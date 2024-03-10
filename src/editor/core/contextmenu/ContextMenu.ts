@@ -179,15 +179,19 @@ export class ContextMenu {
       EDITOR_COMPONENT,
       EditorComponent.CONTEXTMENU
     )
+    // 支持 rtl 布局
+    contextMenuContainer.setAttribute('dir', this.options.direction)
     this.container.append(contextMenuContainer)
     return contextMenuContainer
   }
 
   private _render(payload: IRenderPayload): HTMLDivElement {
+    const { direction } = this.options
     const { contextMenuList, left, top, parentMenuContainer } = payload
     const contextMenuContainer = this._createContextMenuContainer()
     const contextMenuContent = document.createElement('div')
     contextMenuContent.classList.add(`${EDITOR_PREFIX}-contextmenu-content`)
+    contextMenuContent.setAttribute('dir', direction)
     // 直接子菜单
     let childMenuContainer: HTMLDivElement | null = null
     // 父菜单添加子菜单映射关系
@@ -213,6 +217,7 @@ export class ContextMenu {
       } else {
         const menuItem = document.createElement('div')
         menuItem.classList.add(`${EDITOR_PREFIX}-contextmenu-item`)
+        menuItem.setAttribute('dir', direction)
         // 菜单事件
         if (menu.childMenus) {
           const childMenus = this._filterMenuList(menu.childMenus)

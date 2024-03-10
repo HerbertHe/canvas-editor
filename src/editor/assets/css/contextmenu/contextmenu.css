@@ -25,6 +25,11 @@
   background: url(../../images/submenu-dropdown.svg);
 }
 
+.ce-contextmenu-content[dir='rtl'] .ce-contextmenu-sub-item::after {
+  right: 0;
+  left: 12px;
+}
+
 .ce-contextmenu-content .ce-contextmenu-item {
   min-width: 140px;
   padding: 0 32px 0 16px;
@@ -34,6 +39,10 @@
   white-space: nowrap;
   box-sizing: border-box;
   cursor: pointer;
+}
+
+.ce-contextmenu-content[dir='rtl'] .ce-contextmenu-item {
+  padding: 0 16px 0 32px;
 }
 
 .ce-contextmenu-content .ce-contextmenu-item.hover {
@@ -58,6 +67,12 @@
   margin-left: 20px;
 }
 
+.ce-contextmenu-content[dir='rtl'] .ce-contextmenu-item span.ce-shortcut {
+  text-align: left;
+  margin-left: 0;
+  margin-right: 20px;
+}
+
 .ce-contextmenu-content .ce-contextmenu-item i {
   width: 16px;
   height: 16px;
@@ -67,6 +82,11 @@
   background-size: 100% 100%;
   flex-shrink: 0;
   margin-right: 8px;
+}
+
+.ce-contextmenu-content[dir='rtl'] .ce-contextmenu-item i {
+  margin-right: 0;
+  margin-left: 8px;
 }
 
 .ce-contextmenu-divider {

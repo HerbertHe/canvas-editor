@@ -468,6 +468,7 @@ export const commentList: IComment[] = [
 ]
 
 export const options: IEditorOption = {
+  direction: 'rtl',
   margins: [100, 120, 100, 120],
   watermark: {
     data: 'CANVAS-EDITOR',

@@ -14,7 +14,8 @@ import {
 import {
   IEditorData,
   IEditorOption,
-  IEditorResult
+  IEditorResult,
+  TEditorDirection
 } from '../../interface/Editor'
 import {
   IElement,
@@ -346,6 +347,11 @@ export class Draw {
     const width = this.getOriginalWidth()
     const margins = this.getOriginalMargins()
     return width - margins[1] - margins[3]
+  }
+
+  public getDirection(): TEditorDirection {
+    const { direction } = this.options
+    return direction
   }
 
   public getMargins(): IMargin {
@@ -1037,6 +1043,8 @@ export class Draw {
     canvas.height = height * dpr
     canvas.style.cursor = 'text'
     const ctx = canvas.getContext('2d')!
+    // 设置 canvas 的绘制方向
+    ctx.direction = this.options.direction
     // 初始化上下文配置
     this._initPageContext(ctx)
     // 缓存上下文
@@ -1050,7 +1058,9 @@ export class Draw {
     // 重置以下属性是因部分浏览器(chrome)会应用css样式
     ctx.letterSpacing = '0px'
     ctx.wordSpacing = '0px'
-    ctx.direction = 'ltr'
+    // 设置 canvas 绘制方向
+    // ! BUG 需要设置 canvas 绘制原点
+    ctx.direction = this.options.direction
   }
 
   private _getFont(el: IElement, scale = 1): string {

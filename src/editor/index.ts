@@ -146,6 +146,7 @@ export default class Editor {
 
     const editorOptions: DeepRequired<IEditorOption> = {
       mode: EditorMode.EDIT,
+      direction: 'ltr',
       defaultType: 'TEXT',
       defaultColor: '#000000',
       defaultFont: 'Microsoft YaHei',

@@ -29,6 +29,7 @@ export interface IEditorData {
 
 export interface IEditorOption {
   mode?: EditorMode
+  direction?: TEditorDirection
   defaultType?: string
   defaultColor?: string
   defaultFont?: string
@@ -84,6 +85,8 @@ export interface IEditorOption {
   zone?: IZoneOption
   background?: IBackgroundOption
 }
+
+export type TEditorDirection = 'ltr' | 'rtl'
 
 export interface IEditorResult {
   version: string

@@ -93,7 +93,8 @@ export class Cursor {
   public drawCursor(payload?: IDrawCursorOption) {
     let cursorPosition = this.position.getCursorPosition()
     if (!cursorPosition) return
-    const { scale, cursor } = this.options
+    const innerWidth = this.draw.getInnerWidth()
+    const { scale, cursor, direction } = this.options
     const {
       color,
       width,
@@ -139,7 +140,13 @@ export class Cursor {
     const cursorTop =
       leftTop[1] + ascent + descent - (cursorHeight - increaseHeight) + preY
     const cursorLeft = hitLineStartIndex ? leftTop[0] : rightTop[0]
-    agentCursorDom.style.left = `${cursorLeft}px`
+
+    // 解决 rtl 光标定位
+    if (direction === 'rtl') {
+      agentCursorDom.style.right = `${innerWidth - cursorLeft}px`
+    } else {
+      agentCursorDom.style.left = `${cursorLeft}px`
+    }
     agentCursorDom.style.top = `${
       cursorTop + cursorHeight - defaultOffsetHeight
     }px`
@@ -148,7 +155,12 @@ export class Cursor {
     const isReadonly = this.draw.isReadonly()
     this.cursorDom.style.width = `${width * scale}px`
     this.cursorDom.style.backgroundColor = color
-    this.cursorDom.style.left = `${cursorLeft}px`
+    if (direction === 'rtl') {
+      this.cursorDom.style.right = `${cursorLeft - innerWidth}px`
+    } else {
+      this.cursorDom.style.left = `${cursorLeft}px`
+    }
+
     this.cursorDom.style.top = `${cursorTop}px`
     this.cursorDom.style.display = isReadonly ? 'none' : 'block'
     this.cursorDom.style.height = `${cursorHeight}px`

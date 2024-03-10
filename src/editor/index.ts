@@ -231,6 +231,8 @@ export default class Editor {
     this.eventBus = new EventBus<EventBusMap>()
     // 重写
     this.override = new Override()
+    // 添加 dir 属性
+    container.setAttribute('dir', editorOptions.direction)
     // 启动
     const draw = new Draw(
       container,

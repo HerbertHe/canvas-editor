@@ -737,6 +737,10 @@ body[dir='rtl'] .menu-item .menu-item__search__collapse__search .arrow-right {
   background-image: url('./assets/images/print.svg');
 }
 
+.menu-item__direction i {
+  background-image: url('./assets/images/dir.svg');
+}
+
 .catalog {
   width: 250px;
   position: fixed;

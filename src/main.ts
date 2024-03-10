@@ -1014,6 +1014,15 @@ window.onload = function () {
     console.log('print')
     instance.command.executePrint()
   }
+  const dirDom = document.querySelector<HTMLDivElement>('.menu-item__direction')!
+  dirDom.title = `切换方向 ${
+    options.direction === 'rtl' ? '从左到右' : '从右到左'
+  }`
+  dirDom.onclick = function () {
+    const direction = options.direction === 'rtl' ? 'ltr' : 'rtl'
+    console.log('direction:', direction)
+    instance.command.executeSetDirection(direction)
+  }
 
   // 6. 目录显隐 | 页面模式 | 纸张缩放 | 纸张大小 | 纸张方向 | 页边距 | 全屏
   async function updateCatalog() {

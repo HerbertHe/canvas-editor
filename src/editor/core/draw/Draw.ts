@@ -351,6 +351,7 @@ export class Draw {
 
   public setDirection(dir: TEditorDirection) {
     this.options.direction = dir
+    // TODO 触发重新绘制
   }
 
   public getDirection(): TEditorDirection {

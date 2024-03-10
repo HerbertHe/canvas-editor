@@ -250,6 +250,7 @@ export class Position {
   }
 
   public computePositionList() {
+    const { direction } = this.options
     // 置空原位置信息
     this.positionList = []
     this.floatPositionList = []
@@ -257,7 +258,7 @@ export class Position {
     const innerWidth = this.draw.getInnerWidth()
     const pageRowList = this.draw.getPageRowList()
     const margins = this.draw.getMargins()
-    const startX = margins[3]
+    const startX = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     // 起始位置受页眉影响
     const header = this.draw.getHeader()
     const extraHeight = header.getExtraHeight()
@@ -283,6 +284,7 @@ export class Position {
   public computeRowPosition(
     payload: IComputeRowPositionPayload
   ): IElementPosition[] {
+    const { direction } = this.options
     const { row, innerWidth } = payload
     const positionList: IElementPosition[] = []
     this.computePageRowPosition({
@@ -290,7 +292,7 @@ export class Position {
       innerWidth,
       rowList: [deepClone(row)],
       pageNo: 0,
-      startX: 0,
+      startX: direction === 'rtl' ? innerWidth : 0,
       startY: 0,
       startIndex: 0,
       startRowIndex: 0

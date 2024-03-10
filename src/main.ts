@@ -1014,13 +1014,17 @@ window.onload = function () {
     console.log('print')
     instance.command.executePrint()
   }
-  const dirDom = document.querySelector<HTMLDivElement>('.menu-item__direction')!
+  const dirDom = document.querySelector<HTMLDivElement>(
+    '.menu-item__direction'
+  )!
   dirDom.title = `切换方向 ${
-    options.direction === 'rtl' ? '从左到右' : '从右到左'
+    document.body.getAttribute('dir') === 'rtl' ? '从左到右' : '从右到左'
   }`
   dirDom.onclick = function () {
-    const direction = options.direction === 'rtl' ? 'ltr' : 'rtl'
+    const direction =
+      document.body.getAttribute('dir') === 'rtl' ? 'ltr' : 'rtl'
     console.log('direction:', direction)
+    document.body.setAttribute('dir', direction)
     instance.command.executeSetDirection(direction)
   }
 

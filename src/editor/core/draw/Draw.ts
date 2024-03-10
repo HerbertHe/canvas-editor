@@ -351,6 +351,8 @@ export class Draw {
 
   public setDirection(dir: TEditorDirection) {
     this.options.direction = dir
+    this.container.setAttribute('dir', dir)
+    this.container.parentElement!.setAttribute('dir', dir)
     // TODO 触发重新绘制
   }
 

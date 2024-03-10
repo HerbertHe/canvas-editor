@@ -349,6 +349,10 @@ export class Draw {
     return width - margins[1] - margins[3]
   }
 
+  public setDirection(dir: TEditorDirection){
+    this.options.direction = dir
+  }
+
   public getDirection(): TEditorDirection {
     const { direction } = this.options
     return direction

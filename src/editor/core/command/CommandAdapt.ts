@@ -42,7 +42,8 @@ import {
   IEditorHTML,
   IEditorOption,
   IEditorResult,
-  IEditorText
+  IEditorText,
+  TEditorDirection
 } from '../../interface/Editor'
 import { IElement, IElementStyle } from '../../interface/Element'
 import { IPasteOption } from '../../interface/Event'
@@ -2369,5 +2370,13 @@ export class CommandAdapt {
 
   public getContainer(): HTMLDivElement {
     return this.draw.getContainer()
+  }
+
+  public setDirection(dir: TEditorDirection) {
+    this.draw.setDirection(dir)
+  }
+
+  public getDirection(): TEditorDirection {
+    return this.draw.getDirection()
   }
 }

@@ -109,6 +109,8 @@ export class Command {
   public getGroupIds: CommandAdapt['getGroupIds']
   public getControlValue: CommandAdapt['getControlValue']
   public getContainer: CommandAdapt['getContainer']
+  public executeSetDirection: CommandAdapt['setDirection']
+  public getDirection: CommandAdapt['getDirection']
 
   constructor(adapt: CommandAdapt) {
     // 全局命令
@@ -190,6 +192,8 @@ export class Command {
     this.executePaperSize = adapt.paperSize.bind(adapt)
     this.executePaperDirection = adapt.paperDirection.bind(adapt)
     this.executeSetPaperMargin = adapt.setPaperMargin.bind(adapt)
+    // RTL 支持
+    this.executeSetDirection = adapt.setDirection.bind(adapt)
     // 通用
     this.executeInsertElementList = adapt.insertElementList.bind(adapt)
     this.executeAppendElementList = adapt.appendElementList.bind(adapt)
@@ -222,6 +226,7 @@ export class Command {
     this.getLocale = adapt.getLocale.bind(adapt)
     this.getGroupIds = adapt.getGroupIds.bind(adapt)
     this.getContainer = adapt.getContainer.bind(adapt)
+    this.getDirection = adapt.getDirection.bind(adapt)
     // 控件
     this.executeSetControlValue = adapt.setControlValue.bind(adapt)
     this.executeSetControlExtension = adapt.setControlExtension.bind(adapt)

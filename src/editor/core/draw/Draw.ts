@@ -353,7 +353,19 @@ export class Draw {
     this.options.direction = dir
     this.container.setAttribute('dir', dir)
     this.container.parentElement!.setAttribute('dir', dir)
-    // TODO 触发重新绘制
+    // 对编辑器进行重新绘制
+    const { height } = this.options
+    const dpr = this.getPagePixelRatio()
+    this.ctxList.forEach((ctx, idx) => {
+      const canvas = this.pageList[idx]
+      canvas.style.height = `${height}px`
+      canvas.height = height * dpr
+      this._initPageContext(ctx)
+    })
+    this.render({
+      isSubmitHistory: false,
+      isSetCursor: false
+    })
   }
 
   public getDirection(): TEditorDirection {
@@ -1066,7 +1078,6 @@ export class Draw {
     ctx.letterSpacing = '0px'
     ctx.wordSpacing = '0px'
     // 设置 canvas 绘制方向
-    // ! BUG 需要设置 canvas 绘制原点
     ctx.direction = this.options.direction
   }
 

@@ -31,6 +31,11 @@ window.onload = function () {
     typeof navigator !== 'undefined' && /Mac OS X/.test(navigator.userAgent)
 
   // 1. 初始化编辑器
+  // 支持 rtl
+  if (options.direction === 'rtl') {
+    document.body.setAttribute('dir', 'rtl')
+  }
+
   const container = document.querySelector<HTMLDivElement>('.editor')!
   const instance = new Editor(
     container,

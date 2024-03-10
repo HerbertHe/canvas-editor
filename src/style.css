@@ -123,6 +123,11 @@ ul {
   border-width: 3px 3px 0;
 }
 
+body[dir='rtl'] .menu-item .select::after {
+  left: 2px;
+  right: 0;
+}
+
 .menu-item .options {
   width: 70px;
   position: absolute;
@@ -319,6 +324,10 @@ ul {
   background-image: url('./assets/images/title.svg');
 }
 
+body[dir='rtl'] .menu-item__title i {
+  transform: translateX(5px);
+}
+
 .menu-item__title .options {
   width: 80px;
 }
@@ -367,6 +376,11 @@ ul {
   margin-left: 18px;
 }
 
+body[dir='rtl'] .menu-item__list .options>ul>li li {
+  margin-left: 0;
+  margin-right: 18px;
+}
+
 .menu-item__image i {
   background-image: url('./assets/images/image.svg');
 }
@@ -405,6 +419,11 @@ ul {
   right: 10px;
   top: 5px;
   cursor: pointer;
+}
+
+body[dir='rtl'] .menu-item .menu-item__table__collapse .table-close {
+  right: 0;
+  left: 10px;
 }
 
 .menu-item .menu-item__table__collapse .table-close:hover {
@@ -451,6 +470,11 @@ ul {
   pointer-events: none;
 }
 
+body[dir='rtl'] .table-panel .table-cel {
+  margin-right: 0px;
+  margin-left: 6px;
+}
+
 .table-panel .table-cel.active {
   border: 1px solid rgba(73, 145, 242, .2);
   background: rgba(73, 145, 242, .15);
@@ -458,6 +482,10 @@ ul {
 
 .table-panel .table-row .table-cel:last-child {
   margin-right: 0;
+}
+
+body[dir='rtl'] .table-panel .table-row .table-cel:last-child {
+  margin-left: 0;
 }
 
 .menu-item__hyperlink i {
@@ -649,6 +677,11 @@ ul {
   position: absolute;
 }
 
+body[dir='rtl'] .menu-item .menu-item__search__collapse__search label {
+  right: 0;
+  left: 10px;
+}
+
 .menu-item .menu-item__search__collapse__search>input {
   padding: 5px 90px 5px 5px !important;
 }
@@ -678,12 +711,22 @@ ul {
   right: 76px;
 }
 
+body[dir='rtl'] .menu-item .menu-item__search__collapse__search .arrow-left {
+  right: 0;
+  left: 76px;
+}
+
 .menu-item .menu-item__search__collapse__search .arrow-left i {
   background: url(./assets/images/arrow-left.svg) no-repeat;
 }
 
 .menu-item .menu-item__search__collapse__search .arrow-right {
   right: 48px;
+}
+
+body[dir='rtl'] .menu-item .menu-item__search__collapse__search .arrow-right {
+  right: 0;
+  left: 48px;
 }
 
 .menu-item .menu-item__search__collapse__search .arrow-right i {
@@ -701,6 +744,10 @@ ul {
   bottom: 0;
   top: 100px;
   padding: 0 20px 40px 20px;
+}
+
+body[dir='rtl'] .catalog {
+  right: 0;
 }
 
 .catalog .catalog__header {
@@ -785,6 +832,11 @@ ul {
   overflow-y: auto;
 }
 
+body[dir='rtl'] .comment {
+  transform: translateX(-420px);
+  right: 50%;
+}
+
 .comment-item {
   background: #ffffff;
   border: 1px solid #e2e6ed;
@@ -824,6 +876,11 @@ ul {
   border-radius: 999px;
 }
 
+body[dir='rtl'] .comment-item__title span:first-child {
+  margin-right: 0;
+  margin-left: 5px;
+}
+
 .comment-item__title span:nth-child(2) {
   width: 200px;
   overflow: hidden;
@@ -839,6 +896,10 @@ ul {
   right: -8px;
   top: -8px;
   background: url(./assets/images/close.svg) no-repeat;
+}
+
+body[dir='rtl'] .comment-item__title i {
+  left: -8px;
 }
 
 .comment-item__title i:hover {
@@ -899,6 +960,11 @@ ul {
   background-image: url('./assets/images/catalog.svg');
 }
 
+body[dir='rtl'] .footer .catalog-mode i {
+  margin-right: 0;
+  margin-left: 5px;
+}
+
 .footer .page-mode {
   padding: 1px;
   position: relative;
@@ -911,6 +977,11 @@ ul {
   cursor: pointer;
   display: inline-block;
   background-image: url('./assets/images/page-mode.svg');
+}
+
+body[dir='rtl'] .footer .page-mode i {
+  margin-right: 0;
+  margin-left: 5px;
 }
 
 .footer .options {
@@ -952,6 +1023,11 @@ ul {
   display: inline-block;
   margin-right: 5px;
   letter-spacing: 1px;
+}
+
+body[dir='rtl'] .footer>div:first-child>span {
+  margin-right: 0;
+  margin-left: 5px;
 }
 
 .footer>div:last-child {
@@ -1022,6 +1098,11 @@ ul {
   left: unset;
 }
 
+body[dir='rtl'] .footer .paper-size .options {
+  left: 0;
+  right: unset;
+}
+
 .footer .paper-direction {
   position: relative;
 }
@@ -1033,6 +1114,11 @@ ul {
 .footer .paper-direction .options {
   right: 0;
   left: unset;
+}
+
+body[dir='rtl'] .footer .paper-direction .options {
+  left: 0;
+  right: unset;
 }
 
 .ce-contextmenu-signature {

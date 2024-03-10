@@ -1918,6 +1918,7 @@ export class Draw {
     this.control.renderHighlightList(ctx, pageNo)
     // 渲染元素
     const index = rowList[0]?.startIndex
+    // TODO 适配高亮区域渲染
     this.drawRow(ctx, {
       elementList,
       positionList,

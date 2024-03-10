@@ -14,7 +14,8 @@ export class Watermark {
   public render(ctx: CanvasRenderingContext2D) {
     const {
       watermark: { data, opacity, font, size, color },
-      scale
+      scale,
+      direction
     } = this.options
     const width = this.draw.getWidth()
     const height = this.draw.getHeight()
@@ -30,7 +31,7 @@ export class Watermark {
     ctx.rotate((-45 * Math.PI) / 180)
     ctx.fillText(
       data,
-      -measureText.width / 2,
+      direction === 'rtl' ? measureText.width / 2 : -measureText.width / 2,
       measureText.actualBoundingBoxAscent - size / 2
     )
     ctx.restore()

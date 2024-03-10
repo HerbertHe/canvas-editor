@@ -3,17 +3,21 @@ import { IEditorOption } from '../../../interface/Editor'
 import { Draw } from '../Draw'
 
 export class Strikeout extends AbstractRichText {
+  private draw: Draw
   private options: Required<IEditorOption>
 
   constructor(draw: Draw) {
     super()
+    this.draw = draw
     this.options = draw.getOptions()
   }
 
   public render(ctx: CanvasRenderingContext2D) {
     if (!this.fillRect.width) return
-    const { strikeoutColor } = this.options
-    const { x, y, width } = this.fillRect
+    const { strikeoutColor, direction } = this.options
+    const { x: rawX, y, width } = this.fillRect
+    const innerWidth = this.draw.getInnerWidth()
+    const x = direction === 'rtl' ? rawX - innerWidth : rawX
     ctx.save()
     ctx.strokeStyle = strikeoutColor
     const adjustY = y + 0.5 // 从1处渲染，避免线宽度等于3

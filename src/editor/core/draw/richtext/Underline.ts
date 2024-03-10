@@ -4,10 +4,12 @@ import { Draw } from '../Draw'
 import { DashType, TextDecorationStyle } from '../../../dataset/enum/Text'
 
 export class Underline extends AbstractRichText {
+  private draw: Draw
   private options: Required<IEditorOption>
 
   constructor(draw: Draw) {
     super()
+    this.draw = draw
     this.options = draw.getOptions()
   }
 
@@ -77,8 +79,10 @@ export class Underline extends AbstractRichText {
 
   public render(ctx: CanvasRenderingContext2D) {
     if (!this.fillRect.width) return
-    const { underlineColor, scale } = this.options
-    const { x, y, width } = this.fillRect
+    const { underlineColor, scale, direction } = this.options
+    const { x: rawX, y, width } = this.fillRect
+    const innerWidth = this.draw.getInnerWidth()
+    const x = direction === 'rtl' ? rawX - innerWidth : rawX
     ctx.save()
     ctx.strokeStyle = this.fillColor || underlineColor
     ctx.lineWidth = scale

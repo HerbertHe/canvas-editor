@@ -556,10 +556,13 @@ export class RangeManager {
     width: number,
     height: number
   ) {
+    const { direction } = this.options
+    const calX = direction === 'rtl' ? x - width : x
+
     ctx.save()
     ctx.globalAlpha = this.options.rangeAlpha
     ctx.fillStyle = this.options.rangeColor
-    ctx.fillRect(x, y, width, height)
+    ctx.fillRect(calX, y, width, height)
     ctx.restore()
   }
 

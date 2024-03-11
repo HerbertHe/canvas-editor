@@ -353,19 +353,34 @@ export class Draw {
     this.options.direction = dir
     this.container.setAttribute('dir', dir)
     this.container.parentElement!.setAttribute('dir', dir)
-    // 对编辑器进行重新绘制
-    const { height } = this.options
-    const dpr = this.getPagePixelRatio()
-    this.ctxList.forEach((ctx, idx) => {
-      const canvas = this.pageList[idx]
-      canvas.style.height = `${height}px`
-      canvas.height = height * dpr
-      this._initPageContext(ctx)
+
+    // 切换 options 的时候 ctx 的 direction 也要改变
+    this.ctxList.forEach(ctx => {
+      ctx.direction = dir
     })
-    this.render({
-      isSubmitHistory: false,
-      isSetCursor: false
+
+    // 参考 rowFlex 进行实现
+    const isReadonly = this.isReadonly()
+    if (isReadonly) return
+    const { startIndex, endIndex } = this.range.getRange()
+    const elementList = this.getElementList()
+    elementList.forEach(element => {
+      if (!element.rowFlex) {
+        element.rowFlex = dir === 'rtl' ? RowFlex.RIGHT : RowFlex.LEFT
+      }
+
+      if (element.rowFlex === RowFlex.LEFT) {
+        element.rowFlex = RowFlex.RIGHT
+      }
+
+      if (element.rowFlex === RowFlex.RIGHT) {
+        element.rowFlex = RowFlex.LEFT
+      }
     })
+
+    const isSetCursor = startIndex === endIndex
+    const curIndex = isSetCursor ? endIndex : startIndex
+    this.render({ curIndex, isSetCursor })
   }
 
   public getDirection(): TEditorDirection {

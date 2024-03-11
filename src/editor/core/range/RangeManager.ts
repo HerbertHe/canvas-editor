@@ -557,6 +557,7 @@ export class RangeManager {
     height: number
   ) {
     const { direction } = this.options
+    // TODO 计算
     const calX = direction === 'rtl' ? x - width : x
 
     ctx.save()

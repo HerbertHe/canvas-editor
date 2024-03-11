@@ -171,7 +171,12 @@ export class Draw {
     this.pagePixelRatio = null
     this.mode = options.mode
     this.options = options
-    this.elementList = data.main
+    // elementList 需要根据 direction 进行初始化
+    this.elementList = data.main.map(el => ({
+      ...el,
+      rowFlex:
+        el.rowFlex || options.direction === 'ltr' ? RowFlex.LEFT : RowFlex.RIGHT
+    }))
     this.listener = listener
     this.eventBus = eventBus
     this.override = override
@@ -1613,7 +1618,8 @@ export class Draw {
       tdPadding,
       defaultBasicRowMarginHeight,
       defaultRowMargin,
-      group
+      group,
+      direction
     } = this.options
     const { isCrossRowCol, tableId } = this.range.getRange()
     let index = startIndex
@@ -1627,6 +1633,8 @@ export class Draw {
         height: 0
       }
       let tableRangeElement: IElement | null = null
+      // TODO debug 坐标
+      console.log(curRow.elementList.map(el => el.value).join(''), curRow)
       for (let j = 0; j < curRow.elementList.length; j++) {
         const element = curRow.elementList[j]
         const metrics = element.metrics
@@ -1634,9 +1642,15 @@ export class Draw {
         const {
           ascent: offsetY,
           coordinate: {
-            leftTop: [x, y]
+            leftTop: [rawX, y]
           }
         } = positionList[curRow.startIndex + j]
+        // TODO 修正左上角坐标的问题
+        const x =
+          direction === 'rtl'
+            ? rawX - this.getInnerWidth() + curRow.width
+            : rawX
+
         const preElement = curRow.elementList[j - 1]
         // 元素高亮记录
         if (element.highlight) {

@@ -99,6 +99,7 @@ export class Position {
   public computePageRowPosition(
     payload: IComputePageRowPositionPayload
   ): IComputePageRowPositionResult {
+    const { direction } = this.options
     const {
       positionList,
       rowList,
@@ -113,12 +114,15 @@ export class Position {
     let x = startX
     let y = startY
     let index = startIndex
+    // TODO 兼容适配 rtl 坐标计算
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
       // 计算行偏移量（行居中、居右）
       if (curRow.rowFlex === RowFlex.CENTER) {
         x += (innerWidth - curRow.width) / 2
-      } else if (curRow.rowFlex === RowFlex.RIGHT) {
+      } else if (direction === 'ltr' && curRow.rowFlex === RowFlex.RIGHT) {
+        x += innerWidth - curRow.width
+      } else if (direction === 'rtl' && curRow.rowFlex === RowFlex.LEFT) {
         x += innerWidth - curRow.width
       }
       // 当前行X轴偏移量

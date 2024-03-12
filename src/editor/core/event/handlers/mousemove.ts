@@ -50,7 +50,6 @@ export function mousemove(evt: MouseEvent, host: CanvasEvent) {
   }
   // 结束位置
   const position = draw.getPosition()
-  // TODO 修复刚好选区动作是反的
   const positionResult = position.getPositionByXY({
     x: evt.offsetX,
     y: evt.offsetY

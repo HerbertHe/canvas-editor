@@ -139,6 +139,7 @@ export class Previewer {
   }
 
   private _mousedown(evt: MouseEvent) {
+    // TODO 修改 rtl 镜像表现
     this.canvas = this.draw.getPage()
     if (!this.curElement) return
     const { scale } = this.options
@@ -387,6 +388,7 @@ export class Previewer {
   }
 
   public _updateResizerRect(width: number, height: number) {
+    // BUG 预览不一致的问题，原因在于坐标点遵循 lt, 在 rtl 下需要进行修复
     const handleSize = this.options.resizerSize
     this.resizerSelection.style.width = `${width}px`
     this.resizerSelection.style.height = `${height}px`

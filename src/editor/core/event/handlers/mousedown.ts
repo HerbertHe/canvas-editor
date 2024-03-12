@@ -8,19 +8,36 @@ import { CanvasEvent } from '../CanvasEvent'
 
 export function setRangeCache(host: CanvasEvent) {
   const draw = host.getDraw()
+  const { direction } = draw.getOptions()
   const position = draw.getPosition()
   const rangeManager = draw.getRange()
+  const ox = position.getPositionList()[0].coordinate.leftTop[0]
   // 缓存选区上下文信息
   host.isAllowDrag = true
   host.cacheRange = deepClone(rangeManager.getRange())
   host.cacheElementList = draw.getElementList()
-  host.cachePositionList = position.getPositionList()
+  host.cachePositionList =
+    direction === 'rtl'
+      ? position.getPositionList().map(p => ({
+          ...p,
+          coordinate: (() => {
+            const { leftTop, leftBottom, rightTop, rightBottom } = p.coordinate
+            return {
+              leftTop: [2 * ox - rightTop[0], rightTop[1]],
+              leftBottom: [2 * ox - rightBottom[0], rightBottom[1]],
+              rightTop: [2 * ox - leftTop[0], leftTop[1]],
+              rightBottom: [2 * ox - leftBottom[0], leftBottom[1]]
+            }
+          })()
+        }))
+      : position.getPositionList()
   host.cachePositionContext = position.getPositionContext()
 }
 
 export function mousedown(evt: MouseEvent, host: CanvasEvent) {
   if (evt.button === MouseEventButton.RIGHT) return
   const draw = host.getDraw()
+  const { direction } = draw.getOptions()
   const isReadonly = draw.isReadonly()
   const rangeManager = draw.getRange()
   const position = draw.getPosition()
@@ -60,6 +77,7 @@ export function mousedown(evt: MouseEvent, host: CanvasEvent) {
     hitLineStartIndex
   } = positionResult
   // 记录选区开始位置
+  // TODO 可能需要进行 rtl 适配
   host.mouseDownStartPosition = {
     ...positionResult,
     index: isTable ? tdValueIndex! : index,
@@ -67,7 +85,23 @@ export function mousedown(evt: MouseEvent, host: CanvasEvent) {
     y: evt.offsetY
   }
   const elementList = draw.getElementList()
-  const positionList = position.getPositionList()
+  // 进行镜像坐标计算
+  const ox = position.getPositionList()[0].coordinate.leftTop[0]
+  const positionList =
+    direction === 'rtl'
+      ? position.getPositionList().map(p => ({
+          ...p,
+          coordinate: (() => {
+            const { leftTop, leftBottom, rightTop, rightBottom } = p.coordinate
+            return {
+              leftTop: [2 * ox - rightTop[0], rightTop[1]],
+              leftBottom: [2 * ox - rightBottom[0], rightBottom[1]],
+              rightTop: [2 * ox - leftTop[0], leftTop[1]],
+              rightBottom: [2 * ox - leftBottom[0], leftBottom[1]]
+            }
+          })()
+        }))
+      : position.getPositionList()
   const curIndex = isTable ? tdValueIndex! : index
   const curElement = elementList[curIndex]
   // 绘制

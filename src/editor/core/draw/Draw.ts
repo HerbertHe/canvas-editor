@@ -1618,7 +1618,8 @@ export class Draw {
       tdPadding,
       defaultBasicRowMarginHeight,
       defaultRowMargin,
-      group
+      group,
+      direction
     } = this.options
     const { isCrossRowCol, tableId } = this.range.getRange()
     let index = startIndex
@@ -1632,8 +1633,10 @@ export class Draw {
         height: 0
       }
       let tableRangeElement: IElement | null = null
+      // 基点坐标
+      const ox = positionList[0].coordinate.leftTop[0]
       // TODO debug 坐标
-      // console.log(curRow.elementList.map(el => el.value).join(''))
+      // console.log(curRow.elementList.map(el => el.value).join(''), curRow)
       for (let j = 0; j < curRow.elementList.length; j++) {
         const element = curRow.elementList[j]
         const metrics = element.metrics
@@ -1641,15 +1644,16 @@ export class Draw {
         const {
           ascent: offsetY,
           coordinate: {
-            leftTop: [x, y]
+            leftTop: [lx, y],
+            rightTop: [rx]
           }
         } = positionList[curRow.startIndex + j]
-        // TODO debug
-        // console.log(element.value, x, y)
+        const x = direction === 'rtl' ? 2 * ox - rx : lx
         // 修复绘制依赖坐标的问题
         const preElement = curRow.elementList[j - 1]
         // 元素高亮记录
         if (element.highlight) {
+          // BUG 处理高亮问题
           // 高亮元素相连需立即绘制，并记录下一元素坐标
           if (
             preElement &&

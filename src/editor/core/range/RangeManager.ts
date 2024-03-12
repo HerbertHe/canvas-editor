@@ -240,8 +240,11 @@ export class RangeManager {
   }
 
   public getIsPointInRange(x: number, y: number): boolean {
+    const { direction } = this.options
     const { startIndex, endIndex } = this.range
     const positionList = this.position.getPositionList()
+    // 原点横坐标
+    const ox = positionList[0].coordinate.leftTop[0]
     for (let p = startIndex + 1; p <= endIndex; p++) {
       const position = positionList[p]
       if (!position) break
@@ -249,8 +252,19 @@ export class RangeManager {
         coordinate: { leftTop, rightBottom }
       } = positionList[p]
       if (
+        direction === 'ltr' &&
         x >= leftTop[0] &&
         x <= rightBottom[0] &&
+        y >= leftTop[1] &&
+        y <= rightBottom[1]
+      ) {
+        return true
+      }
+      // 计算 rtl 的镜像坐标
+      if (
+        direction === 'rtl' &&
+        x >= 2 * ox - rightBottom[0] &&
+        x <= 2 * ox - leftTop[0] &&
         y >= leftTop[1] &&
         y <= rightBottom[1]
       ) {

@@ -114,19 +114,27 @@ export class Position {
     let x = startX
     let y = startY
     let index = startIndex
-    // TODO 兼容适配 rtl 坐标计算
+    // TODO 兼容适配 rtl 坐标计算, 尤其注意
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
       // 计算行偏移量（行居中、居右）
-      if (curRow.rowFlex === RowFlex.CENTER) {
-        x += (innerWidth - curRow.width) / 2
-      } else if (direction === 'ltr' && curRow.rowFlex === RowFlex.RIGHT) {
-        x += innerWidth - curRow.width
-      } else if (direction === 'rtl' && curRow.rowFlex === RowFlex.LEFT) {
-        x += innerWidth - curRow.width
+      if (direction === 'ltr') {
+        if (curRow.rowFlex === RowFlex.CENTER) {
+          x += (innerWidth - curRow.width) / 2
+        } else if (curRow.rowFlex === RowFlex.RIGHT) {
+          x += innerWidth - curRow.width
+        }
+      } else if (direction === 'rtl') {
+        if (curRow.rowFlex === RowFlex.CENTER) {
+          x -= (innerWidth - curRow.width) / 2
+        } else if (curRow.rowFlex === RowFlex.LEFT) {
+          x -= innerWidth - curRow.width
+        }
       }
+
       // 当前行X轴偏移量
       x += curRow.offsetX || 0
+
       // 当前td所在位置
       const tablePreX = x
       const tablePreY = y
@@ -321,7 +329,8 @@ export class Position {
   }
 
   public getPositionByXY(payload: IGetPositionByXYPayload): ICurrentPosition {
-    const { x, y, isTable } = payload
+    const { direction } = this.options
+    const { x: rawX, y, isTable } = payload
     let { elementList, positionList } = payload
     if (!elementList) {
       elementList = this.draw.getOriginalElementList()
@@ -329,6 +338,9 @@ export class Position {
     if (!positionList) {
       positionList = this.getOriginalPositionList()
     }
+    const ox = positionList[0].coordinate.leftTop[0]
+    // 计算 rtl 镜像坐标
+    const x = direction === 'rtl' ? 2 * ox - rawX : rawX
     const zoneManager = this.draw.getZone()
     const curPageNo = payload.pageNo ?? this.draw.getPageNo()
     const isMainActive = zoneManager.isMainActive()
@@ -604,6 +616,7 @@ export class Position {
   public adjustPositionContext(
     payload: IGetPositionByXYPayload
   ): ICurrentPosition | null {
+    // TODO 偏移量重新计算, rtl 计算
     const positionResult = this.getPositionByXY(payload)
     if (!~positionResult.index) return null
     // 移动控件内光标

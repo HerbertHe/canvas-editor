@@ -1698,6 +1698,8 @@ export class Draw {
         } else if (element.type === ElementType.HYPERLINK) {
           this._drawRichText(ctx)
           // BUG 超链接渲染存在问题, 渲染存在缺陷
+          // BUG 存在两个错误，第一个是 underline 的坐标和文本不是同一坐标
+          // 第二个是，超链接的绘制也不能是单个字符的
           this.hyperlinkParticle.render(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]

@@ -42,10 +42,11 @@ export class Placeholder {
   }
 
   private _computePositionList() {
+    const { direction } = this.options
     const headerExtraHeight = this.draw.getHeader().getExtraHeight()
     const innerWidth = this.draw.getInnerWidth()
     const margins = this.draw.getMargins()
-    const startX = margins[3]
+    const startX = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     const startY = margins[0] + headerExtraHeight
     this.position.computePageRowPosition({
       positionList: this.positionList,

@@ -1700,10 +1700,9 @@ export class Draw {
           // BUG 超链接渲染存在问题
           this.hyperlinkParticle.render(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
-          const before = curRow.elementList[j - 1]
           const next = curRow.elementList[j + 1]
           // 设置释放之前的
-          if (!before || (!!before && before.type !== 'date')) {
+          if (!preElement || (!!preElement && preElement.type !== 'date')) {
             this._drawRichText(ctx)
           }
 

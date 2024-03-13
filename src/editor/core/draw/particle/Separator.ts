@@ -16,7 +16,7 @@ export class SeparatorParticle {
     y: number
   ) {
     ctx.save()
-    const { scale } = this.options
+    const { scale, direction } = this.options
     ctx.lineWidth = scale
     if (element.color) {
       ctx.strokeStyle = element.color
@@ -24,10 +24,11 @@ export class SeparatorParticle {
     if (element.dashArray && element.dashArray.length) {
       ctx.setLineDash(element.dashArray)
     }
+    const graphX = direction === 'rtl' ? x - element.width! : x
     ctx.translate(0, 0.5) // 从1处渲染，避免线宽度等于3
     ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.lineTo(x + element.width! * scale, y)
+    ctx.moveTo(graphX, y)
+    ctx.lineTo(graphX + element.width! * scale, y)
     ctx.stroke()
     ctx.restore()
   }

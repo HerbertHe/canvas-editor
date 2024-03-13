@@ -75,6 +75,9 @@ export class PageNumber {
           : (width - textWidth) / 2
     } else if (direction === 'ltr' && rowFlex === RowFlex.RIGHT) {
       x = width - textWidth - margins[1]
+    } else if (direction === 'rtl' && rowFlex === RowFlex.LEFT) {
+      // TODO debug
+      x = width + textWidth + margins[1]
     } else {
       x = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     }

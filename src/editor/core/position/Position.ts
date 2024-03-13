@@ -125,10 +125,11 @@ export class Position {
           x += innerWidth - curRow.width
         }
       } else if (direction === 'rtl') {
+        // TODO bug 进行重新计算
         if (curRow.rowFlex === RowFlex.CENTER) {
           x -= (innerWidth - curRow.width) / 2
         } else if (curRow.rowFlex === RowFlex.LEFT) {
-          x -= innerWidth - curRow.width
+          x -= innerWidth + curRow.width
         }
       }
 

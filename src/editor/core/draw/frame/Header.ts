@@ -129,7 +129,6 @@ export class Header {
       rowList.push(row)
       curRowHeight += row.height
     }
-    console.log('页眉', this.elementList, this.positionList)
     this.draw.drawRow(ctx, {
       elementList: this.elementList,
       positionList: this.positionList,

@@ -1653,7 +1653,6 @@ export class Draw {
         const graphX = direction === 'rtl' ? 2 * ox - rx : lx
         // 修复绘制依赖坐标的问题
         const preElement = curRow.elementList[j - 1]
-        const nextElement = curRow.elementList[j + 1]
         // 元素高亮记录
         if (element.highlight) {
           // BUG 处理高亮问题
@@ -1701,6 +1700,7 @@ export class Draw {
           // BUG 超链接渲染存在问题, 渲染存在缺陷
           this.hyperlinkParticle.render(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
+          const nextElement = curRow.elementList[j + 1]
           // 设置释放之前的
           if (
             !preElement ||
@@ -1819,6 +1819,7 @@ export class Draw {
         ) {
           // 从行尾开始-绘制最小宽度
           if (startIndex === index) {
+            const nextElement = curRow.elementList[startIndex + 1]
             if (nextElement && nextElement.value === ZERO) {
               rangeRecord.x = x + metrics.width
               rangeRecord.y = y

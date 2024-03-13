@@ -1610,8 +1610,7 @@ export class Draw {
   }
 
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
-    const { rowList, pageNo, positionList, startIndex, zone } =
-      payload
+    const { rowList, pageNo, positionList, startIndex, zone } = payload
     const isPrintMode = this.mode === EditorMode.PRINT
     const {
       scale,
@@ -1784,15 +1783,29 @@ export class Draw {
             element.controlComponent === ControlComponent.PLACEHOLDER
               ? undefined
               : element.color
-          this.underline.recordFillInfo(
-            ctx,
-            x - offsetX,
-            y + curRow.height - rowMargin + offsetY,
-            metrics.width + offsetX,
-            0,
-            color,
-            element.textDecoration?.style
-          )
+
+          // 修复 rtl 超链接不正确的渲染起点坐标
+          if (element.type === ElementType.HYPERLINK) {
+            this.underline.recordFillInfo(
+              ctx,
+              direction === 'rtl' ? graphX : x - offsetX,
+              y + curRow.height - rowMargin + offsetY,
+              metrics.width + offsetX,
+              0,
+              color,
+              element.textDecoration?.style
+            )
+          } else {
+            this.underline.recordFillInfo(
+              ctx,
+              direction === 'rtl' ? x : x - offsetX,
+              y + curRow.height - rowMargin + offsetY,
+              metrics.width + offsetX,
+              0,
+              color,
+              element.textDecoration?.style
+            )
+          }
         } else if (preElement?.underline || preElement?.control?.underline) {
           this.underline.render(ctx)
         }
@@ -1891,6 +1904,7 @@ export class Draw {
       // 绘制选区
       if (!isPrintMode) {
         if (rangeRecord.width && rangeRecord.height) {
+          // BUG 绘制选区的问题
           const { x, y, width, height } = rangeRecord
           this.range.render(ctx, x, y, width, height)
         }

@@ -1636,7 +1636,7 @@ export class Draw {
       // 基点坐标
       const ox = positionList[0].coordinate.leftTop[0]
       // TODO debug 坐标
-      // console.log(curRow.elementList.map(el => el.value).join(''), curRow)
+      // console.log(curRow.elementList.map(el => el.value).join(''), curRow.elementList)
       for (let j = 0; j < curRow.elementList.length; j++) {
         const element = curRow.elementList[j]
         const metrics = element.metrics
@@ -1648,7 +1648,9 @@ export class Draw {
             rightTop: [rx]
           }
         } = positionList[curRow.startIndex + j]
-        const x = direction === 'rtl' ? 2 * ox - rx : lx
+        const x = direction === 'rtl' ? 2 * ox - lx : lx
+        // 由于图形绘制依赖的坐标不同，非文本绘制必须采用镜像坐标
+        const graphX = direction === 'rtl' ? 2 * ox - rx : lx
         // 修复绘制依赖坐标的问题
         const preElement = curRow.elementList[j - 1]
         // 元素高亮记录
@@ -1681,20 +1683,21 @@ export class Draw {
             element.imgDisplay !== ImageDisplay.FLOAT_TOP &&
             element.imgDisplay !== ImageDisplay.FLOAT_BOTTOM
           ) {
-            this.imageParticle.render(ctx, element, x, y + offsetY)
+            this.imageParticle.render(ctx, element, graphX, y + offsetY)
           }
         } else if (element.type === ElementType.LATEX) {
           this._drawRichText(ctx)
-          this.laTexParticle.render(ctx, element, x, y + offsetY)
+          this.laTexParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TABLE) {
           if (isCrossRowCol) {
             rangeRecord.x = x
             rangeRecord.y = y
             tableRangeElement = element
           }
-          this.tableParticle.render(ctx, element, x, y)
+          this.tableParticle.render(ctx, element, graphX, y)
         } else if (element.type === ElementType.HYPERLINK) {
           this._drawRichText(ctx)
+          // BUG 超链接渲染存在问题
           this.hyperlinkParticle.render(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
           const before = curRow.elementList[j - 1]
@@ -1726,7 +1729,7 @@ export class Draw {
           element.controlComponent === ControlComponent.CHECKBOX
         ) {
           this._drawRichText(ctx)
-          this.checkboxParticle.render(ctx, element, x, y + offsetY)
+          this.checkboxParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TAB) {
           this._drawRichText(ctx)
         } else if (element.rowFlex === RowFlex.ALIGNMENT) {
@@ -1850,6 +1853,7 @@ export class Draw {
         index++
         // 绘制表格内元素
         if (element.type === ElementType.TABLE) {
+          // BUG table 渲染存在 bug
           const tdPaddingWidth = tdPadding[1] + tdPadding[3]
           for (let t = 0; t < element.trList!.length; t++) {
             const tr = element.trList![t]

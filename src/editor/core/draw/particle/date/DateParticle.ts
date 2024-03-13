@@ -131,6 +131,13 @@ export class DateParticle {
     })
   }
 
+  /**
+   * @deprecated 渲染函数已过时
+   * @param ctx
+   * @param element
+   * @param x
+   * @param y
+   */
   public render(
     ctx: CanvasRenderingContext2D,
     element: IRowElement,

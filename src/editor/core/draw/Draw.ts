@@ -1663,6 +1663,7 @@ export class Draw {
           ) {
             this.highlight.render(ctx)
           }
+          // BUG 高亮记录的坐标是错误的
           this.highlight.recordFillInfo(
             ctx,
             x,
@@ -1786,27 +1787,15 @@ export class Draw {
               : element.color
 
           // 修复 rtl 超链接不正确的渲染起点坐标
-          if (element.type === ElementType.HYPERLINK) {
-            this.underline.recordFillInfo(
-              ctx,
-              direction === 'rtl' ? graphX : x - offsetX,
-              y + curRow.height - rowMargin + offsetY,
-              metrics.width + offsetX,
-              0,
-              color,
-              element.textDecoration?.style
-            )
-          } else {
-            this.underline.recordFillInfo(
-              ctx,
-              direction === 'rtl' ? x : x - offsetX,
-              y + curRow.height - rowMargin + offsetY,
-              metrics.width + offsetX,
-              0,
-              color,
-              element.textDecoration?.style
-            )
-          }
+          this.underline.recordFillInfo(
+            ctx,
+            direction === 'rtl' ? x : x - offsetX,
+            y + curRow.height - rowMargin + offsetY,
+            metrics.width + offsetX,
+            0,
+            color,
+            element.textDecoration?.style
+          )
         } else if (preElement?.underline || preElement?.control?.underline) {
           this.underline.render(ctx)
         }

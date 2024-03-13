@@ -77,8 +77,9 @@ export class Underline extends AbstractRichText {
 
   public render(ctx: CanvasRenderingContext2D) {
     if (!this.fillRect.width) return
-    const { underlineColor, scale } = this.options
-    const { x, y, width } = this.fillRect
+    const { underlineColor, scale, direction } = this.options
+    const { x: rawX, y, width } = this.fillRect
+    const x = direction === 'rtl' ? rawX - width : rawX
     ctx.save()
     ctx.strokeStyle = this.fillColor || underlineColor
     ctx.lineWidth = scale

@@ -29,7 +29,8 @@ export class PageNumber {
         format,
         startPageNo,
         fromPageNo
-      }
+      },
+      direction
     } = this.options
     if (pageNo < fromPageNo) return
     // 处理页码格式
@@ -64,16 +65,18 @@ export class PageNumber {
     ctx.fillStyle = color
     ctx.font = `${size * scale}px ${font}`
     // 计算x位置-居左、居中、居右
-    // TODO 需要进行 rtl 适配计算
     let x = 0
     const margins = this.draw.getMargins()
     const { width: textWidth } = ctx.measureText(text)
     if (rowFlex === RowFlex.CENTER) {
-      x = (width - textWidth) / 2
-    } else if (rowFlex === RowFlex.RIGHT) {
+      x =
+        direction === 'rtl'
+          ? width - (width - textWidth) / 2
+          : (width - textWidth) / 2
+    } else if (direction === 'ltr' && rowFlex === RowFlex.RIGHT) {
       x = width - textWidth - margins[1]
     } else {
-      x = margins[3]
+      x = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     }
     ctx.fillText(text, x, y)
     ctx.restore()

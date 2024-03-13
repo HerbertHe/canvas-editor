@@ -1789,7 +1789,7 @@ export class Draw {
           // 修复 rtl 超链接不正确的渲染起点坐标
           this.underline.recordFillInfo(
             ctx,
-            direction === 'rtl' ? x : x - offsetX,
+            direction === 'rtl' ? x + offsetX : x - offsetX,
             y + curRow.height - rowMargin + offsetY,
             metrics.width + offsetX,
             0,

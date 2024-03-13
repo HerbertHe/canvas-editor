@@ -64,6 +64,7 @@ export class PageNumber {
     ctx.fillStyle = color
     ctx.font = `${size * scale}px ${font}`
     // 计算x位置-居左、居中、居右
+    // TODO 需要进行 rtl 适配计算
     let x = 0
     const margins = this.draw.getMargins()
     const { width: textWidth } = ctx.measureText(text)

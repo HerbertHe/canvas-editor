@@ -59,10 +59,12 @@ export class Header {
   }
 
   private _computePositionList() {
+    const { direction } = this.options
     const headerTop = this.getHeaderTop()
     const innerWidth = this.draw.getInnerWidth()
     const margins = this.draw.getMargins()
-    const startX = margins[3]
+    // 更新起始坐标计算
+    const startX = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     const startY = headerTop
     this.position.computePageRowPosition({
       positionList: this.positionList,
@@ -127,6 +129,7 @@ export class Header {
       rowList.push(row)
       curRowHeight += row.height
     }
+    console.log('页眉', this.elementList, this.positionList)
     this.draw.drawRow(ctx, {
       elementList: this.elementList,
       positionList: this.positionList,

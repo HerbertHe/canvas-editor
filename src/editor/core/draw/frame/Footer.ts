@@ -59,10 +59,11 @@ export class Footer {
   }
 
   private _computePositionList() {
+    const { direction } = this.options
     const footerBottom = this.getFooterBottom()
     const innerWidth = this.draw.getInnerWidth()
     const margins = this.draw.getMargins()
-    const startX = margins[3]
+    const startX = direction === 'rtl' ? innerWidth + margins[3] : margins[3]
     // 页面高度 - 页脚顶部距离页面底部高度
     const pageHeight = this.draw.getHeight()
     const footerHeight = this.getHeight()

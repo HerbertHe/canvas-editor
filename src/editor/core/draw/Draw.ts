@@ -1702,7 +1702,10 @@ export class Draw {
         } else if (element.type === ElementType.DATE) {
           const next = curRow.elementList[j + 1]
           // 设置释放之前的
-          if (!preElement || (!!preElement && preElement.type !== 'date')) {
+          if (
+            !preElement ||
+            (!!preElement && preElement.type !== ElementType.DATE)
+          ) {
             this._drawRichText(ctx)
           }
 

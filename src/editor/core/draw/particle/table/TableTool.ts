@@ -57,25 +57,28 @@ export class TableTool {
   }
 
   public render() {
+    // TODO rtl 绘制偏移问题
     const { isTable, index, trIndex, tdIndex } =
       this.position.getPositionContext()
     if (!isTable) return
     // 销毁之前工具
     this.dispose()
     // 渲染所需数据
-    const { scale } = this.options
+    const { scale, direction } = this.options
     const elementList = this.draw.getOriginalElementList()
     const positionList = this.position.getOriginalPositionList()
     const element = elementList[index!]
     const position = positionList[index!]
     const { colgroup, trList } = element
     const {
-      coordinate: { leftTop }
+      coordinate: { leftTop, rightTop }
     } = position
     const height = this.draw.getHeight()
     const pageGap = this.draw.getPageGap()
     const prePageHeight = this.draw.getPageNo() * (height + pageGap)
-    const tableX = leftTop[0]
+    // TODO 重新计算 tableX
+    const ox = positionList[0].coordinate.leftTop[0]
+    const tableX = direction === 'rtl' ? 2 * ox - rightTop[0] : leftTop[0]
     const tableY = leftTop[1] + prePageHeight
     const td = element.trList![trIndex!].tdList[tdIndex!]
     const rowIndex = td.rowIndex
@@ -84,6 +87,7 @@ export class TableTool {
     const rowHeightList = trList!.map(tr => tr.height)
     const rowContainer = document.createElement('div')
     rowContainer.classList.add(`${EDITOR_PREFIX}-table-tool__row`)
+    rowContainer.setAttribute('dir', direction)
     rowContainer.style.transform = `translateX(-${
       this.ROW_COL_OFFSET * scale
     }px)`
@@ -108,8 +112,10 @@ export class TableTool {
       rowItem.style.height = `${rowHeight}px`
       rowContainer.append(rowItem)
     }
+    // TODO 画反了
     rowContainer.style.left = `${tableX}px`
     rowContainer.style.top = `${tableY}px`
+    console.log(rowContainer)
     this.container.append(rowContainer)
     this.toolRowContainer = rowContainer
 
@@ -117,6 +123,7 @@ export class TableTool {
     const colWidthList = colgroup!.map(col => col.width)
     const colContainer = document.createElement('div')
     colContainer.classList.add(`${EDITOR_PREFIX}-table-tool__col`)
+    colContainer.setAttribute('dir', direction)
     colContainer.style.transform = `translateY(-${
       this.ROW_COL_OFFSET * scale
     }px)`
@@ -139,7 +146,11 @@ export class TableTool {
       }
       colItem.append(colItemAnchor)
       colItem.style.width = `${colWidth}px`
-      colContainer.append(colItem)
+      if (direction === 'rtl') {
+        colContainer.prepend(colItem)
+      } else {
+        colContainer.append(colItem)
+      }
     }
     colContainer.style.left = `${tableX}px`
     colContainer.style.top = `${tableY}px`
@@ -151,6 +162,7 @@ export class TableTool {
     const tableWidth = element.width! * scale
     const borderContainer = document.createElement('div')
     borderContainer.classList.add(`${EDITOR_PREFIX}-table-tool__border`)
+    borderContainer.setAttribute('dir', direction)
     borderContainer.style.height = `${tableHeight}px`
     borderContainer.style.width = `${tableWidth}px`
     borderContainer.style.left = `${tableX}px`

@@ -1690,7 +1690,7 @@ export class Draw {
           this.laTexParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TABLE) {
           if (isCrossRowCol) {
-            rangeRecord.x = x
+            rangeRecord.x = graphX
             rangeRecord.y = y
             tableRangeElement = element
           }
@@ -1839,7 +1839,7 @@ export class Draw {
               }
               // 记录第一次位置、行高
               if (!rangeRecord.width) {
-                rangeRecord.x = x
+                rangeRecord.x = graphX
                 rangeRecord.y = y
                 rangeRecord.height = curRow.height
               }
@@ -1855,6 +1855,7 @@ export class Draw {
         // 绘制表格内元素
         if (element.type === ElementType.TABLE) {
           // BUG table 渲染存在 bug
+          console.log(element)
           const tdPaddingWidth = tdPadding[1] + tdPadding[3]
           for (let t = 0; t < element.trList!.length; t++) {
             const tr = element.trList![t]
@@ -1875,6 +1876,7 @@ export class Draw {
       }
       // 绘制列表样式
       if (curRow.isList) {
+        // BUG 表格列表绘制错误
         this.listParticle.drawListStyle(
           ctx,
           curRow,

@@ -1704,18 +1704,12 @@ export class Draw {
           // this.textParticle.record(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
-          // 设置释放之前的
-          if (
-            !preElement ||
-            (!!preElement && preElement.type !== ElementType.DATE)
-          ) {
+          if (!preElement || preElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
-
           this.textParticle.record(ctx, element, x, y + offsetY)
-          if (!nextElement) {
-            // 手动触发渲染
-            this.textParticle.complete()
+          if (!nextElement || nextElement.dateId !== element.dateId) {
+            this._drawRichText(ctx)
           }
         } else if (element.type === ElementType.SUPERSCRIPT) {
           this._drawRichText(ctx)

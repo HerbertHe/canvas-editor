@@ -1818,6 +1818,7 @@ export class Draw {
         ) {
           // 从行尾开始-绘制最小宽度
           if (startIndex === index) {
+            // TODO 选区记录在 rtl 下错误的坐标偏移，对光标来说又是正常的
             const nextElement = curRow.elementList[startIndex + 1]
             if (nextElement && nextElement.value === ZERO) {
               rangeRecord.x = x + metrics.width
@@ -1839,7 +1840,7 @@ export class Draw {
               }
               // 记录第一次位置、行高
               if (!rangeRecord.width) {
-                rangeRecord.x = graphX
+                rangeRecord.x = x
                 rangeRecord.y = y
                 rangeRecord.height = curRow.height
               }
@@ -1861,10 +1862,16 @@ export class Draw {
             const tr = element.trList![t]
             for (let d = 0; d < tr.tdList!.length; d++) {
               const td = tr.tdList[d]
+              // 初始化赋值方向
+              const rowList = td.rowList!.map(r => ({
+                ...r,
+                rowFlex: direction === 'rtl' ? RowFlex.RIGHT : RowFlex.LEFT
+              }))
+              console.log(rowList)
               this.drawRow(ctx, {
                 elementList: td.value,
                 positionList: td.positionList!,
-                rowList: td.rowList!,
+                rowList,
                 pageNo,
                 startIndex: 0,
                 innerWidth: (td.width! - tdPaddingWidth) * scale,
@@ -1876,7 +1883,6 @@ export class Draw {
       }
       // 绘制列表样式
       if (curRow.isList) {
-        // BUG 表格列表绘制错误
         this.listParticle.drawListStyle(
           ctx,
           curRow,

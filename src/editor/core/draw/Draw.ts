@@ -1696,12 +1696,13 @@ export class Draw {
           }
           this.tableParticle.render(ctx, element, graphX, y)
         } else if (element.type === ElementType.HYPERLINK) {
-          this._drawRichText(ctx)
+          // this._drawRichText(ctx)
           // BUG 超链接渲染存在问题, 渲染存在缺陷
           // BUG 存在两个错误，第一个是 underline 的坐标和文本不是同一坐标
           // 第二个是，超链接的绘制也不能是单个字符的
-          this.hyperlinkParticle.render(ctx, element, x, y + offsetY)
-          // this.textParticle.record(ctx, element, x, y + offsetY)
+          // BUG 这里记录 underline 的坐标是错误的
+          this.hyperlinkParticle.render(ctx, element)
+          this.textParticle.record(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
           if (!preElement || preElement.dateId !== element.dateId) {
@@ -1818,7 +1819,6 @@ export class Draw {
         ) {
           // 从行尾开始-绘制最小宽度
           if (startIndex === index) {
-            // TODO 选区记录在 rtl 下错误的坐标偏移，对光标来说又是正常的
             const nextElement = curRow.elementList[startIndex + 1]
             if (nextElement && nextElement.value === ZERO) {
               rangeRecord.x = x + metrics.width

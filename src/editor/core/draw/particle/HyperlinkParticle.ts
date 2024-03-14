@@ -65,12 +65,7 @@ export class HyperlinkParticle {
     }
   }
 
-  public render(
-    ctx: CanvasRenderingContext2D,
-    element: IRowElement,
-    x: number,
-    y: number
-  ) {
+  public render(ctx: CanvasRenderingContext2D, element: IRowElement) {
     ctx.save()
     ctx.font = element.style
     if (!element.color) {
@@ -80,7 +75,7 @@ export class HyperlinkParticle {
     if (element.underline === undefined) {
       element.underline = true
     }
-    ctx.fillText(element.value, x, y)
+    // ctx.fillText(element.value, x, y)
     ctx.restore()
   }
 }

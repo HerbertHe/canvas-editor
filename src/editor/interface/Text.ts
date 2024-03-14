@@ -13,3 +13,12 @@ export interface ITextMetrics {
 export interface ITextDecoration {
   style?: TextDecorationStyle
 }
+
+export interface ITextRenderItem {
+  value: string
+  width: number[]
+  style: string
+  color?: string
+  x: number
+  y: number
+}

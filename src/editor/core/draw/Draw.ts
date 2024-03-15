@@ -19,8 +19,8 @@ import {
 } from '../../interface/Editor'
 import {
   IElement,
-  IElementMetrics,
   IElementFillRect,
+  IElementMetrics,
   IElementStyle
 } from '../../interface/Element'
 import { IRow, IRowElement } from '../../interface/Row'
@@ -33,7 +33,7 @@ import { Listener } from '../listener/Listener'
 import { Position } from '../position/Position'
 import { RangeManager } from '../range/RangeManager'
 import { Background } from './frame/Background'
-import { Highlight } from './richtext/Highlight'
+// import { Highlight } from './richtext/Highlight'
 import { Margin } from './frame/Margin'
 import { Search } from './interactive/Search'
 import { Strikeout } from './richtext/Strikeout'
@@ -117,7 +117,7 @@ export class Draw {
   private group: Group
   private underline: Underline
   private strikeout: Strikeout
-  private highlight: Highlight
+  // private highlight: Highlight
   private historyManager: HistoryManager
   private previewer: Previewer
   private imageParticle: ImageParticle
@@ -196,7 +196,7 @@ export class Draw {
     this.group = new Group(this)
     this.underline = new Underline(this)
     this.strikeout = new Strikeout(this)
-    this.highlight = new Highlight(this)
+    // this.highlight = new Highlight(this)
     this.previewer = new Previewer(this)
     this.imageParticle = new ImageParticle(this)
     this.laTexParticle = new LaTexParticle(this)
@@ -1603,24 +1603,18 @@ export class Draw {
   }
 
   private _drawRichText(ctx: CanvasRenderingContext2D) {
-    this.underline.render(ctx)
-    this.strikeout.render(ctx)
-    this.highlight.render(ctx)
+    console.log(ctx)
     this.textParticle.complete()
+    // this.underline.render(ctx)
+    // this.strikeout.render(ctx)
+    // this.highlight.render(ctx)
   }
 
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
     // TODO LTR 切换时，要重新计算坐标重置 元素绘制点
     const { rowList, pageNo, positionList, startIndex, zone } = payload
     const isPrintMode = this.mode === EditorMode.PRINT
-    const {
-      scale,
-      tdPadding,
-      defaultBasicRowMarginHeight,
-      defaultRowMargin,
-      group,
-      direction
-    } = this.options
+    const { scale, tdPadding, group, direction } = this.options
     const { isCrossRowCol, tableId } = this.range.getRange()
     let index = startIndex
     for (let i = 0; i < rowList.length; i++) {
@@ -1654,28 +1648,29 @@ export class Draw {
         // 修复绘制依赖坐标的问题
         const preElement = curRow.elementList[j - 1]
         // 元素高亮记录
-        if (element.highlight) {
-          // BUG 处理高亮问题
-          // 高亮元素相连需立即绘制，并记录下一元素坐标
-          if (
-            preElement &&
-            preElement.highlight &&
-            preElement.highlight !== element.highlight
-          ) {
-            this.highlight.render(ctx)
-          }
-          // BUG 高亮记录的坐标是错误的
-          this.highlight.recordFillInfo(
-            ctx,
-            x,
-            y,
-            metrics.width,
-            curRow.height,
-            element.highlight
-          )
-        } else if (preElement?.highlight) {
-          this.highlight.render(ctx)
-        }
+        // TODO 按行绘制
+        // if (element.highlight) {
+        //   // BUG 处理高亮问题
+        //   // 高亮元素相连需立即绘制，并记录下一元素坐标
+        //   if (
+        //     preElement &&
+        //     preElement.highlight &&
+        //     preElement.highlight !== element.highlight
+        //   ) {
+        //     this.highlight.render(ctx)
+        //   }
+        //   // BUG 高亮记录的坐标是错误的
+        //   this.highlight.recordFillInfo(
+        //     ctx,
+        //     x,
+        //     y,
+        //     metrics.width,
+        //     curRow.height,
+        //     element.highlight
+        //   )
+        // } else if (preElement?.highlight) {
+        //   this.highlight.render(ctx)
+        // }
         // 元素绘制
         if (element.type === ElementType.IMAGE) {
           this._drawRichText(ctx)
@@ -1703,25 +1698,13 @@ export class Draw {
           // 第二个是，超链接的绘制也不能是单个字符的
           // BUG 这里记录 underline 的坐标是错误的
           this.hyperlinkParticle.render(ctx, element)
-          this.textParticle.record(
-            ctx,
-            element,
-            x,
-            y + offsetY,
-            positionList[curRow.startIndex + j]
-          )
+          this.textParticle.record(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
           if (!preElement || preElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
-          this.textParticle.record(
-            ctx,
-            element,
-            x,
-            y + offsetY,
-            positionList[curRow.startIndex + j]
-          )
+          this.textParticle.record(ctx, element, x, y + offsetY)
           if (!nextElement || nextElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
@@ -1747,107 +1730,15 @@ export class Draw {
           this._drawRichText(ctx)
         } else if (element.rowFlex === RowFlex.ALIGNMENT) {
           // 如果是两端对齐，因canvas目前不支持letterSpacing需单独绘制文本
-          this.textParticle.record(
-            ctx,
-            element,
-            x,
-            y + offsetY,
-            positionList[curRow.startIndex + j]
-          )
+          this.textParticle.record(ctx, element, x, y + offsetY)
           this._drawRichText(ctx)
         } else if (element.type === ElementType.BLOCK) {
           this._drawRichText(ctx)
           this.blockParticle.render(pageNo, element, x, y)
         } else {
-          // 如果当前元素设置左偏移，则上一元素立即绘制
-          if (element.left) {
-            // TODO 需要验证
-            this.textParticle.complete()
-          }
-          this.textParticle.record(
-            ctx,
-            element,
-            x,
-            y + offsetY,
-            positionList[curRow.startIndex + j]
-          )
-          // 如果设置字宽、字间距需单独绘制
-          if (element.width || element.letterSpacing) {
-            this.textParticle.complete()
-          }
+          this.textParticle.record(ctx, element, x, y + offsetY)
         }
 
-        // 下划线记录
-        if (element.underline || element.control?.underline) {
-          // 上下标元素下划线单独绘制
-          if (
-            (preElement?.type === ElementType.SUPERSCRIPT &&
-              element.type !== ElementType.SUPERSCRIPT) ||
-            (preElement?.type === ElementType.SUBSCRIPT &&
-              element.type !== ElementType.SUBSCRIPT)
-          ) {
-            this.underline.render(ctx)
-          }
-          // 行间距
-          const rowMargin =
-            defaultBasicRowMarginHeight *
-            (element.rowMargin || defaultRowMargin) *
-            scale
-          // 元素向左偏移量
-          const offsetX = element.left || 0
-          // 上下标元素y轴偏移值
-          let offsetY = 0
-          if (element.type === ElementType.SUBSCRIPT) {
-            offsetY = this.subscriptParticle.getOffsetY(element)
-          } else if (element.type === ElementType.SUPERSCRIPT) {
-            offsetY = this.superscriptParticle.getOffsetY(element)
-          }
-          // 占位符不参与颜色计算
-          const color =
-            element.controlComponent === ControlComponent.PLACEHOLDER
-              ? undefined
-              : element.color
-
-          // 修复 rtl 超链接不正确的渲染起点坐标
-          // TODO 整行计算、整行绘制
-          const {
-            coordinate: {
-              leftTop: [lx]
-            }
-          } = positionList[curRow.startIndex + j]
-          const x = direction === 'rtl' ? 2 * ox - lx : lx
-          // TODO underline 需要整行记录，整行绘制
-          this.underline.recordFillInfo(
-            ctx,
-            direction === 'rtl' ? x + offsetX : x - offsetX,
-            y + curRow.height - rowMargin + offsetY,
-            metrics.width + offsetX,
-            0,
-            color,
-            element.textDecoration?.style
-          )
-        } else if (preElement?.underline || preElement?.control?.underline) {
-          this.underline.render(ctx)
-        }
-        // 删除线记录
-        if (element.strikeout) {
-          // TODO 修改 x 坐标, 要重新计算 lx
-          const {
-            coordinate: {
-              leftTop: [lx]
-            }
-          } = positionList[curRow.startIndex + j]
-          const x = direction === 'rtl' ? 2 * ox - lx : lx
-          this.strikeout.recordFillInfo(
-            ctx,
-            x,
-            y + curRow.height / 2,
-            metrics.width
-          )
-        } else if (preElement?.strikeout) {
-          this.strikeout.render(ctx)
-        }
-        // 选区记录
         const {
           zone: currentZone,
           startIndex,
@@ -1931,9 +1822,59 @@ export class Draw {
           positionList[curRow.startIndex]
         )
       }
-      // 绘制富文本及文字
+
+      // 按行绘制富文本及文字
+      // 重排列触发时机不对
+      if (direction === 'rtl') {
+        this.textParticle.reQueue()
+      }
+
+      // 按行绘制
+      // TODO range 计算存在问题
+      this.textParticle.getTextRenderQueue().forEach(textItem => {
+        // TODO 需要处理手动触发 underline 的绘制问题
+        const { x, y, width } = textItem
+        const el = textItem.elements[0]
+        const widthSum = width.reduce((prev, curr) => prev + curr)
+        // 绘制 highlight, underline 和 strikeout
+        // if (el.highlight) {
+
+        // }
+
+        if (el.underline) {
+          // 元素向左偏移量
+          const offsetX = el.left || 0
+          // 上下标元素y轴偏移值
+          let offsetY = 0
+          if (el.type === ElementType.SUBSCRIPT) {
+            offsetY = this.subscriptParticle.getOffsetY(el)
+          } else if (el.type === ElementType.SUPERSCRIPT) {
+            offsetY = this.superscriptParticle.getOffsetY(el)
+          }
+          // 占位符不参与颜色计算
+          const color =
+            el.controlComponent === ControlComponent.PLACEHOLDER
+              ? undefined
+              : el.color
+
+          // 修复 rtl 超链接不正确的渲染起点坐标
+          // underline 为单元素绘制
+          this.underline.render(
+            ctx,
+            direction === 'rtl' ? x + offsetX : x - offsetX,
+            y + offsetY,
+            widthSum + offsetX,
+            color,
+            el.textDecoration?.style
+          )
+        }
+
+        if (el.strikeout) {
+          this.strikeout.render(ctx, x, y + curRow.height / 2, widthSum)
+        }
+      })
+
       this._drawRichText(ctx)
-      // TODO 整行记录 underline 等，要进行整行绘制
       // 绘制批注样式
       this.group.render(ctx)
       // 绘制选区

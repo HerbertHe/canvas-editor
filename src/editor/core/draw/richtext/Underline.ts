@@ -1,13 +1,11 @@
-import { AbstractRichText } from './AbstractRichText'
 import { IEditorOption } from '../../../interface/Editor'
 import { Draw } from '../Draw'
 import { DashType, TextDecorationStyle } from '../../../dataset/enum/Text'
 
-export class Underline extends AbstractRichText {
+export class Underline {
   private options: Required<IEditorOption>
 
   constructor(draw: Draw) {
-    super()
     this.options = draw.getOptions()
   }
 
@@ -75,33 +73,37 @@ export class Underline extends AbstractRichText {
     ctx.stroke()
   }
 
-  public render(ctx: CanvasRenderingContext2D) {
-    if (!this.fillRect.width) return
+  public render(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    color?: string,
+    decorationStyle?: TextDecorationStyle
+  ) {
     const { underlineColor, scale, direction } = this.options
-    const { x: rawX, y, width } = this.fillRect
-    const x = direction === 'rtl' ? rawX - width : rawX
+    const calcX = direction === 'rtl' ? x - width : x
     ctx.save()
-    ctx.strokeStyle = this.fillColor || underlineColor
+    ctx.strokeStyle = color || underlineColor
     ctx.lineWidth = scale
     const adjustY = Math.floor(y + 2 * ctx.lineWidth) + 0.5 // +0.5从1处渲染，避免线宽度等于3
-    switch (this.fillDecorationStyle) {
+    switch (decorationStyle) {
       case TextDecorationStyle.WAVY:
-        this._drawWave(ctx, x, adjustY, width)
+        this._drawWave(ctx, calcX, adjustY, width)
         break
       case TextDecorationStyle.DOUBLE:
-        this._drawDouble(ctx, x, adjustY, width)
+        this._drawDouble(ctx, calcX, adjustY, width)
         break
       case TextDecorationStyle.DASHED:
-        this._drawLine(ctx, x, adjustY, width, DashType.DASHED)
+        this._drawLine(ctx, calcX, adjustY, width, DashType.DASHED)
         break
       case TextDecorationStyle.DOTTED:
-        this._drawLine(ctx, x, adjustY, width, DashType.DOTTED)
+        this._drawLine(ctx, calcX, adjustY, width, DashType.DOTTED)
         break
       default:
-        this._drawLine(ctx, x, adjustY, width)
+        this._drawLine(ctx, calcX, adjustY, width)
         break
     }
     ctx.restore()
-    this.clearFillInfo()
   }
 }

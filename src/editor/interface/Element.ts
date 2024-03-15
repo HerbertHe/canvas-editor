@@ -156,6 +156,7 @@ export interface IElementPosition {
   }
 }
 
+// TODO 过期类型删除
 export interface IElementFillRect {
   x: number
   y: number

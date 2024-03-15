@@ -1,6 +1,7 @@
 import { ElementType, IEditorOption, IElement } from '../../..'
 import { PUNCTUATION_LIST } from '../../../dataset/constant/Common'
 import { DeepRequired } from '../../../interface/Common'
+import { IElementPosition } from '../../../interface/Element'
 import { IRowElement } from '../../../interface/Row'
 import { ITextMetrics, ITextRenderItem } from '../../../interface/Text'
 import { Draw } from '../Draw'
@@ -101,7 +102,8 @@ export class TextParticle {
     ctx: CanvasRenderingContext2D,
     element: IRowElement,
     x: number,
-    y: number
+    y: number,
+    position: IElementPosition
   ) {
     this.ctx = ctx
     const { value, style, color, metrics } = element
@@ -114,8 +116,11 @@ export class TextParticle {
       if (this.textRenderQueue.length !== 0) {
         this._fixRTLSymbols()
       }
+
+      // position 坐标用于进行计算
       this.textRenderQueue.push({
         value,
+        positions: [position],
         width: [metrics.width],
         style,
         color,
@@ -128,6 +133,9 @@ export class TextParticle {
           metrics.width
         )
         this.textRenderQueue[this.textRenderQueue.length - 1].value += value
+        this.textRenderQueue[this.textRenderQueue.length - 1].positions.push(
+          position
+        )
       } else {
         // 在 push 之前修复错误的符号结尾
         if (this.textRenderQueue.length !== 0) {
@@ -135,6 +143,7 @@ export class TextParticle {
         }
         this.textRenderQueue.push({
           value,
+          positions: [position],
           width: [metrics.width],
           style,
           color,
@@ -162,13 +171,22 @@ export class TextParticle {
         0,
         -1
       )
-      const poped =
+      const width_poped =
         this.textRenderQueue[this.textRenderQueue.length - 1].width.pop()!
-      this.textRenderQueue.push({ ...args, width: [poped], value: lc })
+      const position_poped =
+        this.textRenderQueue[this.textRenderQueue.length - 1].positions.pop()!
+      // 修正成员
+      this.textRenderQueue.push({
+        ...args,
+        positions: [position_poped],
+        width: [width_poped],
+        value: lc
+      })
     }
   }
 
-  private _reQueue() {
+  // 进行外部触发
+  public reQueue() {
     if (this.textRenderQueue.length === 1) {
       return
     }
@@ -193,11 +211,23 @@ export class TextParticle {
     }
 
     // 重新计算坐标
-    this.textRenderQueue = result.map(r => {
+    this.textRenderQueue = result.map((r, idx) => {
+      const x = startX - offsetX
       const res = {
         ...r,
-        x: startX - offsetX
-      }
+        // TODO 修改 position 坐标
+        positions: r.positions.map(p => ({
+          ...p,
+          coordinate: {
+            leftTop: [x, p.coordinate.leftTop[1]],
+            leftBottom: [x, p.coordinate.leftBottom[1]],
+            rightTop: [x + r.width[idx], p.coordinate.rightTop[1]],
+            rightBottom: [x + r.width[idx], p.coordinate.rightBottom[1]]
+          }
+        })),
+        x
+      } as ITextRenderItem
+
       offsetX += r.width.reduce((prev, curr) => {
         return prev + curr
       })
@@ -230,14 +260,6 @@ export class TextParticle {
 
   private _render() {
     if (this.textRenderQueue.length === 0) return
-
-    const { direction } = this.options
-    if (direction === 'rtl') {
-      this._reQueue()
-      // TODO 重新计算给 underline 一个正确的 x坐标, 要修改此 element 的坐标才行
-      // TODO 修改 underline, strikeout 坐标
-    }
-
     this.ctx.save()
     this.textRenderQueue.forEach(({ value, color, style, x, y }) => {
       this.ctx.font = style

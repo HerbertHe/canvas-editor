@@ -1,4 +1,5 @@
 import { TextDecorationStyle } from '../dataset/enum/Text'
+import { IElementPosition } from './Element'
 
 export interface ITextMetrics {
   width: number
@@ -16,6 +17,7 @@ export interface ITextDecoration {
 
 export interface ITextRenderItem {
   value: string
+  positions: IElementPosition[]
   width: number[]
   style: string
   color?: string

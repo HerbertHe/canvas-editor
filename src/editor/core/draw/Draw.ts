@@ -1610,6 +1610,7 @@ export class Draw {
   }
 
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
+    // TODO LTR 切换时，要重新计算坐标重置 元素绘制点
     const { rowList, pageNo, positionList, startIndex, zone } = payload
     const isPrintMode = this.mode === EditorMode.PRINT
     const {
@@ -1702,13 +1703,25 @@ export class Draw {
           // 第二个是，超链接的绘制也不能是单个字符的
           // BUG 这里记录 underline 的坐标是错误的
           this.hyperlinkParticle.render(ctx, element)
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
           if (!preElement || preElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
           if (!nextElement || nextElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
@@ -1734,7 +1747,13 @@ export class Draw {
           this._drawRichText(ctx)
         } else if (element.rowFlex === RowFlex.ALIGNMENT) {
           // 如果是两端对齐，因canvas目前不支持letterSpacing需单独绘制文本
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
           this._drawRichText(ctx)
         } else if (element.type === ElementType.BLOCK) {
           this._drawRichText(ctx)
@@ -1742,14 +1761,22 @@ export class Draw {
         } else {
           // 如果当前元素设置左偏移，则上一元素立即绘制
           if (element.left) {
+            // TODO 需要验证
             this.textParticle.complete()
           }
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
           // 如果设置字宽、字间距需单独绘制
           if (element.width || element.letterSpacing) {
             this.textParticle.complete()
           }
         }
+
         // 下划线记录
         if (element.underline || element.control?.underline) {
           // 上下标元素下划线单独绘制
@@ -1782,6 +1809,14 @@ export class Draw {
               : element.color
 
           // 修复 rtl 超链接不正确的渲染起点坐标
+          // TODO 整行计算、整行绘制
+          const {
+            coordinate: {
+              leftTop: [lx]
+            }
+          } = positionList[curRow.startIndex + j]
+          const x = direction === 'rtl' ? 2 * ox - lx : lx
+          // TODO underline 需要整行记录，整行绘制
           this.underline.recordFillInfo(
             ctx,
             direction === 'rtl' ? x + offsetX : x - offsetX,
@@ -1796,6 +1831,13 @@ export class Draw {
         }
         // 删除线记录
         if (element.strikeout) {
+          // TODO 修改 x 坐标, 要重新计算 lx
+          const {
+            coordinate: {
+              leftTop: [lx]
+            }
+          } = positionList[curRow.startIndex + j]
+          const x = direction === 'rtl' ? 2 * ox - lx : lx
           this.strikeout.recordFillInfo(
             ctx,
             x,
@@ -1891,6 +1933,7 @@ export class Draw {
       }
       // 绘制富文本及文字
       this._drawRichText(ctx)
+      // TODO 整行记录 underline 等，要进行整行绘制
       // 绘制批注样式
       this.group.render(ctx)
       // 绘制选区

@@ -1692,19 +1692,26 @@ export class Draw {
           }
           this.tableParticle.render(ctx, element, graphX, y)
         } else if (element.type === ElementType.HYPERLINK) {
-          // this._drawRichText(ctx)
-          // BUG 超链接渲染存在问题, 渲染存在缺陷
-          // BUG 存在两个错误，第一个是 underline 的坐标和文本不是同一坐标
-          // 第二个是，超链接的绘制也不能是单个字符的
-          // BUG 这里记录 underline 的坐标是错误的
           this.hyperlinkParticle.render(ctx, element)
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
           if (!preElement || preElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
           if (!nextElement || nextElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
@@ -1730,13 +1737,25 @@ export class Draw {
           this._drawRichText(ctx)
         } else if (element.rowFlex === RowFlex.ALIGNMENT) {
           // 如果是两端对齐，因canvas目前不支持letterSpacing需单独绘制文本
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
           this._drawRichText(ctx)
         } else if (element.type === ElementType.BLOCK) {
           this._drawRichText(ctx)
           this.blockParticle.render(pageNo, element, x, y)
         } else {
-          this.textParticle.record(ctx, element, x, y + offsetY)
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
         }
 
         const {
@@ -1830,7 +1849,7 @@ export class Draw {
       }
 
       // 按行绘制
-      // TODO range 计算存在问题
+      // TODO range 计算存在问题, 要处理 command 差异
       this.textParticle.getTextRenderQueue().forEach(textItem => {
         // TODO 需要处理手动触发 underline 的绘制问题
         const { x, y, width } = textItem
@@ -1880,7 +1899,7 @@ export class Draw {
       // 绘制选区
       if (!isPrintMode) {
         if (rangeRecord.width && rangeRecord.height) {
-          // BUG 绘制选区的问题
+          // BUG 绘制选区的问题, 重排之后
           const { x, y, width, height } = rangeRecord
           this.range.render(ctx, x, y, width, height)
         }

@@ -136,6 +136,13 @@ export interface IElementMetrics {
   boundingBoxDescent: number
 }
 
+interface IElementPositionCoordinate {
+  leftTop: number[]
+  leftBottom: number[]
+  rightTop: number[]
+  rightBottom: number[]
+}
+
 export interface IElementPosition {
   pageNo: number
   index: number
@@ -148,12 +155,9 @@ export interface IElementPosition {
   metrics: IElementMetrics
   isFirstLetter: boolean
   isLastLetter: boolean
-  coordinate: {
-    leftTop: number[]
-    leftBottom: number[]
-    rightTop: number[]
-    rightBottom: number[]
-  }
+  coordinate: IElementPositionCoordinate
+  // RTL 适配绘制坐标
+  rtlCoordinate?: IElementPositionCoordinate
 }
 
 // TODO 过期类型删除

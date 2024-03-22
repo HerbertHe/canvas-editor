@@ -517,6 +517,7 @@ export class CommandAdapt {
         isCompute: false
       })
     } else {
+      // TODO 修复重排时 range 选择的错误坐标问题
       const { endIndex } = this.range.getRange()
       const elementList = this.draw.getElementList()
       const enterElement = elementList[endIndex]

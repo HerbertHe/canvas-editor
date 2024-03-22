@@ -1,7 +1,7 @@
 import { ElementType, IEditorOption, IElement } from '../../..'
 import { PUNCTUATION_LIST } from '../../../dataset/constant/Common'
 import { DeepRequired } from '../../../interface/Common'
-import { IElementPosition } from '../../../interface/Element'
+import { IElementBasic, IElementPosition } from '../../../interface/Element'
 import { IRowElement } from '../../../interface/Row'
 import { ITextMetrics, ITextRenderItem } from '../../../interface/Text'
 import { Draw } from '../Draw'
@@ -17,6 +17,7 @@ export class TextParticle {
 
   private ctx: CanvasRenderingContext2D
   private textRenderQueue: ITextRenderItem[]
+  private curType: IElementBasic['type']
   private curStyle: string
   private curColor?: string
   public cacheMeasureText: Map<string, TextMetrics>
@@ -26,6 +27,7 @@ export class TextParticle {
     this.options = draw.getOptions()
     this.ctx = draw.getCtx()
     this.textRenderQueue = []
+    this.curType = undefined
     this.curStyle = ''
     this.cacheMeasureText = new Map()
   }
@@ -107,14 +109,24 @@ export class TextParticle {
   ) {
     this.ctx = ctx
     const { direction } = this.options
-    const { value, style, color, metrics } = element
-    // 样式发生改变
+    const { value, style, color, metrics, type } = element
+    // 样式发生改变, 元素类型发生了改变
+
+    let offsetY = 0
+    if (type === ElementType.SUPERSCRIPT) {
+      offsetY = -element.metrics.height / 2
+    } else if (type === ElementType.SUBSCRIPT) {
+      offsetY = element.metrics.height / 2
+    }
+
     if (
+      (this.curType && element.type !== this.curType) ||
       (this.curStyle && element.style !== this.curStyle) ||
       element.color !== this.curColor ||
-      element.width ||
-      element.letterSpacing
+      element.width
+      // element.letterSpacing === 0
     ) {
+      // TODO 通过 type='control' 和 valueSets 的方式进行计划实现
       // 在 push 之前修复错误的符号结尾
       if (this.textRenderQueue.length !== 0 && direction === 'rtl') {
         this._fixRTLSymbols()
@@ -129,7 +141,7 @@ export class TextParticle {
         style,
         color,
         x,
-        y
+        y: y + offsetY
       })
     } else {
       if (this.textRenderQueue.length !== 0) {
@@ -156,21 +168,28 @@ export class TextParticle {
           style,
           color,
           x,
-          y
+          y: y + offsetY
         })
       }
     }
 
+    this.curType = element.type
     this.curStyle = element.style
     this.curColor = element.color
+
+    if (element.control?.type === 'checkbox') {
+      console.log(element)
+    }
   }
 
   private _fixRTLSymbols() {
     const { value, ...args } =
       this.textRenderQueue[this.textRenderQueue.length - 1]
-    // CJK 标点符号
     const lc = value.charAt(value.length - 1)
+
+    // CJK 标点符号, 处理特殊符号
     if (
+      this._isSpecialCharacter(lc) ||
       /[\u3001-\u303f]/.test(lc) ||
       /[\u0021-\u002f\u003a-\u0040]+/.test(lc)
     ) {
@@ -210,8 +229,13 @@ export class TextParticle {
       const cur = this.textRenderQueue[i]
       const last = this.textRenderQueue[i - 1]
 
-      // 重新进行排队
+      // 重新进行排队，角标强制 ltr
       if (
+        cur.elements[0].type === ElementType.SUPERSCRIPT ||
+        cur.elements[0].type === ElementType.SUBSCRIPT
+      ) {
+        result.unshift(cur)
+      } else if (
         this._isRTLCharacter(cur.value[0]) ||
         this._isRTLCharacter(last.value[0])
       ) {
@@ -223,6 +247,8 @@ export class TextParticle {
 
     // 重新计算坐标, 只计算一次就行了
     this.textRenderQueue = result.map((r, idx) => {
+      // TODO 处理 letterSpacing
+      // TODO control 文本不能连续绘制
       const x = startX - offsetX
       // TODO 赋值 rtlPositions, 方便进行后续取值
       const res = {
@@ -244,10 +270,17 @@ export class TextParticle {
       })
       return res
     })
+
+    console.log(this.textRenderQueue)
   }
 
   public getTextRenderQueue() {
     return this.textRenderQueue
+  }
+
+  private _isSpecialCharacter(c: string) {
+    // TODO 对特殊单位的符号要进行处理
+    return ['℃'].includes(c)
   }
 
   private _isRTLCharacter(c: string) {

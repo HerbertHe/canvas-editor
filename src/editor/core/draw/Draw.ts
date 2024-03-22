@@ -1715,12 +1715,17 @@ export class Draw {
           if (!nextElement || nextElement.dateId !== element.dateId) {
             this._drawRichText(ctx)
           }
-        } else if (element.type === ElementType.SUPERSCRIPT) {
-          this._drawRichText(ctx)
-          this.superscriptParticle.render(ctx, element, x, y + offsetY)
-        } else if (element.type === ElementType.SUBSCRIPT) {
-          this._drawRichText(ctx)
-          this.subscriptParticle.render(ctx, element, x, y + offsetY)
+        } else if (
+          element.type === ElementType.SUPERSCRIPT ||
+          element.type === ElementType.SUBSCRIPT
+        ) {
+          this.textParticle.record(
+            ctx,
+            element,
+            x,
+            y + offsetY,
+            positionList[curRow.startIndex + j]
+          )
         } else if (element.type === ElementType.SEPARATOR) {
           this.separatorParticle.render(ctx, element, lx, y)
         } else if (element.type === ElementType.PAGE_BREAK) {
@@ -1731,7 +1736,7 @@ export class Draw {
           element.type === ElementType.CHECKBOX ||
           element.controlComponent === ControlComponent.CHECKBOX
         ) {
-          this._drawRichText(ctx)
+          // this._drawRichText(ctx)
           this.checkboxParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TAB) {
           this._drawRichText(ctx)

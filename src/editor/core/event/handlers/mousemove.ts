@@ -64,6 +64,7 @@ export function mousemove(evt: MouseEvent, host: CanvasEvent) {
     trIndex: startTrIndex,
     tableId: startTableId
   } = host.mouseDownStartPosition
+  // TODO 修正文本重排之后的 range 错误的范围修复问题, 因为重排之后的 position 和绘制顺序并不能完全由索引进行确定
   const endIndex = isTable ? tdValueIndex! : index
   // 判断是否是表格跨行/列
   const rangeManager = draw.getRange()

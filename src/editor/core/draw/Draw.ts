@@ -1602,14 +1602,6 @@ export class Draw {
     return pageRowList
   }
 
-  private _drawRichText(ctx: CanvasRenderingContext2D) {
-    console.log(ctx)
-    this.textParticle.complete()
-    // this.underline.render(ctx)
-    // this.strikeout.render(ctx)
-    // this.highlight.render(ctx)
-  }
-
   public drawRow(ctx: CanvasRenderingContext2D, payload: IDrawRowPayload) {
     // TODO LTR 切换时，要重新计算坐标重置 元素绘制点
     const { rowList, pageNo, positionList, startIndex, zone } = payload
@@ -1673,7 +1665,7 @@ export class Draw {
         // }
         // 元素绘制
         if (element.type === ElementType.IMAGE) {
-          this._drawRichText(ctx)
+          this.textParticle.complete()
           // 浮动图片单独绘制
           if (
             element.imgDisplay !== ImageDisplay.FLOAT_TOP &&
@@ -1682,7 +1674,7 @@ export class Draw {
             this.imageParticle.render(ctx, element, graphX, y + offsetY)
           }
         } else if (element.type === ElementType.LATEX) {
-          this._drawRichText(ctx)
+          this.textParticle.complete()
           this.laTexParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TABLE) {
           if (isCrossRowCol) {
@@ -1703,7 +1695,7 @@ export class Draw {
         } else if (element.type === ElementType.DATE) {
           const nextElement = curRow.elementList[j + 1]
           if (!preElement || preElement.dateId !== element.dateId) {
-            this._drawRichText(ctx)
+            this.textParticle.complete()
           }
           this.textParticle.record(
             ctx,
@@ -1713,7 +1705,7 @@ export class Draw {
             positionList[curRow.startIndex + j]
           )
           if (!nextElement || nextElement.dateId !== element.dateId) {
-            this._drawRichText(ctx)
+            this.textParticle.complete()
           }
         } else if (
           element.type === ElementType.SUPERSCRIPT ||
@@ -1736,10 +1728,10 @@ export class Draw {
           element.type === ElementType.CHECKBOX ||
           element.controlComponent === ControlComponent.CHECKBOX
         ) {
-          // this._drawRichText(ctx)
+          // this.textParticle.complete()
           this.checkboxParticle.render(ctx, element, graphX, y + offsetY)
         } else if (element.type === ElementType.TAB) {
-          this._drawRichText(ctx)
+          this.textParticle.complete()
         } else if (element.rowFlex === RowFlex.ALIGNMENT) {
           // 如果是两端对齐，因canvas目前不支持letterSpacing需单独绘制文本
           this.textParticle.record(
@@ -1749,9 +1741,9 @@ export class Draw {
             y + offsetY,
             positionList[curRow.startIndex + j]
           )
-          this._drawRichText(ctx)
+          this.textParticle.complete()
         } else if (element.type === ElementType.BLOCK) {
-          this._drawRichText(ctx)
+          this.textParticle.complete()
           this.blockParticle.render(pageNo, element, x, y)
         } else {
           this.textParticle.record(
@@ -1898,7 +1890,7 @@ export class Draw {
         }
       })
 
-      this._drawRichText(ctx)
+      this.textParticle.complete()
       // 绘制批注样式
       this.group.render(ctx)
       // 绘制选区

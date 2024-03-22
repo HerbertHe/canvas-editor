@@ -271,7 +271,7 @@ export class TextParticle {
       return res
     })
 
-    console.log(this.textRenderQueue)
+    // console.log(this.textRenderQueue)
   }
 
   public getTextRenderQueue() {

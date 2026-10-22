@@ -7,10 +7,10 @@ listener 只能响应一个方法，后续不再添加新监听方法，推荐�
 ## 使用方式
 
 ```javascript
-import Editor from "@hufe921/canvas-editor"
+import Editor from '@herberthe/canvas-editor'
 
-const instance = new Editor(container, <IElement[]>data, options)
-instance.listener.eventName = ()=>{}
+const instance = await Editor.create(container, data, options)
+instance.listener.eventName = () => {}
 ```
 
 ## rangeStyleChange
@@ -124,3 +124,17 @@ instance.listener.saved = (payload: IEditorResult) => {}
 ```javascript
 instance.listener.zoneChange = (payload: EditorZone) => {}
 ```
+
+## fontCoverageChange
+
+字体覆盖或下载状态变化时发送当前 `FontCoverageReport` 快照；已解决项移除。
+首次订阅后主动读取快照，避免依赖首次事件时序。内建页面提示无需订阅。
+
+```typescript
+instance.listener.fontCoverageChange = report => {
+  console.log(report.issues)
+}
+const current = instance.getFontCoverageReport()
+```
+
+[完整字体接口与覆盖边界](./font-and-esm-migration.md)。

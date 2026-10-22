@@ -3,9 +3,9 @@
 ## 使用方式
 
 ```javascript
-import Editor from "@hufe921/canvas-editor"
+import Editor from '@herberthe/canvas-editor'
 
-const instance = new Editor(container, <IElement[]>data, options)
+const instance = await Editor.create(container, data, options)
 instance.command.commandName()
 ```
 
@@ -13,7 +13,7 @@ instance.command.commandName()
 某些命令的执行，会使光标从文档中移出（比如：点击自定义工具栏-加粗文字）。此时可以设置一个标识(EDITOR_COMPONENT)给编辑器，让编辑器将其识别为内部组件。如：
 
 ```js
-import { EDITOR_COMPONENT, EditorComponent } from '@hufe921/canvas-editor'
+import { EDITOR_COMPONENT, EditorComponent } from '@herberthe/canvas-editor'
 
 <div class="menu" :[EDITOR_COMPONENT]="EditorComponent.MENU">
   <button class="bold"></button>
@@ -956,6 +956,8 @@ instance.command.executeSetColumns(config: IColumnOption | null)
 
 ```javascript
 instance.command.executeSetMainBadge(payload: IBadge | null)
+// IBadge: { top?, left?, right?, width, height, value }
+// right >= 0 时相对页面右缘定位，优先于 left
 ```
 
 ## executeSetAreaBadge
@@ -1110,6 +1112,22 @@ instance.command.executeSetZone(zone: EditorZone)
 instance.command.executeUpdateOptions(payload: IUpdateOption)
 ```
 
+## executeUiDirection
+
+功能：设置 UI 的 LTR/RTL **模式**（`options.direction`）。
+
+- 仅镜像编辑器壳层（容器打 `ce-ui-rtl` class；**不要**给画布容器设 `dir=rtl`，否则绝对定位光标碰撞会错位）
+- 新建行/表时写入默认 `element.direction`
+- **不**参与存量正文排版、绘制与光标碰撞；切换**不**重绘文本区
+
+与段落方向命令 `executeDirection`、内容默认 `defaultDirection` **分离，请勿混用**。
+
+用法：
+
+```javascript
+instance.command.executeUiDirection(payload: 'ltr' | 'rtl')
+```
+
 ## executeInsertTitle
 
 功能：插入标题
@@ -1177,3 +1195,18 @@ instance.command.executeLocationArea(areaId: string, options?: ILocationAreaOpti
 ```js
 instance.command.executeClearGraffiti()
 ```
+
+## executeComputeElementListHeight / executeComputeElementListHeightAsync
+
+同步版本需在 ready 后使用；异步版本允许初始化期间显式等待 ready。
+失败或销毁时异步版本拒绝，不排队修改内容。
+
+```typescript
+const height = instance.command.executeComputeElementListHeight(elements)
+const awaitedHeight =
+  await instance.command.executeComputeElementListHeightAsync(elements)
+```
+
+运行时用 `executeUpdateOptions({ autoDownloadFonts: false })` 切换自动补字体。
+补充字体使用 `await instance.register.fonts(faces)`；`textEngine` / `renderMode`
+旧配置已删除，传入旧键会抛出迁移错误。详见[迁移指南](./font-and-esm-migration.md)。

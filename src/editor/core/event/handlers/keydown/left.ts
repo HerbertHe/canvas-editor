@@ -1,15 +1,50 @@
+import { moveNativeCaret } from './nativeCaret'
 import { EditorMode } from '../../../..'
 import { ZERO } from '../../../../dataset/constant/Common'
 import { LocationPosition } from '../../../../dataset/enum/Common'
 import { ControlComponent } from '../../../../dataset/enum/Control'
 import { ElementType } from '../../../../dataset/enum/Element'
 import { MoveDirection } from '../../../../dataset/enum/Observer'
+import { CaretMovement } from '../../../../dataset/enum/TextDirection'
 import {
   getIsBlockElement,
   getNonHideElementIndex
 } from '../../../../utils/element'
 import { isApple } from '../../../../utils/ua'
+import { resolveLayoutScope } from '../../../text-engine-host/LayoutHostAdapter'
 import { CanvasEvent } from '../../CanvasEvent'
+
+function tryVisualMove(
+  draw: ReturnType<CanvasEvent['getDraw']>,
+  logicalIndex: number,
+  delta: 1 | -1
+): number | null {
+  const options = draw.getOptions()
+  if (options.caretMovement === CaretMovement.LOGICAL) return null
+  const adapter = draw.getLayoutHostAdapter()
+  if (!adapter.isReady() || draw.getPosition().getNativeCaret?.(logicalIndex))
+    return null
+  const positionContext = draw.getPosition().getPositionContext()
+  const layoutScope = resolveLayoutScope({
+    zone: draw.getZone().getZone(),
+    isTable: positionContext.isTable,
+    tdId: positionContext.tdId,
+    paperDirection: draw.getPageDirection(draw.getPageNo())
+  })
+  // RTL 段：方向键跟随阅读方向（右=前进=逻辑+1，左=后退=逻辑-1）。
+  // 视觉槽在 RTL/LTR 岛边界会回退跳跃，逻辑步进才能与 LTR 一致的单调前进/后退。
+  const dir = adapter.resolveElementDirection(
+    draw.getElementList(),
+    logicalIndex
+  )
+  if (dir === 'rtl') {
+    const target = logicalIndex + delta
+    const elementList = draw.getElementList()
+    if (target < 0 || target >= elementList.length) return null
+    return target
+  }
+  return adapter.visualNeighbor(logicalIndex, delta, layoutScope)
+}
 
 export function left(evt: KeyboardEvent, host: CanvasEvent) {
   const draw = host.getDraw()
@@ -20,7 +55,12 @@ export function left(evt: KeyboardEvent, host: CanvasEvent) {
   if (!cursorPosition) return
   const positionContext = position.getPositionContext()
   const { index } = cursorPosition
-  if (index <= 0 && !positionContext.isTable) return
+  if (
+    index <= 0 &&
+    !positionContext.isTable &&
+    !position.getNativeCaret?.(index)
+  )
+    return
   const rangeManager = draw.getRange()
   const { startIndex, endIndex } = rangeManager.getRange()
   const isCollapsed = rangeManager.getIsCollapsed()
@@ -37,6 +77,17 @@ export function left(evt: KeyboardEvent, host: CanvasEvent) {
       direction: MoveDirection.UP
     })
     return
+  }
+  if (moveNativeCaret(evt, host, -1)) return
+  // Visual caret movement (RTL / bidi)
+  if (!(isApple ? evt.altKey : evt.ctrlKey) && !evt.shiftKey && isCollapsed) {
+    const visualIndex = tryVisualMove(draw, startIndex, -1)
+    if (visualIndex !== null) {
+      rangeManager.setRange(visualIndex, visualIndex)
+      draw.render({ curIndex: visualIndex, isSubmitHistory: false })
+      evt.preventDefault()
+      return
+    }
   }
   // 单词整体移动
   let moveCount = 1
@@ -165,6 +216,11 @@ export function left(evt: KeyboardEvent, host: CanvasEvent) {
     LocationPosition.BEFORE,
     el => traceParticle.isTraceHidden(el)
   )
+  anchorStartIndex =
+    position.normalizeNativeIndex?.(anchorStartIndex, 'before') ??
+    anchorStartIndex
+  anchorEndIndex =
+    position.normalizeNativeIndex?.(anchorEndIndex, 'before') ?? anchorEndIndex
   // 设置上下文
   rangeManager.setRange(anchorStartIndex, anchorEndIndex)
   const isAnchorCollapsed = anchorStartIndex === anchorEndIndex

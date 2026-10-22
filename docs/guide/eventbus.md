@@ -2,23 +2,17 @@
 
 ## 使用方式
 
-```javascript
-import Editor from "@hufe921/canvas-editor"
+```typescript
+import Editor from '@herberthe/canvas-editor'
 
-const instance = new Editor(container, <IElement[]>data, options)
-
-// 注册
-instance.eventBus.on<K keyof EventMap>(
-  eventName: K,
-  callback: EventMap[K]
-)
-
-// 移除
-instance.eventBus.off<K keyof EventMap>(
-  eventName: K,
-  callback: EventMap[K]
-)
+const instance = await Editor.create(container, data, options)
+const onContentChange = () => console.log('Document changed')
+instance.eventBus.on('contentChange', onContentChange)
+// 卸载时用同一个函数取消订阅：
+instance.eventBus.off('contentChange', onContentChange)
 ```
+
+EventBus 支持多订阅者，`on()` 返回 void，不返回取消订阅函数。状态类报告在订阅后可主动读取当前快照。下方签名示意回调参数，类型从包根导入。
 
 ## rangeChange
 
@@ -271,7 +265,7 @@ instance.eventBus.on('labelMousedown', (payload: {
 
 ## renderChange
 
-功能：编辑器重渲染后立即触发
+仅在计算布局的渲染轮次触发；首次延后到 ready 后，普通轮次在后续 nextTick 工具更新前触发。不是所有字体、图片或屏外页绘制已完成的通知。详见[渲染时序](./rendering-pipeline.md)。
 
 用法：
 
@@ -291,3 +285,19 @@ instance.eventBus.on('spellcheckClick', (payload: {
   range: ISpellcheckRange
 }) => void)
 ```
+
+## fontCoverageChange
+
+字体覆盖或下载状态变化时发送当前 `FontCoverageReport` 快照；已解决项移除。
+首次订阅后主动读取快照，避免依赖首次事件时序。内建页面提示无需订阅。
+
+```typescript
+import type { FontCoverageReport } from '@herberthe/canvas-editor'
+
+const onCoverage = (report: FontCoverageReport) => console.log(report.issues)
+instance.eventBus.on('fontCoverageChange', onCoverage)
+// instance.eventBus.off('fontCoverageChange', onCoverage)
+const current = instance.getFontCoverageReport()
+```
+
+[完整字体接口与覆盖边界](./font-and-esm-migration.md)。

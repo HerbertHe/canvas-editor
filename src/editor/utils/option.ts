@@ -58,9 +58,13 @@ import {
   EditorMode,
   PageMode,
   PaperDirection,
-  RenderMode,
   WordBreak
 } from '../dataset/enum/Editor'
+import {
+  CaretMovement,
+  DeleteMovement,
+  TextDirection
+} from '../dataset/enum/TextDirection'
 import { defaultBadgeOption } from '../dataset/constant/Badge'
 import { IBadgeOption } from '../interface/Badge'
 import { defaultModeRuleOption } from '../dataset/constant/Editor'
@@ -76,6 +80,25 @@ import type { ISpellcheckOption } from '../interface/Spellcheck'
 export function mergeOption(
   options: IEditorOption = {}
 ): DeepRequired<IEditorOption> {
+  if ('renderer' in options) {
+    throw new TypeError(
+      'renderer is not configurable. Only Canvas page rendering is supported; ' +
+        'SVG page rendering is deferred.'
+    )
+  }
+  for (const name of ['textEngine', 'renderMode']) {
+    if (name in options) {
+      throw new TypeError(
+        `${name} has been removed. Remove this option and await editor.ready; ` +
+          'HarfBuzz is the only text engine.'
+      )
+    }
+  }
+  if (
+    options.autoDownloadFonts !== undefined &&
+    typeof options.autoDownloadFonts !== 'boolean'
+  )
+    throw new TypeError('autoDownloadFonts must be a boolean')
   const labOptions: Required<ILabOption> = {
     incrementalCompute: false,
     ...options.lab
@@ -255,12 +278,18 @@ export function mergeOption(
     marginIndicatorColor: '#BABABA',
     margins: [100, 120, 100, 120],
     pageMode: PageMode.PAGING,
-    renderMode: RenderMode.SPEED,
+
     defaultHyperlinkColor: '#0000FF',
     paperDirection: PaperDirection.VERTICAL,
     inactiveAlpha: 0.6,
     historyMaxRecordCount: 100,
     wordBreak: WordBreak.BREAK_WORD,
+
+    direction: TextDirection.LTR,
+    uiDirectionToggle: true,
+    defaultDirection: TextDirection.AUTO,
+    caretMovement: CaretMovement.VISUAL,
+    deleteMovement: DeleteMovement.LOGICAL,
     printPixelRatio: 3,
     maskMargin: [0, 0, 0, 0],
     letterClass: [LETTER_CLASS.ENGLISH],
@@ -269,6 +298,17 @@ export function mergeOption(
     scrollContainerSelector: '',
     pageOuterSelectionDisable: false,
     ...options,
+    autoDownloadFonts: options.autoDownloadFonts ?? true,
+    fonts: (options.fonts || []).map(f => ({
+      family: f.family,
+      resourceId: f.resourceId ?? '',
+      fallback: f.fallback ?? true,
+      data: f.data ?? null,
+      url: f.url ?? null,
+      weight: f.weight ?? 400,
+      style: f.style ?? ('normal' as const),
+      scripts: f.scripts ? [...f.scripts] : []
+    })),
     lab: labOptions,
     table: tableOptions,
     header: headerOptions,

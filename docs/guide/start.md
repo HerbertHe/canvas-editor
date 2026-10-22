@@ -1,95 +1,172 @@
-# 入门
+# 快速上手
 
-> 所见即所得的富文本编辑器。
+`@herberthe/canvas-editor` 是 Herbert He 独立维护的 [Hufe921/canvas-editor fork](./fork-and-differences.md)，当前仓库版本为 **0.1.0**。它使用 HarfBuzz 排版、Canvas 字形轮廓绘制，包格式仅 ESM。**当前默认且仅支持 Canvas 页面；SVG 页面绘制与独立 SVG 导出暂缓，没有 renderer 开关。**
 
-得益于光标及文字排版的完全自行实现。绘制底层也可由 svg 渲染，详见代码：[feature/svg](https://github.com/Hufe921/canvas-editor/tree/feature/svg)；或借助 pdfjs 可以完成 pdf 的绘制，详见代码：[feature/pdf](https://github.com/Hufe921/canvas-editor/tree/feature/pdf)。
+可以先打开[在线体验](./playground.md)，无需安装即可试用完整编辑器。
 
-::: warning
-官方仅提供编辑器核心层 npm 包，菜单栏或其他外部工具可自行参考文档扩展，或直接参考[官方](https://github.com/Hufe921/canvas-editor)实现，详见[demo](https://hufe.club/canvas-editor/)。
-:::
+## 运行环境与安装
 
-## 功能点
-
-- 富文本操作：撤销、重做、格式刷、清除格式、字体、字号、加粗、斜体、下划线、删除线、上下标、文本颜色、高亮、对齐方式、行高、段前段后间距、标题、列表、首行缩进
-- 插入元素：表格、图片、超链接、分割线、分页符、LaTeX 公式、日期选择器、Tab、内容块、标签、区域（Area）
-- 表格：行列增删、单元格合并与拆分、边框样式、背景色、垂直对齐、跨行跨列、跨页分页
-- 打印：基于 canvas 转图片、pdf 绘制
-- 控件：文本、数字、下拉选择、单选框组、复选框组、日期，支持占位符、前后缀、默认值、禁用与缩进对齐规则，支持控件嵌套
-- 级联表达式：控件值变化时自动联动其他控件或标题的显隐、必填、可编辑、可删除，支持计算表达式
-- 留痕：插入、删除修订的记录与可视化标记
-- 宏（Macro）：录制宏与脚本宏，支持命令录制回放、序列化持久化与自定义逻辑
-- 编辑模式：编辑、清洁、只读、表单、打印
-- 页面模式：分页、连页，支持页边距、页眉、页脚、页码
-- 水印：文字、图片，支持置于内容顶层或底层
-- 批注：文本批注的新增、定位与删除
-- 目录：基于标题自动生成，支持点击导航定位
-- 右键菜单：内置菜单，支持按元素类型自定义扩展
-- 快捷键：内置快捷键，支持自定义覆盖
-- 拖拽：文字、元素、控件
-- 搜索与替换：关键字搜索、上下导航、替换
-- 国际化（i18n）：内置中、英文，支持扩展其他语言
-- 插件生态：[Word / Excel 导入导出、公式、批注、拼写检查等 20+ 官方插件](https://github.com/Hufe921/canvas-editor-plugin)
-
-## Step. 1: 下载 npm 包
+开发环境使用 Node.js `>=24.13.1`。宿主需提供支持 ESM、WebAssembly、Worker 和顶层 await 的现代浏览器及构建器。以下示例使用 Vite，构建目标配置为 `esnext`。编辑器需要浏览器 DOM；SSR 项目在客户端挂载后创建实例。
 
 ```sh
-npm i @hufe921/canvas-editor --save
+npm install @herberthe/canvas-editor@0.1.0
 ```
 
-## Step. 2: 准备一个容器
+此命令用于消费已发布版本；仓库中的版本号不代表 npm 发布已完成。如果 registry 尚无该版本，先在本仓库 `npm run lib`，再 `npm pack`，在宿主中安装生成的 `.tgz`。不要改为安装原 npm 包，它们是独立版本线。
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  build: { target: 'esnext' }
+})
+```
+
+不支持 UMD `<script>` 全局变量、CommonJS `require()` 和内部模块深路径导入。部署时保留完整构建目录中的相对 chunk、Worker 和 WASM 资源，通过 HTTP(S) 访问。
+
+## 创建日常场景文档
+
+在页面中准备容器与两个按钮：
 
 ```html
-<div class="canvas-editor"></div>
+<button id="save">保存周末计划</button>
+<button id="print">打印</button>
+<div id="editor"></div>
 ```
 
-## Step. 3: 实例化编辑器
+在 Vite 的 `main.ts` 中创建编辑器：
 
-- 仅包含正文内容
+```typescript
+import Editor, { RowFlex } from '@herberthe/canvas-editor'
 
-```javascript
-import Editor from '@hufe921/canvas-editor'
+const container = document.querySelector<HTMLDivElement>('#editor')
+if (!container) throw new Error('Missing editor container')
 
-new Editor(
-  document.querySelector('.canvas-editor'),
-  [
+try {
+  const editor = await Editor.create(
+    container,
     {
-      value: 'Hello World'
+      header: [
+        { value: '家庭周末安排 · Weekend plans', rowFlex: RowFlex.CENTER }
+      ],
+      main: [
+        { value: '周六上午：去市场购买水果和面包。', bold: true },
+        { value: '\n' },
+        { value: '下午：与邻居一起整理花园。Hello · مرحبا · नमस्ते · สวัสดี' },
+        { value: '\n' },
+        { value: '周日：图书馆借书，然后为下周准备便当。' }
+      ],
+      footer: [{ value: '记得带购物袋和水杯。', size: 12 }]
+    },
+    { autoDownloadFonts: true }
+  )
+
+  const save = () => {
+    const snapshot = editor.command.getValue()
+    localStorage.setItem('weekend-plan', JSON.stringify(snapshot))
+  }
+  const print = () => {
+    void editor.command.executePrint().catch(console.error)
+  }
+  document.querySelector('#save')?.addEventListener('click', save)
+  document.querySelector('#print')?.addEventListener('click', print)
+
+  // 框架组件卸载时执行相同清理。Vite 热更新时也释放实例。
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      document.querySelector('#save')?.removeEventListener('click', save)
+      document.querySelector('#print')?.removeEventListener('click', print)
+      editor.destroy()
+    })
+  }
+} catch (error) {
+  console.error('Editor initialization failed', error)
+  container.textContent = '编辑器初始化失败，请检查浏览器及字体资源。'
+}
+```
+
+此例演示内容、页眉页脚、持久化和打印。完整的日常多语种、控件、表格与图片示例在仓库 `src/main.ts`，执行 `npm run dev` 查看。工具栏属于宿主集成层，安装编辑器包不会自动创建仓库 Demo 的整套菜单。
+
+## ready 与缺字提示
+
+`await Editor.create(...)` 等待 HarfBuzz WASM、显式字体与首次布局；返回后可执行修改和几何命令。同步 `new Editor(...)` 也可用，但必须先 `await editor.ready`。初始化期间命令不会自动排队。
+
+**ready 不等待后台自动下载字体。** 初次看到缺字方框不一定是初始化失败。默认 `autoDownloadFonts: true` 会依据实际缺字，尝试从 `fonts.bunny.net` 获取相应文字类别的基本字体，注册成功后自动重排。网络失败、罕见字、emoji 或无对应样式时，页面状态区域和控制台仍提示补充字体。不是每个语言、地区字形和样式都保证覆盖。
+
+通过字体报告订阅下载和缺字变化，而不是靠固定的 timeout 判断完成；报告中的空 issues 表示当前扫描未发现缺字，不保证外部图片等资源已完成。完整候选、网络与缓存语义见[字体指南](./font-and-esm-migration.md)。
+
+## 离线使用与手动字体
+
+系统安装字体、CSS `font-family` 和 `@font-face` 不能替代 HarfBuzz 需要的字体字节。将实际字体文件放在宿主的静态资源目录；以下路径是示例，需要自行提供文件。
+
+```typescript
+import Editor from '@herberthe/canvas-editor'
+
+const editor = await Editor.create(container, [{ value: '周末一起去公园。' }], {
+  autoDownloadFonts: false,
+  defaultFont: 'Local Sans',
+  fonts: [
+    {
+      family: 'Local Sans',
+      url: `${import.meta.env.BASE_URL}fonts/LocalSans-Regular.ttf`,
+      weight: 400,
+      style: 'normal'
     }
-  ],
-  {}
-)
+  ]
+})
 ```
 
-- 包含正文、页眉、页脚内容
+关闭后不会自动下载 Bunny 字体，也不会自动注册下载缓存中的字体；仍会提醒缺字，允许上述显式 URL 和手动二进制注册。TTF/OTF/WOFF/WOFF2 均可注册。跨域资源需要 CORS，字体/WASM/Worker 需要符合宿主 CSP。字体应有适当授权，粗体与斜体应提供实际对应 face。
 
-```javascript
-import Editor from '@hufe921/canvas-editor'
+运行期补字体时使用 `await editor.register.fonts(...)`，不要只修改配置数组：
 
-new Editor(
-  document.querySelector('.canvas-editor'),
-  {
-    header: [
-      {
-        value: 'Header',
-        rowFlex: RowFlex.CENTER
-      }
-    ],
-    main: [
-      {
-        value: 'Hello World'
-      }
-    ],
-    footer: [
-      {
-        value: 'canvas-editor',
-        size: 12
-      }
-    ]
-  },
-  {}
-)
+```typescript
+const results = await editor.register.fonts([
+  { family: 'Local Sans', data: await file.arrayBuffer(), weight: 400 }
+])
+for (const result of results) {
+  if (result.status === 'failed') console.warn(result.failure)
+}
+console.log(editor.getFontCoverageReport())
 ```
 
-## Step. 4: 配置编辑器
+这里的 `file` 来自宿主文件选择器。注册结果逐项返回，成功注册不等于文件覆盖了文档中的全部字符。
 
-详见下一节
+## 保存、恢复与导出
+
+```typescript
+// snapshot: { version, data: { header, main, footer, ... }, options }
+const snapshot = editor.command.getValue()
+const raw = localStorage.getItem('weekend-plan')
+if (raw) {
+  const saved = JSON.parse(raw) // 生产代码需校验数据结构并处理解析错误
+  editor.command.executeSetValue(saved.data)
+}
+
+const pngPages: string[] = await editor.command.getImage()
+```
+
+恢复正文传 `saved.data`，不是把完整结果当成正文数组。生产环境应校验外部 JSON；不要自动信任已保存的 options，其中可能存在旧引擎配置或不适用的资源 URL。需要重建实例时由宿主管理配置和字体资源。序列化结果不替代随应用分发的字体文件。
+
+`getImage()` 返回 Canvas 页面 PNG；打印也基于页面图片，不提供独立 SVG 或原生矢量 PDF。若需稳定分页和导出，在初始化时显式提供所有必要字体，并管理图片加载，避免后台补字体改变布局。详见[查询 API](./command-get.md)。
+
+## 框架挂载与销毁
+
+Vue/React 等框架需在 DOM 挂载后创建实例。异步 create 可能在组件已卸载后才返回：保留取消标记，若返回时已卸载，立即 destroy；不要将实例写回已失效组件。卸载时取消自己的 EventBus 订阅、释放事件处理器和工具栏，然后 `editor.destroy()`。同步构造方式还需捕获 ready 拒绝并清理失败实例。
+
+## 本地开发与下一步
+
+```sh
+npm install
+npm run dev
+npm run docs:dev
+npm run docs:build
+```
+
+CI 使用 pnpm 10.32.1 与已提交的 `pnpm-lock.yaml` 做冻结安装。本地也可用 `pnpm install --frozen-lockfile`。不要混用包管理器并提交额外 lockfile。
+
+- [渲染管线与时序](./rendering-pipeline.md)：文字整形、分页、交互与导出。
+- [实例 API](./api-instance.md)、[配置](./option.md)、[命令](./command-execute.md)：接入细节。
+- [项目关系与差异](./fork-and-differences.md)：上游基线、兼容与许可证。
+- [常见问题](./faq.md)：缺字、初始化、布局和路径排查。

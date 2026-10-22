@@ -1,9 +1,9 @@
 {
-  "name": "@hufe921/canvas-editor",
-  "author": "Hufe",
+  "name": "@herberthe/canvas-editor",
+  "author": "Herbert He",
   "license": "MIT",
-  "version": "1.0.5",
-  "description": "A Canvas/SVG-based rich text editor",
+  "version": "0.1.0",
+  "description": "A HarfBuzz-powered, Canvas-only rich text editor; an independent fork of Hufe921/canvas-editor",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
@@ -13,21 +13,22 @@
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
-    "package.json"
+    "package.json",
+    "NOTICE"
   ],
-  "typings": "./dist/src/editor/index.d.ts",
-  "main": "./dist/canvas-editor.umd.cjs",
   "module": "./dist/canvas-editor.js",
-  "homepage": "https://github.com/Hufe921/canvas-editor",
+  "homepage": "https://github.com/HerbertHe/canvas-editor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Hufe921/canvas-editor.git"
+    "url": "https://github.com/HerbertHe/canvas-editor.git"
   },
   "keywords": [
     "canvas-editor",
     "editor",
     "wysiwyg",
-    "emr"
+    "harfbuzz",
+    "typography",
+    "rtl"
   ],
   "engines": {
     "node": ">=24.13.1"
@@ -45,11 +46,18 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type:check": "tsc --noEmit",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:dev": "node scripts/build-docs-demo.mjs && vitepress dev docs",
+    "docs:build": "node scripts/check-docs-diagrams.mjs && node scripts/build-docs-demo.mjs && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "postinstall": "simple-git-hooks",
-    "pre-release": "node scripts/pre-release.js"
+    "pre-release": "node scripts/pre-release.js",
+    "test:package": "node scripts/test-package.mjs",
+    "test:migration:browser": "cypress run --config-file cypress.migration.config.ts",
+    "test:migration:engines": "node scripts/test-native-browsers.mjs",
+    "test:migration:performance": "node scripts/test-native-performance.mjs",
+    "test:migration:audit": "node scripts/audit-native-release.mjs",
+    "test:migration:baseline": "node scripts/serve-native-baseline.mjs",
+    "docs:check": "node scripts/check-docs-diagrams.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -65,6 +73,7 @@
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
+    "mermaid": "^11.17.2",
     "simple-git-hooks": "^2.14.0",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
@@ -78,11 +87,28 @@
   },
   "dependencies": {
     "@cspell/dict-en_us": "^4.4.37",
+    "@types/emscripten": "^1.41.6",
+    "@types/opentype.js": "^1.3.10",
+    "bidi-js": "^1.0.3",
     "cspell-trie-lib": "^10.1.1",
-    "prismjs": "^1.27.0"
+    "harfbuzzjs": "^1.4.0",
+    "opentype.js": "^2.0.0",
+    "prismjs": "^1.27.0",
+    "woff2-encoder": "2.0.0"
   },
   "simple-git-hooks": {
     "pre-commit": "npm run lint && npm run type:check",
     "commit-msg": "node scripts/verifyCommit.js"
+  },
+  "types": "./dist/src/editor/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/editor/index.d.ts",
+      "import": "./dist/canvas-editor.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bugs": {
+    "url": "https://github.com/HerbertHe/canvas-editor/issues"
   }
 }

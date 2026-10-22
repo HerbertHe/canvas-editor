@@ -3,9 +3,9 @@
 ## How to Use
 
 ```javascript
-import Editor from "@hufe921/canvas-editor"
+import Editor from '@herberthe/canvas-editor'
 
-const instance = new Editor(container, <IElement[]>data, options)
+const instance = await Editor.create(container, data, options)
 instance.command.commandName()
 ```
 
@@ -13,7 +13,7 @@ instance.command.commandName()
 The execution of certain commands may cause the cursor to move out of the document (e.g., clicking the "Bold" button on the custom toolbar). In such cases, you can assign an identifier (EDITOR_COMPONENT) to the editor, allowing it to recognize the component as internal. For example:
 
 ```js
-import { EDITOR_COMPONENT, EditorComponent } from '@hufe921/canvas-editor'
+import { EDITOR_COMPONENT, EditorComponent } from '@herberthe/canvas-editor'
 
 <div class="menu" :[EDITOR_COMPONENT]="EditorComponent.MENU">
   <button class="bold"></button>
@@ -962,6 +962,8 @@ Usage:
 
 ```javascript
 instance.command.executeSetMainBadge(payload: IBadge | null)
+// IBadge: { top?, left?, right?, width, height, value }
+// right >= 0 anchors to the page right edge and overrides left
 ```
 
 ## executeSetAreaBadge
@@ -1116,6 +1118,22 @@ Usage:
 instance.command.executeUpdateOptions(payload: IUpdateOption)
 ```
 
+## executeUiDirection
+
+Feature: Set UI LTR/RTL **mode** (`options.direction`).
+
+- Mirrors editor chrome only (`ce-ui-rtl` class; **do not** set `dir=rtl` on the canvas container — it breaks absolute caret hit-testing)
+- Seeds `element.direction` for newly created lines/tables
+- Does **not** affect existing content layout, paint, or hit-testing; toggle does **not** reflow the text area
+
+Separate from paragraph `executeDirection` and content `defaultDirection` — do not mix them up.
+
+Usage:
+
+```javascript
+instance.command.executeUiDirection(payload: 'ltr' | 'rtl')
+```
+
 ## executeInsertTitle
 
 Feature: Insert title
@@ -1195,3 +1213,19 @@ Usage:
 ```javascript
 instance.command.executeClearGraffiti()
 ```
+
+## executeComputeElementListHeight / executeComputeElementListHeightAsync
+
+Use the synchronous version after ready. The asynchronous version explicitly
+waits for ready, rejecting on failure/destruction without queuing mutations.
+
+```typescript
+const height = instance.command.executeComputeElementListHeight(elements)
+const awaitedHeight =
+  await instance.command.executeComputeElementListHeightAsync(elements)
+```
+
+Toggle downloads with `executeUpdateOptions({ autoDownloadFonts: false })`.
+Register fonts using `await instance.register.fonts(faces)`. Removed
+`textEngine` / `renderMode` keys throw migration errors. See the
+[migration guide](./font-and-esm-migration.md).

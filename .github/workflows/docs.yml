@@ -1,36 +1,93 @@
-name: docs
+name: Documentation Pages
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
     paths:
-      - '.github/workflows/docs.yml'
       - 'docs/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/check-docs-diagrams.mjs'
+      - 'scripts/build-docs-demo.mjs'
+      - 'src/**'
+      - 'public/**'
+      - 'tests/fixtures/fonts/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-pages-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
-
-      - run: npm install -g pnpm@10
-      - run: echo "/usr/local/bin:/usr/bin:/bin" >> $GITHUB_PATH
-      - run: pnpm install --ignore-scripts --no-frozen-lockfile
-      - run: pnpm run docs:build
-      - run: mv ./docs/.vitepress/dist ./docs/.vitepress/canvas-editor-docs
-      - name: Copy folder content recursively to remote
-        uses: appleboy/scp-action@v0.1.7
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build documentation
+        env:
+          DOCS_BASE: /canvas-editor/
+        run: pnpm run docs:build
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
         with:
-          source: docs/.vitepress/canvas-editor-docs
-          target: ${{ secrets.DOCS_PATH }}
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          overwrite: true
-          strip_components: 2
+          path: docs/.vitepress/dist
+          retention-days: 7
+
+  publish-branch:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v5
+        with:
+          name: github-pages
+          path: pages-artifact
+      - name: Extract the exact Pages build
+        run: |
+          mkdir -p docs-site
+          tar -xf pages-artifact/artifact.tar -C docs-site
+      - name: Update gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: docs-site
+          clean: true
+          force: false
+          commit-message: 'docs: publish documentation site'
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [build, publish-branch]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Deploy the same artifact to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

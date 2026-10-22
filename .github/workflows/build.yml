@@ -1,4 +1,4 @@
-name: build
+name: Build demo
 
 on:
   push:
@@ -6,40 +6,44 @@ on:
     paths:
       - '.github/workflows/build.yml'
       - 'src/**'
+      - 'tests/**'
       - 'index.html'
       - 'package.json'
+      - 'pnpm-lock.yaml'
       - 'vite.config.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/build.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'index.html'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vite.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      VITEST_MAX_WORKERS: 2
     steps:
       - uses: actions/checkout@v6
-
-      - name: Use Node.js 24
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v6
         with:
           node-version: '24'
-
-      - run: npm install -g pnpm@10
-      - run: echo "/usr/local/bin:/usr/bin:/bin" >> $GITHUB_PATH
-      - run: pnpm install --ignore-scripts --no-frozen-lockfile
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm run build
-      - run: /usr/bin/mv dist canvas-editor
-      - name: Copy folder content recursively to remote
-        uses: appleboy/scp-action@v0.1.7
+      - uses: actions/upload-artifact@v4
         with:
-          source: canvas-editor
-          target: ${{ secrets.PATH }}
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          overwrite: true
-      - name: Executing remote ssh commands
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          script: sed -i 's/<\/body>/${{ secrets.SCRIPT }}<\/body>/g' ${{ secrets.PATH }}/canvas-editor/index.html
+          name: canvas-editor-demo
+          path: dist
+          retention-days: 7

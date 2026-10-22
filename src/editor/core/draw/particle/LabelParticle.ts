@@ -1,5 +1,6 @@
 import { DeepRequired } from '../../../interface/Common'
 import { IEditorOption } from '../../../interface/Editor'
+import { IElement } from '../../../interface/Element'
 import { IRowElement } from '../../../interface/Row'
 import { Draw } from '../Draw'
 
@@ -10,49 +11,39 @@ export class LabelParticle {
     this.options = draw.getOptions()
   }
 
-  public render(
+  /** 标签文字色；引擎行跳过 Particle 文字时也须先调用，供 GlyphRenderer */
+  public ensureDefaults(element: IElement) {
+    const { defaultColor } = this.options.label
+    if (!element.color) {
+      element.color = element.label?.color || defaultColor
+    }
+  }
+
+  /** 仅圆角背景（引擎行文字由 GlyphRenderer 绘制） */
+  public renderBackground(
     ctx: CanvasRenderingContext2D,
     element: IRowElement,
     x: number,
     y: number
   ) {
     const {
-      scale,
-      label: {
-        defaultBackgroundColor,
-        defaultColor,
-        defaultBorderRadius,
-        defaultPadding
-      }
+      label: { defaultBackgroundColor, defaultBorderRadius }
     } = this.options
-
-    // 默认样式
     const backgroundColor =
       element.label?.backgroundColor || defaultBackgroundColor
-    const color = element.label?.color || defaultColor
     const borderRadius = element.label?.borderRadius || defaultBorderRadius
-    const padding = element.label?.padding || defaultPadding
-
-    // 设置字体大小
-    ctx.save()
-    ctx.font = element.style
     const { width, height, boundingBoxAscent } = element.metrics
-
-    // 绘制圆角矩形背景
+    ctx.save()
     ctx.fillStyle = backgroundColor
     this._drawRoundedRect(
       ctx,
       x,
       y - boundingBoxAscent,
       width,
-      height + (padding[0] + padding[2]) * scale,
-      borderRadius * scale
+      height,
+      borderRadius * this.options.scale
     )
     ctx.fill()
-
-    // 绘制文本
-    ctx.fillStyle = color
-    ctx.fillText(element.value, x + padding[3] * scale, y)
     ctx.restore()
   }
 

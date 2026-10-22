@@ -1,3 +1,4 @@
+import { scaleShapedLine } from '../../text-engine-host/scaleShapedLine'
 import { EDITOR_PREFIX } from '../../../dataset/constant/Editor'
 import { ImageDisplay } from '../../../dataset/enum/Common'
 import { ElementType } from '../../../dataset/enum/Element'
@@ -5,6 +6,7 @@ import { DeepRequired } from '../../../interface/Common'
 import { IEditorOption } from '../../../interface/Editor'
 import { IElement } from '../../../interface/Element'
 import { convertStringToBase64 } from '../../../utils'
+import { truncatePlainText } from '../../text-engine-host/drawPlainText'
 import { Draw } from '../Draw'
 
 export class ImageParticle {
@@ -182,7 +184,19 @@ export class ImageParticle {
     }
   }
 
-  private _renderCaption(
+  public getCaptionText(element: IElement): string {
+    let captionText = element.imgCaption?.value || ''
+    // 替换特殊字符
+    if (captionText.includes('{imageNo}')) {
+      const elementList = this.draw.getOriginalMainElementList()
+      const imageNo =
+        Math.max(this._countImagesBeforeTarget(elementList, element), 0) + 1
+      captionText = captionText.replace(/\{imageNo\}/g, String(imageNo))
+    }
+    return captionText
+  }
+
+  protected _renderCaption(
     ctx: CanvasRenderingContext2D,
     element: IElement,
     x: number,
@@ -192,43 +206,30 @@ export class ImageParticle {
   ) {
     if (!element.imgCaption?.value) return
     const { scale, imgCaption } = this.options
-    let captionText = element.imgCaption.value
-    // 替换特殊字符
-    if (captionText.includes('{imageNo}')) {
-      const elementList = this.draw.getOriginalMainElementList()
-      const imageNo =
-        Math.max(this._countImagesBeforeTarget(elementList, element), 0) + 1
-      captionText = captionText.replace(/\{imageNo\}/g, String(imageNo))
-    }
+    const captionText = this.getCaptionText(element)
     const fontSize = (element.imgCaption.size || imgCaption.size) * scale
     const fontFamily = element.imgCaption.font || imgCaption.font
     const color = element.imgCaption.color || imgCaption.color
-    ctx.save()
-    ctx.font = `${fontSize}px ${fontFamily}`
-    ctx.fillStyle = color
-    ctx.textAlign = 'center'
-    // 超出图片宽度后省略
-    let displayText = captionText
-    const textMetrics = ctx.measureText(captionText)
-    if (textMetrics.width > width) {
-      let left = 0
-      let right = captionText.length
-      while (left < right) {
-        const mid = Math.ceil((left + right) / 2)
-        const truncated = captionText.substring(0, mid)
-        if (ctx.measureText(truncated + '...').width <= width) {
-          left = mid
-        } else {
-          right = mid - 1
-        }
-      }
-      displayText = captionText.substring(0, left) + '...'
+    const style = {
+      text: captionText,
+      fontFamily,
+      fontSize,
+      color
     }
+    const adapter = this.draw.getLayoutHostAdapter()
+    const displayText = truncatePlainText(adapter, ctx, style, width)
     const captionTop = (element.imgCaption.top ?? imgCaption.top) * scale
-    const captionY =
-      y + height + captionTop + textMetrics.actualBoundingBoxAscent
-    const captionX = x + width / 2
-    ctx.fillText(displayText, captionX, captionY)
+    ctx.save()
+    const layout = adapter.layoutCaption(element, displayText)
+    const line = scaleShapedLine(layout.lines[0], scale)
+    adapter
+      .getGlyphRenderer()
+      .drawLine(
+        ctx,
+        line,
+        x + (width - line.width) / 2,
+        y + height + captionTop + line.ascent
+      )
     ctx.restore()
   }
 

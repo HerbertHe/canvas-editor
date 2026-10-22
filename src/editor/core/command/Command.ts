@@ -34,6 +34,7 @@ export class Command {
   public executeTitle: CommandAdapt['title']
   public executeList: CommandAdapt['list']
   public executeRowFlex: CommandAdapt['rowFlex']
+  public executeDirection: CommandAdapt['direction']
   public executeRowMargin: CommandAdapt['rowMargin']
   public executeSpacingBefore: CommandAdapt['spacingBefore']
   public executeSpacingAfter: CommandAdapt['spacingAfter']
@@ -129,9 +130,11 @@ export class Command {
   public executeInsertControl: CommandAdapt['insertControl']
   public executeJumpControl: CommandAdapt['jumpControl']
   public executeUpdateOptions: CommandAdapt['updateOptions']
+  public executeUiDirection: CommandAdapt['uiDirection']
   public executeInsertTitle: CommandAdapt['insertTitle']
   public executeFocus: CommandAdapt['focus']
   public executeComputeElementListHeight: CommandAdapt['computeElementListHeight']
+  public executeComputeElementListHeightAsync: CommandAdapt['computeElementListHeightAsync']
   public getCatalog: CommandAdapt['getCatalog']
   public getImage: CommandAdapt['getImage']
   public getOptions: CommandAdapt['getOptions']
@@ -149,6 +152,7 @@ export class Command {
   public getRangeContext: CommandAdapt['getRangeContext']
   public getRangeRow: CommandAdapt['getRangeRow']
   public getRangeParagraph: CommandAdapt['getRangeParagraph']
+  public getRangeParagraphDirection: CommandAdapt['getRangeParagraphDirection']
   public getSurroundElementList: CommandAdapt['getSurroundElementList']
   public getKeywordRangeList: CommandAdapt['getKeywordRangeList']
   public getKeywordContext: CommandAdapt['getKeywordContext']
@@ -178,7 +182,7 @@ export class Command {
     }) as T
   }
 
-  constructor(adapt: CommandAdapt) {
+  constructor(adapt: CommandAdapt, guard?: (name: string) => void) {
     // 全局命令
     this.executeMode = this.wrap('executeMode', adapt.mode.bind(adapt))
     this.executeCut = this.wrap('executeCut', adapt.cut.bind(adapt))
@@ -257,6 +261,10 @@ export class Command {
     this.executeTitle = this.wrap('executeTitle', adapt.title.bind(adapt))
     this.executeList = this.wrap('executeList', adapt.list.bind(adapt))
     this.executeRowFlex = this.wrap('executeRowFlex', adapt.rowFlex.bind(adapt))
+    this.executeDirection = this.wrap(
+      'executeDirection',
+      adapt.direction.bind(adapt)
+    )
     this.executeRowMargin = this.wrap(
       'executeRowMargin',
       adapt.rowMargin.bind(adapt)
@@ -578,6 +586,10 @@ export class Command {
       'executeUpdateOptions',
       adapt.updateOptions.bind(adapt)
     )
+    this.executeUiDirection = this.wrap(
+      'executeUiDirection',
+      adapt.uiDirection.bind(adapt)
+    )
     this.executeInsertTitle = this.wrap(
       'executeInsertTitle',
       adapt.insertTitle.bind(adapt)
@@ -586,6 +598,10 @@ export class Command {
     this.executeComputeElementListHeight = this.wrap(
       'executeComputeElementListHeight',
       adapt.computeElementListHeight.bind(adapt)
+    )
+    this.executeComputeElementListHeightAsync = this.wrap(
+      'executeComputeElementListHeightAsync',
+      adapt.computeElementListHeightAsync.bind(adapt)
     )
     // 获取
     this.getImage = adapt.getImage.bind(adapt)
@@ -603,6 +619,8 @@ export class Command {
     this.getRangeContext = adapt.getRangeContext.bind(adapt)
     this.getRangeRow = adapt.getRangeRow.bind(adapt)
     this.getRangeParagraph = adapt.getRangeParagraph.bind(adapt)
+    this.getRangeParagraphDirection =
+      adapt.getRangeParagraphDirection.bind(adapt)
     this.getSurroundElementList = adapt.getSurroundElementList.bind(adapt)
     this.getKeywordRangeList = adapt.getKeywordRangeList.bind(adapt)
     this.getKeywordContext = adapt.getKeywordContext.bind(adapt)
@@ -668,5 +686,33 @@ export class Command {
       'executeJumpControl',
       adapt.jumpControl.bind(adapt)
     )
+    if (guard) {
+      const asyncCommands = new Set([
+        'executeCut',
+        'executeCopy',
+        'executePrint',
+        'getImage',
+        'getValueAsync',
+        'getWordCount',
+        'getCatalog',
+        'getGroupIds',
+        'executeComputeElementListHeightAsync'
+      ])
+      // Guard every command/query binding without changing its public signature
+      // or allowing setInterceptor() to replace the lifecycle check.
+      for (const name of Object.keys(this)) {
+        const fn = Reflect.get(this, name)
+        if (typeof fn !== 'function') continue
+        Reflect.set(this, name, (...args: unknown[]) => {
+          try {
+            guard(name)
+          } catch (error) {
+            if (asyncCommands.has(name)) return Promise.reject(error)
+            throw error
+          }
+          return Reflect.apply(fn, this, args)
+        })
+      }
+    }
   }
 }

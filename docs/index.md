@@ -1,43 +1,40 @@
 ---
 layout: home
-
-title: canvas-editor
-titleTemplate: A Canvas/SVG-based rich text editor
-
+title: Canvas Editor
+titleTemplate: HarfBuzz typography and Canvas pages
 hero:
-  name: canvas-editor
-  text: 基于canvas/svg的富文本编辑器
+  name: '@herberthe/canvas-editor'
+  text: HarfBuzz 排版 · Canvas 页面
+  tagline: 'Herbert He · Independent fork · 0.1.0 · ESM only'
   actions:
     - theme: brand
-      text: 开始
-      link: /guide/start.html
+      text: 在线体验
+      link: /guide/playground
+    - theme: brand
+      text: 快速上手
+      link: /guide/start
     - theme: alt
-      text: 在 GitHub 上查看
-      link: https://github.com/Hufe921/canvas-editor
-
+      text: 查看渲染管线
+      link: /guide/rendering-pipeline
 features:
-  - icon: 💡
-    title: 所见即所得
-    details: 类word可分页，所见即所得
-  - icon: ⚡️
-    title: 轻量的数据结构
-    details: 一段JSON即可呈现复杂样式
-  - icon: 🛠️
-    title: 丰富的功能
-    details: 支持常见富文本操作、表格、水印、控件、公式等
-  - icon: 📦
-    title: 使用方便
-    details: 官方发布核心npm包，菜单栏、工具栏可自行维护
-  - icon: 🔩
-    title: 灵活的开发机制
-    details: 通过接口可获取生命周期、事件回调、自定义右键菜单、快捷键等
-  - icon: 🔑
-    title: 完全类型化的API
-    details: 灵活的 API 和完整的 TypeScript 类型
+  - title: 从第一个文档开始
+    details: 异步创建编辑器，管理字体，保存日常场景文档。
+    link: /guide/start
+  - title: 看懂渲染管线
+    details: 通过流程图和时序图理解整形、断行、分页与 Canvas 绘制。
+    link: /guide/rendering-pipeline
+  - title: 了解项目关系
+    details: 独立维护的 fork，按固定上游基线对比，保留 MIT 原始署名。
+    link: /guide/fork-and-differences
+  - title: 字体与离线接入
+    details: 默认 Bunny 基本字体下载、手动注册和缺字诊断。
+    link: /guide/font-and-esm-migration
+  - title: 能力与边界
+    details: 仅 Canvas 页面、仅 ESM 分发，公开增量排版的实际限制。
+    link: /guide/features
+  - title: 发布项目文档
+    details: 合并 main 后构建 gh-pages，并通过 Pages Actions 发布同一产物。
+    link: /guide/docs-deployment
 ---
 
-<style>
-  .main>p {
-    max-width:100% !important;
-  }
-</style>
+当前默认且仅支持 Canvas 文档页面，SVG 页面绘制与独立 SVG 导出暂缓。本项目基于 [Hufe921/canvas-editor](https://github.com/Hufe921/canvas-editor) 独立维护，并非上游官方发行。

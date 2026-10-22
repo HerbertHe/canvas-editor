@@ -1,32 +1,42 @@
+import type { LayoutRow } from '../../interface/LayoutRow'
+import { getHostRowsHeight } from '../layout/hostRowGeometry'
+import {
+  hitTextLine,
+  intersectRect,
+  lineCarets,
+  lineSegments,
+  pageRect,
+  textRangeRects,
+  type NativeCaret,
+  type PlacedTextLine
+} from '../layout/InteractionGeometry'
+import { rowElementMetrics, rowSourceIndex } from '../layout/rowGeometry'
+import { getCellVerticalOffset } from '../layout/TableLayout'
 import { ElementType, ListStyle, RowFlex, VerticalAlign } from '../..'
 import { ZERO } from '../../dataset/constant/Common'
-import { ControlComponent } from '../../dataset/enum/Control'
+import { ControlComponent, ControlType } from '../../dataset/enum/Control'
+import { IEditorOption } from '../../interface/Editor'
+import { IElement, IElementPosition } from '../../interface/Element'
+import { ITd } from '../../interface/table/Td'
 import {
   IComputePageRowPositionPayload,
   IComputePageRowPositionResult,
   IComputePositionListPayload,
   IComputeRowPositionPayload,
+  ICurrentPosition,
   IFloatPosition,
   IGetFloatPositionByXYPayload,
-  ISetSurroundPositionPayload
-} from '../../interface/Position'
-import { IEditorOption } from '../../interface/Editor'
-import { IElement, IElementPosition } from '../../interface/Element'
-import { ITd } from '../../interface/table/Td'
-import {
-  ICurrentPosition,
   IGetPositionByXYPayload,
   IPositionContext,
   ITablePositionContext
 } from '../../interface/Position'
 import { Draw } from '../draw/Draw'
 import { EditorMode, EditorZone } from '../../dataset/enum/Editor'
-import { deepClone, isRectIntersect } from '../../utils'
+import { deepClone } from '../../utils'
 import { ImageDisplay } from '../../dataset/enum/Common'
 import { DeepRequired } from '../../interface/Common'
 import { EventBus } from '../event/eventbus/EventBus'
 import { EventBusMap } from '../../interface/EventBus'
-import { getIsBlockElement } from '../../utils/element'
 
 // 单页新增位置信息的缓存切片
 interface IPagePositionCache {
@@ -50,6 +60,304 @@ export class Position {
   private draw: Draw
   private eventBus: EventBus<EventBusMap>
   private options: DeepRequired<IEditorOption>
+
+  private nativeLines = new WeakMap<IElementPosition[], PlacedTextLine[]>()
+  private nativeCaretHint: NativeCaret | null = null
+
+  public getNativeLines(positions = this.getPositionList()): PlacedTextLine[] {
+    return this.nativeLines.get(positions) || []
+  }
+
+  public getNativeRow(
+    row: LayoutRow,
+    positions: IElementPosition[],
+    pageNo?: number
+  ) {
+    return (
+      this.getNativeLines(positions).find(
+        placed =>
+          placed.line === row.nativeLine &&
+          (pageNo === undefined || placed.pageNo === pageNo)
+      ) ||
+      this.getNativeLines(positions).find(
+        placed =>
+          placed.line.id === row.nativeLine?.id &&
+          placed.line.source.scope === row.nativeLine.source.scope &&
+          (pageNo === undefined ||
+            placed.pageNo === pageNo ||
+            placed.line.source.scope.startsWith('header:') ||
+            placed.line.source.scope.startsWith('footer:'))
+      )
+    )
+  }
+
+  public getNativeRangeRects(
+    start: number,
+    end: number,
+    positions = this.getPositionList(),
+    pageNo?: number
+  ) {
+    return this.getNativeLines(positions).flatMap(placed => {
+      const frame = /^(header|footer):/.test(placed.line.source.scope)
+      if (pageNo !== undefined && !frame && pageNo !== placed.pageNo) return []
+      return textRangeRects(placed, start, end).map(rect => ({
+        ...rect,
+        pageNo: frame && pageNo !== undefined ? pageNo : placed.pageNo,
+        lineId: placed.line.id
+      }))
+    })
+  }
+
+  public setNativeCaretHint(caret: NativeCaret | null) {
+    this.nativeCaretHint = caret
+  }
+
+  public getNativeCaret(
+    index: number,
+    hitLineStartIndex?: number
+  ): NativeCaret | null {
+    const lines = this.getNativeLines().filter(p => !p.line.hidden)
+    const hint = this.nativeCaretHint
+    const candidates = lines.flatMap(lineCarets).filter(c => c.index === index)
+    if (hitLineStartIndex !== undefined) {
+      const next = lines.find(p => p.line.source.start === hitLineStartIndex)
+      if (next)
+        return hitTextLine(
+          next,
+          next.line.direction === 'rtl' ? Infinity : -Infinity
+        )
+    }
+    if (hint?.index === index) {
+      const found = candidates.find(
+        c =>
+          c.lineId === hint.lineId &&
+          c.scope === hint.scope &&
+          c.pageNo === hint.pageNo &&
+          Math.abs(c.x - hint.x) < 0.01
+      )
+      if (found) return found
+    }
+    return (
+      candidates.find(c => c.affinity === 'upstream') || candidates[0] || null
+    )
+  }
+
+  public normalizeNativeIndex(
+    index: number,
+    bias: 'before' | 'after' = 'after'
+  ) {
+    for (const placed of this.getNativeLines()) {
+      if (placed.line.hidden) continue
+      const segment = lineSegments(placed).find(
+        s => s.start <= index && index < s.end - 1
+      )
+      if (segment)
+        return bias === 'before'
+          ? Math.max(0, segment.start - 1)
+          : segment.end - 1
+    }
+    return index
+  }
+
+  public getNativeCaretAtX(
+    positions: IElementPosition[],
+    index: number,
+    x: number,
+    pageNo?: number
+  ) {
+    const placed = this.getNativeLines(positions).find(
+      p =>
+        !p.line.hidden &&
+        index >= p.line.source.start &&
+        index < p.line.source.end &&
+        (pageNo === undefined || pageNo === p.pageNo)
+    )
+    return placed ? hitTextLine(placed, x) : null
+  }
+
+  public moveNativeCaret(
+    index: number,
+    delta: 1 | -1,
+    visual = true,
+    vertical = false
+  ): NativeCaret | null {
+    const lines = this.getNativeLines().filter(p => !p.line.hidden)
+    const current = this.getNativeCaret(index)
+    if (!current) return null
+    const at = lines.findIndex(
+      p =>
+        p.line.id === current.lineId &&
+        p.line.source.scope === current.scope &&
+        p.pageNo === current.pageNo
+    )
+    if (vertical) {
+      const next = lines[at + delta]
+      return next ? hitTextLine(next, current.x) : null
+    }
+    if (!visual) {
+      const candidates = lines
+        .flatMap(lineCarets)
+        .filter(c => (delta > 0 ? c.index > index : c.index < index))
+      candidates.sort((a, b) => delta * (a.index - b.index))
+      return candidates[0] || null
+    }
+    const slots = lineCarets(lines[at])
+    const slot = slots.findIndex(
+      c => c.index === current.index && Math.abs(c.x - current.x) < 0.01
+    )
+    const neighbour = slots[slot + delta]
+    if (neighbour) return neighbour
+    const next =
+      lines[at + (lines[at].line.direction === 'rtl' ? -delta : delta)]
+    if (!next) return null
+    const nextSlots = lineCarets(next)
+    return (delta > 0 ? nextSlots[0] : nextSlots.at(-1)) || null
+  }
+
+  public getNativeDeleteRange(
+    index: number,
+    backward: boolean,
+    visual: boolean
+  ) {
+    const current = this.getNativeCaret(index)
+    if (!current) return null
+    const lines = this.getNativeLines()
+    const segments = lines.flatMap(placed =>
+      lineSegments(placed).map(segment => ({ ...segment, placed }))
+    )
+    const candidates = segments.filter(segment => {
+      if (visual)
+        return (
+          segment.placed.line.id === current.lineId &&
+          segment.placed.pageNo === current.pageNo &&
+          (backward
+            ? segment.rect.x + segment.rect.width <= current.x + 0.01
+            : segment.rect.x >= current.x - 0.01)
+        )
+      return backward ? segment.end - 1 <= index : segment.start > index
+    })
+    candidates.sort((a, b) =>
+      visual
+        ? backward
+          ? b.rect.x + b.rect.width - (a.rect.x + a.rect.width)
+          : a.rect.x - b.rect.x
+        : backward
+          ? b.end - a.end
+          : a.start - b.start
+    )
+    const target = candidates[0]
+    if (!target) return null
+    if (!visual) {
+      const adjacent = backward ? index : index + 1
+      if (adjacent < target.start || adjacent >= target.end) return null
+    }
+    return {
+      index: target.start,
+      count: target.end - target.start,
+      cursorIndex: target.start - 1
+    }
+  }
+
+  private hitNativeText(
+    x: number,
+    y: number,
+    pageNo: number,
+    positions: IElementPosition[],
+    elements: IElement[]
+  ): ICurrentPosition | null {
+    const lines = this.getNativeLines(positions).filter(placed => {
+      const { line, scale } = placed
+      const frame = /^(header|footer):/.test(line.source.scope)
+      const rect = pageRect(placed, line.rect)
+      if (
+        placed.clip &&
+        (x < placed.clip.x ||
+          x > placed.clip.x + placed.clip.width ||
+          y < placed.clip.y ||
+          y > placed.clip.y + placed.clip.height)
+      )
+        return false
+      return (
+        !line.hidden &&
+        (frame || placed.pageNo === pageNo) &&
+        y >= rect.y - line.spacingBefore * scale &&
+        y <= rect.y + rect.height + line.spacingAfter * scale
+      )
+    })
+    if (!lines.length) return null
+    const column = this._getColumnIndexByX(x, pageNo)
+    const placed =
+      lines.find(
+        p => p.columnIndex === undefined || p.columnIndex === column
+      ) || lines[0]
+    const inside = (rect: import('../../interface/Layout').LayoutRect) => {
+      const box = pageRect(placed, rect)
+      return (
+        x >= box.x &&
+        x <= box.x + box.width &&
+        y >= box.y &&
+        y <= box.y + box.height
+      )
+    }
+    const inline = placed.line.inlines.find(
+      n =>
+        n.kind === 'inlineObject' &&
+        n.objectType !== 'controlSpace' &&
+        !n.hidden &&
+        inside(n.rect)
+    )
+    if (inline?.kind === 'inlineObject') {
+      const element = elements[inline.source.start]
+      return {
+        index: inline.source.start,
+        isDirectHit: true,
+        isImage: inline.objectType === 'image' || inline.objectType === 'latex',
+        isCheckbox: inline.objectType === 'checkbox',
+        isRadio: inline.objectType === 'radio',
+        isControl: !!element?.controlId
+      }
+    }
+    const label = placed.line.labels?.find(n => inside(n.rect))
+    if (label)
+      return { index: label.source.start, isDirectHit: true, isLabel: true }
+    let caret = hitTextLine(placed, x)
+    if (!caret) return null
+    const segment = lineSegments(placed).find(
+      s => x >= s.rect.x && x <= s.rect.x + s.rect.width
+    )
+    const owner = segment ? elements[segment.start] : undefined
+    // A checkbox/radio label is an action target, not a text caret. The
+    // nearest caret may belong to the preceding box at the label's left edge.
+    if (
+      owner?.controlComponent === ControlComponent.VALUE &&
+      (owner.control?.type === ControlType.CHECKBOX ||
+        owner.control?.type === ControlType.RADIO)
+    )
+      return { index: segment!.start, isDirectHit: true, isControl: true }
+    if (
+      owner?.controlId &&
+      elements[caret.index]?.controlId !== owner.controlId
+    ) {
+      const internal = lineCarets(placed).filter(
+        c => elements[c.index]?.controlId === owner.controlId
+      )
+      caret =
+        internal.reduce(
+          (a, b) => (Math.abs(b.x - x) < Math.abs(a.x - x) ? b : a),
+          internal[0]
+        ) || caret
+    }
+    return {
+      index: caret.index,
+      nativeCaret: caret,
+      isDirectHit: !!segment,
+      isControl: !!elements[caret.index]?.controlId,
+      hitLineStartIndex:
+        caret.index < placed.line.source.start
+          ? placed.line.source.start
+          : undefined
+    }
+  }
 
   constructor(draw: Draw) {
     this.positionList = []
@@ -116,6 +424,11 @@ export class Position {
   public getTablePositionList(
     sourceElementList: IElement[]
   ): IElementPosition[] {
+    const zone = this.draw.getZone()
+    const direction = this.draw.getPageDirection(this.draw.getPageNo())
+    if (zone.isHeaderActive()) this.draw.getHeader().getPositionList(direction)
+    else if (zone.isFooterActive())
+      this.draw.getFooter().getPositionList(direction)
     return (
       this.getTableTdByContext(sourceElementList, this.positionContext)
         ?.positionList || []
@@ -276,10 +589,12 @@ export class Position {
       : this.positionList
   }
 
-  public getOriginalPositionList(): IElementPosition[] {
+  public getOriginalPositionList(
+    pageNo = this.draw.getPageNo()
+  ): IElementPosition[] {
     const zoneManager = this.draw.getZone()
     // 混排横竖版：页眉/页脚按当前页方向取布局
-    const direction = this.draw.getPageDirection(this.draw.getPageNo())
+    const direction = this.draw.getPageDirection(pageNo)
     if (zoneManager.isHeaderActive()) {
       const header = this.draw.getHeader()
       return header.getPositionList(direction)
@@ -381,16 +696,21 @@ export class Position {
       scale,
       table: { tdPadding }
     } = this.options
+    if (!positionList.length) this.nativeLines.set(positionList, [])
     let x = startX
     let y = startY
     let index = startIndex
     const traceParticle = this.draw.getTraceParticle()
-    const columnLayout = this.draw.getColumnLayout()
+    const columnLayout = this.draw.getColumnLayout(
+      this.draw.getPageDirection(pageNo)
+    )
     let prevColumnIndex: number | undefined = undefined
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
+      if (curRow.flow) y = curRow.flow.y * scale
       // 分栏内栏切换：y 重置到栏顶
       if (
+        !curRow.flow &&
         prevColumnIndex !== undefined &&
         curRow.columnIndex !== undefined &&
         curRow.columnIndex > 0 &&
@@ -412,65 +732,127 @@ export class Position {
         inColumn && columnLayout ? columnLayout.width : innerWidth
       x += columnOffset
       // 行存在环绕的可能性均不设置行布局
-      if (!curRow.isSurround) {
+      // Text rows already carry native alignment; object rows align here.
+      const isTextEngineRow = !!curRow.nativeLine
+      if (!curRow.isSurround && !isTextEngineRow) {
         // 计算行偏移量（行居中、居右）
         const curRowWidth = curRow.width + (curRow.offsetX || 0)
-        if (curRow.rowFlex === RowFlex.CENTER) {
+        const rowFlex = curRow.rowFlex
+        const resolvedFlex =
+          rowFlex === RowFlex.START
+            ? curRow.direction === 'rtl'
+              ? RowFlex.RIGHT
+              : RowFlex.LEFT
+            : rowFlex === RowFlex.END
+              ? curRow.direction === 'rtl'
+                ? RowFlex.LEFT
+                : RowFlex.RIGHT
+              : rowFlex
+        if (resolvedFlex === RowFlex.CENTER) {
           x += (effectiveInnerWidth - curRowWidth) / 2
-        } else if (curRow.rowFlex === RowFlex.RIGHT) {
+        } else if (resolvedFlex === RowFlex.RIGHT) {
+          x += effectiveInnerWidth - curRowWidth
+        } else if (!resolvedFlex && curRow.direction === 'rtl') {
+          // RTL paragraph default: align to end (right) when no explicit rowFlex
           x += effectiveInnerWidth - curRowWidth
         }
       }
       // 当前行X/Y轴偏移量
       x += curRow.offsetX || 0
       y += curRow.offsetY || 0
+      // Origin of row content after alignment
+      const rowContentStartX = x
+      let nativePlacement: PlacedTextLine | undefined
+      if (curRow.nativeLine) {
+        const lines = this.getNativeLines(positionList)
+        nativePlacement = {
+          line: curRow.nativeLine,
+          pageNo,
+          x,
+          y: y - curRow.nativeLine.rect.y * scale,
+          scale,
+          columnIndex: curRow.columnIndex,
+          clip: payload.clip
+        }
+        lines.push(nativePlacement)
+        this.nativeLines.set(positionList, lines)
+      }
       // 当前td所在位置
       const tablePreX = x
       const tablePreY = y
       for (let j = 0; j < curRow.elementList.length; j++) {
-        const element = curRow.elementList[j]
+        const model = curRow.elementList[j]
+        const element = model
         // 表格跨页片段行：同一数据元素对应多个视觉片段（跨页/跨栏），
         // 索引以行起始数据索引为基准，避免同页多片段时后续元素索引整体错位
         if (curRow.tableFragment) {
           index = curRow.startIndex + j
         }
-        const metrics = element.metrics
+        const metrics = rowElementMetrics(
+          curRow,
+          j,
+          scale,
+          this.options.defaultSize
+        )
         const offsetY =
           !element.hide &&
           !traceParticle.isTraceHidden(element) &&
-          ((element.imgDisplay !== ImageDisplay.INLINE &&
+          (((isTextEngineRow || element.imgDisplay !== ImageDisplay.INLINE) &&
             element.type === ElementType.IMAGE) ||
             element.type === ElementType.LATEX)
             ? curRow.ascent - metrics.height
             : curRow.ascent
         // 偏移量（内部计算使用）
-        if (element.left) {
-          x += element.left
-        }
         // 偏移量（外部传入）
         if (element.translateX) {
           x += element.translateX * scale
         }
+        const nativeRects = nativePlacement
+          ? textRangeRects(
+              nativePlacement,
+              rowSourceIndex(curRow, j),
+              rowSourceIndex(curRow, j) + 1
+            )
+          : []
+        const nativeLeft = nativeRects.length
+          ? Math.min(...nativeRects.map(rect => rect.x))
+          : undefined
+        const nativeCaret = nativePlacement
+          ? lineCarets(nativePlacement).find(
+              c => c.index === rowSourceIndex(curRow, j)
+            )
+          : undefined
+        const drawX = nativePlacement
+          ? (nativeLeft ?? nativeCaret?.x ?? rowContentStartX)
+          : x
+        const sourceIndex = curRow.sourceIndices?.[j]
+        const elementIndex = sourceIndex ?? index
+        const contentHeight = curRow.nativeLine
+          ? curRow.nativeLine.contentHeight * scale
+          : curRow.height
         const positionItem: IElementPosition = {
           pageNo,
-          index,
+          index: elementIndex,
           value: element.value,
           rowIndex: startRowIndex + i,
           // 表格单元格内行号为绝对序号（拆分窗口的续排位置与原窗口位置不冲突）；
           // 正文保持页内行号（页首行查找依赖 rowNo === 0）
           rowNo: payload.isTable ? startRowIndex + i : i,
           metrics,
-          left: element.left || 0,
+          left: 0,
           ascent: offsetY,
-          lineHeight: curRow.height,
+          lineHeight: contentHeight,
           isFirstLetter: j === 0,
           isLastLetter: j === curRow.elementList.length - 1,
           columnIndex: curRow.columnIndex,
+          bidiLevel:
+            nativeCaret?.bidiLevel ??
+            (curRow.direction === 'rtl' ? 1 : undefined),
           coordinate: {
-            leftTop: [x, y],
-            leftBottom: [x, y + curRow.height],
-            rightTop: [x + metrics.width, y],
-            rightBottom: [x + metrics.width, y + curRow.height]
+            leftTop: [drawX, y],
+            leftBottom: [drawX, y + contentHeight],
+            rightTop: [drawX + metrics.width, y],
+            rightBottom: [drawX + metrics.width, y + contentHeight]
           }
         }
         // 缓存浮动元素信息
@@ -521,12 +903,20 @@ export class Position {
             tableFragment.startTrIndex === 0 &&
             !tableFragment.startSplitTrOffset
           ) {
-            positionList.push(positionItem)
+            if (sourceIndex !== undefined) {
+              positionList[sourceIndex] = positionItem
+            } else {
+              positionList.push(positionItem)
+            }
           }
         } else {
-          positionList.push(positionItem)
+          if (sourceIndex !== undefined) {
+            positionList[sourceIndex] = positionItem
+          } else {
+            positionList.push(positionItem)
+          }
         }
-        index++
+        index = Math.max(index + 1, elementIndex + 1)
         x += metrics.width
         // 计算表格内元素位置
         if (
@@ -577,6 +967,12 @@ export class Position {
                   .getTableParticle()
                   .getTdWindowOffsetY(windowStart, tableFragment)
               : 0
+            const cellClip = {
+              x: td.x! * scale + tablePreX + (element.translateX || 0) * scale,
+              y: td.y! * scale + tablePreY + drawnOffsetY,
+              width: td.width! * scale,
+              height: (windowEnd - windowStart) * scale
+            }
             const drawRowResult = this.computePageRowPosition({
               positionList: tdPositionList,
               rowList,
@@ -589,6 +985,9 @@ export class Position {
                 (element.translateX || 0) * scale,
               startY: (td.y! + tdPadding[0]) * scale + tablePreY + drawnOffsetY,
               innerWidth: (td.width! - tdPaddingWidth) * scale,
+              clip: payload.clip
+                ? intersectRect(cellClip, payload.clip)
+                : cellClip,
               isTable: true,
               index: index - 1,
               tdIndex: td.tdIndex!,
@@ -663,12 +1062,16 @@ export class Position {
       scale,
       table: { tdPadding }
     } = this.options
-    const tdPaddingHeight = tdPadding[0] + tdPadding[2]
-    const rowsHeight = td.rowList!.reduce((pre, cur) => pre + cur.height, 0)
-    const blankHeight = (td.height! - tdPaddingHeight) * scale - rowsHeight
     const offsetHeight =
-      td.verticalAlign === VerticalAlign.MIDDLE ? blankHeight / 2 : blankHeight
-    if (Math.floor(offsetHeight) > 0) {
+      getCellVerticalOffset(
+        td.height!,
+        getHostRowsHeight(td.rowList!) / scale,
+        tdPadding,
+        td.verticalAlign
+      ) * scale
+    if (offsetHeight > 0) {
+      for (const placed of this.getNativeLines(positionList))
+        placed.y += offsetHeight
       positionList.forEach(tdPosition => {
         const {
           coordinate: { leftTop, leftBottom, rightBottom, rightTop }
@@ -677,13 +1080,42 @@ export class Position {
         leftBottom[1] += offsetHeight
         rightBottom[1] += offsetHeight
         rightTop[1] += offsetHeight
+        const element = td.value[tdPosition.index]
+        const shiftNested = (elements: IElement[]) => {
+          for (const child of elements)
+            for (const row of child.trList || [])
+              for (const cell of row.tdList) {
+                for (const placed of this.getNativeLines(
+                  cell.positionList || []
+                )) {
+                  placed.y += offsetHeight
+                  if (placed.clip) {
+                    const moved = {
+                      ...placed.clip,
+                      y: placed.clip.y + offsetHeight
+                    }
+                    const parentClip =
+                      this.getNativeLines(positionList)[0]?.clip
+                    placed.clip = parentClip
+                      ? intersectRect(moved, parentClip)
+                      : moved
+                  }
+                }
+                for (const position of cell.positionList || []) {
+                  for (const point of Object.values(position.coordinate))
+                    point[1] += offsetHeight
+                }
+                shiftNested(cell.value)
+              }
+        }
+        if (element?.trList) shiftNested([element])
       })
     }
   }
 
   public computePositionList(payload?: IComputePositionListPayload) {
     // 按每页行计算（混排横竖版时每页宽度/边距可能不同，按页取值）
-    const pageRowList = this.draw.getPageRowList()
+    const pageRowList = this.draw.getLayoutPages()
     const fromPageNo = payload?.fromPageNo ?? 0
     // 增量复用：首个变动页之前的页位置/浮动/跨页表格片段信息完全未变
     const cache = this.pagePositionCacheList
@@ -762,7 +1194,7 @@ export class Position {
     this.computePageRowPosition({
       positionList,
       innerWidth,
-      rowList: [deepClone(row)],
+      rowList: [row.node ? { ...row } : deepClone(row)],
       pageNo: 0,
       startX: 0,
       startY: 0,
@@ -793,10 +1225,14 @@ export class Position {
   }
 
   // 根据 x 坐标推断点击位置所属的分栏索引；无分栏布局时返回 undefined
-  private _getColumnIndexByX(x: number): number | undefined {
-    const layout = this.draw.getColumnLayout()
+  private _getColumnIndexByX(
+    x: number,
+    pageNo = this.draw.getPageNo()
+  ): number | undefined {
+    const direction = this.draw.getPageDirection(pageNo)
+    const layout = this.draw.getColumnLayout(direction)
     if (!layout) return
-    const startX = this.draw.getMargins()[3]
+    const startX = this.draw.getMargins(direction)[3]
     const xRel = x - startX
     // 栏范围 [colStart, nextColStart)，gap 算入左侧栏，避免点击栏间空白时误判
     for (let i = 0; i < layout.count; i++) {
@@ -831,6 +1267,12 @@ export class Position {
       const t = td.rowIndex!
       const d = td.tdIndex!
       const tr = element.trList![t]
+      const cellX = tablePosition.coordinate.leftTop[0] + td.x! * scale
+      if (x < cellX || x > cellX + td.width! * scale) continue
+      if (!fragment) {
+        const cellY = tablePosition.coordinate.leftTop[1] + td.y! * scale
+        if (y < cellY || y > cellY + td.height! * scale) continue
+      }
       // 片段内按可见窗口过滤：拆分/进位窗口外的区域不参与命中
       if (fragment) {
         const [windowStart, windowEnd] = this.draw
@@ -894,6 +1336,7 @@ export class Position {
           tdIndex: d,
           trIndex: t,
           tdValueIndex: childPositionIndex,
+          nativeCaret: childPosition.nativeCaret,
           tdId: td.id,
           trId: tr.id,
           tableId: element.id,
@@ -903,6 +1346,27 @@ export class Position {
       }
     }
     return null
+  }
+
+  /** 留痕软删：非设计态不参与命中（与 GlyphRenderer 跳过一致） */
+  private isTraceHitSkipped(element: IElement | undefined): boolean {
+    if (!element || this.draw.isDesignMode()) return false
+    return this.draw.getTraceParticle().isTraceHidden(element)
+  }
+
+  /** 行尾/空隙回落时避开留痕软删，落到最近可见元素 */
+  private snapIndexFromTraceHidden(
+    index: number,
+    elementList: IElement[]
+  ): number {
+    if (!~index || !this.isTraceHitSkipped(elementList[index])) {
+      return index
+    }
+    let i = index
+    while (i >= 0 && this.isTraceHitSkipped(elementList[i])) {
+      i--
+    }
+    return i >= 0 ? i : index
   }
 
   public getPositionByXY(payload: IGetPositionByXYPayload): ICurrentPosition {
@@ -918,6 +1382,9 @@ export class Position {
     const curPageNo = payload.pageNo ?? this.draw.getPageNo()
     const isMainActive = zoneManager.isMainActive()
     const positionNo = curPageNo
+    const validPositions = positionList.filter(
+      (position): position is NonNullable<typeof position> => !!position
+    )
     // 验证浮于文字上方元素
     if (!isTable) {
       const floatTopPosition = this.getFloatPositionByXY({
@@ -926,15 +1393,25 @@ export class Position {
       })
       if (floatTopPosition) return floatTopPosition
     }
+    const nativeHit = this.hitNativeText(
+      x,
+      y,
+      curPageNo,
+      positionList,
+      elementList
+    )
+    if (nativeHit) return nativeHit
     // 普通元素
     for (let j = 0; j < positionList.length; j++) {
+      const position = positionList[j]
+      if (!position) continue
       const {
         index,
         pageNo,
         left,
         isFirstLetter,
         coordinate: { leftTop, rightTop, leftBottom }
-      } = positionList[j]
+      } = position
       // 页眉/页脚的 positionList 跨页共享，坐标是页内的，按坐标命中即可
       if (isMainActive) {
         if (positionNo !== pageNo) continue
@@ -947,8 +1424,12 @@ export class Position {
         leftTop[1] <= y &&
         leftBottom[1] >= y
       ) {
-        let curPositionIndex = j
-        const element = elementList[j]
+        let curPositionIndex = index
+        const element = elementList[index]
+        // 留痕软删：不占命中
+        if (this.isTraceHitSkipped(element)) {
+          continue
+        }
         // 表格被命中
         if (element.type === ElementType.TABLE) {
           const tableChildPosition = this._getTableChildPositionByXY({
@@ -957,7 +1438,7 @@ export class Position {
             pageNo: curPageNo,
             element,
             index,
-            tablePosition: positionList[j]
+            tablePosition: position
           })
           if (tableChildPosition) return tableChildPosition
         }
@@ -1023,13 +1504,25 @@ export class Position {
           }
         }
         let hitLineStartIndex: number | undefined
-        // 判断是否在文字中间前后
+        // 判断是否在文字中间前后（RTL：左半=之后，右半=之前）
         if (elementList[index].value !== ZERO) {
-          const valueWidth = rightTop[0] - leftTop[0]
-          if (x < leftTop[0] + valueWidth / 2) {
-            curPositionIndex = j - 1
-            if (isFirstLetter) {
-              hitLineStartIndex = j
+          const mid = (leftTop[0] + rightTop[0]) / 2
+          const isRtlRun = ((position.bidiLevel ?? 0) & 1) === 1
+          const wouldExitControl = (prevIndex: number) =>
+            !!element.controlId &&
+            elementList[prevIndex]?.controlId !== element.controlId
+          if (isRtlRun) {
+            // 控件首字右半若会落到控件外，仍停在控件内（否则「：|{」无法激活下拉）
+            if (x >= mid && !wouldExitControl(curPositionIndex - 1)) {
+              curPositionIndex = index - 1
+              if (isFirstLetter) hitLineStartIndex = index
+            }
+          } else if (x < mid) {
+            if (!wouldExitControl(curPositionIndex - 1)) {
+              curPositionIndex = index - 1
+              if (isFirstLetter) {
+                hitLineStartIndex = index
+              }
             }
           }
         }
@@ -1037,7 +1530,8 @@ export class Position {
           isDirectHit: true,
           hitLineStartIndex,
           index: curPositionIndex,
-          isControl: !!element.controlId
+          // 半盒亲和可能把 index 挪到控件外；isControl 须跟最终 index 一致
+          isControl: !!elementList[curPositionIndex]?.controlId
         }
       }
     }
@@ -1115,10 +1609,12 @@ export class Position {
     }
     // 判断所属行是否存在元素
     const matchedLastLetterList = isMainActive
-      ? positionList.filter(p => p.isLastLetter && p.pageNo === positionNo)
-      : positionList.filter(p => p.isLastLetter)
+      ? validPositions.filter(p => p.isLastLetter && p.pageNo === positionNo)
+      : validPositions.filter(p => p.isLastLetter)
     // 分栏场景下，只保留与点击栏一致的行，避免误命中同 y 的其他栏
-    const clickColumnIndex = this._getColumnIndexByX(x)
+    const clickColumnIndex = isMainActive
+      ? this._getColumnIndexByX(x, positionNo)
+      : undefined
     const lastLetterList =
       clickColumnIndex === undefined
         ? matchedLastLetterList
@@ -1126,7 +1622,7 @@ export class Position {
             p =>
               p.columnIndex === undefined || clickColumnIndex === p.columnIndex
           )
-    const zoneRowList = this.draw.getOriginalRowList()
+    const zoneRowList = this.draw.getLayoutRows()
     for (let j = 0; j < lastLetterList.length; j++) {
       const {
         index,
@@ -1138,40 +1634,79 @@ export class Position {
       const rowOffsetY = zoneRowList[rowIndex]?.offsetY || 0
       if (y > leftTop[1] - rowOffsetY && y <= leftBottom[1]) {
         const headIndex = isMainActive
-          ? positionList.findIndex(
+          ? validPositions.findIndex(
               p => p.pageNo === positionNo && p.rowNo === rowNo
             )
-          : positionList.findIndex(p => p.rowNo === rowNo)
-        const headElement = elementList[headIndex]
-        const headPosition = positionList[headIndex]
-        // 是否在头部（点击行内容上方空白视为点击行首）
-        const isHitOffsetArea = y <= leftTop[1]
-        const headStartX =
-          headElement.listStyle === ListStyle.CHECKBOX
-            ? this.draw.getMargins()[3]
-            : headPosition.coordinate.leftTop[0]
-        if (isHitOffsetArea || x < headStartX) {
-          // 头部元素为空元素时无需选中
-          if (~headIndex) {
+          : validPositions.findIndex(p => p.rowNo === rowNo)
+        const headPosition = validPositions[headIndex]
+        const headElement = headPosition
+          ? elementList[headPosition.index]
+          : undefined
+        const rowPositions = isMainActive
+          ? validPositions.filter(
+              p => p.pageNo === positionNo && p.rowNo === rowNo
+            )
+          : validPositions.filter(p => p.rowNo === rowNo)
+        const contentLeft = Math.min(
+          ...rowPositions.map(p => p.coordinate.leftTop[0])
+        )
+        const contentRight = Math.max(
+          ...rowPositions.map(p => p.coordinate.rightTop[0])
+        )
+        const row =
+          this.draw.getLayoutRowList()[headPosition.rowIndex] ||
+          this.draw.getLayoutRows()[headPosition.rowIndex]
+        const isRtlRow = row?.direction === 'rtl'
+        const placeAtLogicalStart = () => {
+          if (headPosition) {
             if (headPosition.value === ZERO) {
-              curPositionIndex = headIndex
+              curPositionIndex = headPosition.index
             } else {
-              curPositionIndex = headIndex - 1
-              hitLineStartIndex = headIndex
+              curPositionIndex = headPosition.index - 1
+              hitLineStartIndex = headPosition.index
             }
           } else {
             curPositionIndex = index
           }
-        } else {
-          // 是否是复选框列表
-          if (headElement.listStyle === ListStyle.CHECKBOX && x < leftTop[0]) {
-            return {
-              index: headIndex,
-              isDirectHit: true,
-              isCheckbox: true
+        }
+        if (y <= leftTop[1]) {
+          placeAtLogicalStart()
+        } else if (isRtlRow) {
+          // RTL：段首在右、逻辑尾在左。左侧空白 → 逻辑尾；右侧空白 → 逻辑首
+          if (x < contentLeft) {
+            curPositionIndex = index
+          } else if (x > contentRight) {
+            placeAtLogicalStart()
+          } else {
+            // 落入字间空隙：靠近哪侧跟哪侧
+            const mid = (contentLeft + contentRight) / 2
+            if (x < mid) {
+              curPositionIndex = index
+            } else {
+              placeAtLogicalStart()
             }
           }
-          curPositionIndex = index
+        } else {
+          // LTR：左侧空白 → 行首；否则 → 行尾（逻辑尾）
+          const headStartX =
+            headElement?.listStyle === ListStyle.CHECKBOX
+              ? this.draw.getMargins()[3]
+              : headPosition.coordinate.leftTop[0]
+          if (x < headStartX) {
+            placeAtLogicalStart()
+          } else {
+            if (
+              headElement?.listStyle === ListStyle.CHECKBOX &&
+              x < leftTop[0]
+            ) {
+              return {
+                index: headPosition.index,
+                isDirectHit: true,
+                isCheckbox: true
+              }
+            }
+            curPositionIndex = index
+          }
         }
         isLastArea = true
         break
@@ -1223,15 +1758,18 @@ export class Position {
       // 正文上-循环首行
       const margins = this.draw.getMargins()
       if (y <= margins[0]) {
-        for (let p = 0; p < positionList.length; p++) {
-          const position = positionList[p]
+        const firstRowPositions = validPositions.filter(
+          position => position.pageNo === positionNo && position.rowNo === 0
+        )
+        for (let p = 0; p < firstRowPositions.length; p++) {
+          const position = firstRowPositions[p]
           if (position.pageNo !== positionNo || position.rowNo !== 0) continue
           const { leftTop, rightTop } = position.coordinate
           // 小于左页边距 || 命中文字 || 首行最后元素
           if (
             x <= margins[3] ||
             (x >= leftTop[0] && x <= rightTop[0]) ||
-            positionList[p + 1]?.rowNo !== 0
+            firstRowPositions[p + 1]?.rowNo !== 0
           ) {
             return {
               index: position.index
@@ -1243,20 +1781,19 @@ export class Position {
         const lastLetter = lastLetterList[lastLetterList.length - 1]
         if (lastLetter) {
           const lastRowNo = lastLetter.rowNo
-          for (let p = 0; p < positionList.length; p++) {
-            const position = positionList[p]
-            if (
-              position.pageNo !== positionNo ||
-              position.rowNo !== lastRowNo
-            ) {
-              continue
-            }
+          const lastRowPositions = validPositions.filter(
+            position =>
+              (!isMainActive || position.pageNo === positionNo) &&
+              position.rowNo === lastRowNo
+          )
+          for (let p = 0; p < lastRowPositions.length; p++) {
+            const position = lastRowPositions[p]
             const { leftTop, rightTop } = position.coordinate
             // 小于左页边距 || 命中文字 || 尾行最后元素
             if (
               x <= margins[3] ||
               (x >= leftTop[0] && x <= rightTop[0]) ||
-              positionList[p + 1]?.rowNo !== lastRowNo
+              lastRowPositions[p + 1]?.rowNo !== lastRowNo
             ) {
               return {
                 index: position.index
@@ -1272,10 +1809,14 @@ export class Position {
           positionList.length - 1
       }
     }
+    const snappedIndex = this.snapIndexFromTraceHidden(
+      curPositionIndex,
+      elementList
+    )
     return {
       hitLineStartIndex,
-      index: curPositionIndex,
-      isControl: !!elementList[curPositionIndex]?.controlId
+      index: snappedIndex,
+      isControl: !!elementList[snappedIndex]?.controlId
     }
   }
 
@@ -1344,6 +1885,7 @@ export class Position {
   ): ICurrentPosition | null {
     const positionResult = this.getPositionByXY(payload)
     if (!~positionResult.index) return null
+    this.setNativeCaretHint(positionResult.nativeCaret || null)
     // 移动控件内光标
     if (
       positionResult.isControl &&
@@ -1351,12 +1893,29 @@ export class Position {
     ) {
       const { index, isTable, trIndex, tdIndex, tdValueIndex } = positionResult
       const control = this.draw.getControl()
+      // 半盒亲和可能把 index 推到控件外；命中控件时仍按控件入口吸附
+      let moveIndex = isTable ? tdValueIndex! : index
+      if (!isTable) {
+        const elementList = this.draw.getOriginalElementList()
+        if (!elementList[moveIndex]?.controlId) {
+          const next = elementList[moveIndex + 1]
+          if (
+            next?.controlId &&
+            (next.controlComponent === ControlComponent.PREFIX ||
+              next.controlComponent === ControlComponent.PRE_TEXT ||
+              next.controlComponent === ControlComponent.PLACEHOLDER ||
+              next.controlComponent === ControlComponent.VALUE)
+          ) {
+            moveIndex = moveIndex + 1
+          }
+        }
+      }
       const { newIndex } = control.moveCursor({
-        index,
+        index: isTable ? index : moveIndex,
         isTable,
         trIndex,
         tdIndex,
-        tdValueIndex
+        tdValueIndex: isTable ? moveIndex : tdValueIndex
       })
       if (isTable) {
         positionResult.tdValueIndex = newIndex
@@ -1398,56 +1957,5 @@ export class Position {
       tablePath
     })
     return positionResult
-  }
-
-  public setSurroundPosition(payload: ISetSurroundPositionPayload) {
-    const { scale } = this.options
-    const {
-      pageNo,
-      row,
-      rowElement,
-      rowElementRect,
-      surroundElementList,
-      availableWidth
-    } = payload
-    let x = rowElementRect.x
-    let rowIncreaseWidth = 0
-    if (
-      surroundElementList.length &&
-      !getIsBlockElement(rowElement) &&
-      !rowElement.control?.minWidth
-    ) {
-      for (let s = 0; s < surroundElementList.length; s++) {
-        const surroundElement = surroundElementList[s]
-        const floatPosition = surroundElement.imgFloatPosition!
-        if (floatPosition.pageNo !== pageNo) continue
-        const surroundRect = {
-          ...floatPosition,
-          x: floatPosition.x * scale,
-          y: floatPosition.y * scale,
-          width: surroundElement.width! * scale,
-          height: surroundElement.height! * scale
-        }
-        if (isRectIntersect(rowElementRect, surroundRect)) {
-          row.isSurround = true
-          // 需向左移动距离：浮动元素宽度 + 浮动元素左上坐标 - 元素左上坐标
-          const translateX =
-            surroundRect.width + surroundRect.x - rowElementRect.x
-          rowElement.left = translateX
-          // 增加行宽
-          row.width += translateX
-          rowIncreaseWidth += translateX
-          // 下个元素起始位置：浮动元素右坐标 - 元素宽度
-          x = surroundRect.x + surroundRect.width
-          // 检测宽度是否足够，不够则移动到下一行，并还原状态
-          if (row.width + rowElement.metrics.width > availableWidth) {
-            rowElement.left = 0
-            row.width -= rowIncreaseWidth
-            break
-          }
-        }
-      }
-    }
-    return { x, rowIncreaseWidth }
   }
 }

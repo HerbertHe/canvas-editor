@@ -1,236 +1,177 @@
 import { defineConfig } from 'vitepress'
 
+function sidebar(prefix = '', english = false) {
+  const item = (text: string, path: string) => ({
+    text,
+    link: `${prefix}/guide/${path}`
+  })
+  return [
+    {
+      text: english ? 'Get started' : '快速上手',
+      items: [
+        item(english ? 'Online playground' : '在线体验', 'playground'),
+        item(
+          english ? 'Installation and first document' : '安装与第一个文档',
+          'start'
+        ),
+        item(
+          english ? 'Fonts, readiness and migration' : '字体、初始化与迁移',
+          'font-and-esm-migration'
+        ),
+        item(english ? 'Supported features' : '能力与支持边界', 'features'),
+        item(english ? 'Troubleshooting' : '常见问题', 'faq')
+      ]
+    },
+    {
+      text: english ? 'Rendering internals' : '渲染原理',
+      items: [
+        item(english ? 'Architecture' : '架构与模块职责', 'architecture'),
+        item(
+          english ? 'Rendering pipeline' : '渲染管线与时序',
+          'rendering-pipeline'
+        ),
+        item(english ? 'Document model' : '文档数据结构', 'schema'),
+        item(
+          english ? 'Experimental configuration' : '实验配置与增量边界',
+          'lab'
+        )
+      ]
+    },
+    {
+      text: english ? 'API reference' : 'API 参考',
+      items: [
+        item(english ? 'Options' : '编辑器配置', 'option'),
+        item(
+          english ? 'Editor lifecycle and fonts' : '实例、生命周期与字体',
+          'api-instance'
+        ),
+        item(english ? 'Mutation commands' : '执行命令', 'command-execute'),
+        item(english ? 'Query commands' : '查询与导出', 'command-get'),
+        item(english ? 'Common utilities' : '通用工具', 'api-common'),
+        item('EventBus', 'eventbus'),
+        item('Listener', 'listener'),
+        item(english ? 'Localization' : '国际化', 'i18n')
+      ]
+    },
+    {
+      text: english ? 'Form controls' : '表单控件',
+      items: [
+        item(english ? 'Configuration' : '控件配置', 'control/option'),
+        item(english ? 'Commands' : '控件命令', 'control/command'),
+        item(english ? 'Cascades' : '级联表达式', 'control/cascade'),
+        item(english ? 'Validation' : '校验', 'control/validate')
+      ]
+    },
+    {
+      text: english ? 'Extension' : '扩展集成',
+      collapsed: true,
+      items: [
+        item(
+          english ? 'Built-in shortcuts' : '内置快捷键',
+          'shortcut-internal'
+        ),
+        item(english ? 'Custom shortcuts' : '自定义快捷键', 'shortcut-custom'),
+        item(
+          english ? 'Built-in context menu' : '内置右键菜单',
+          'contextmenu-internal'
+        ),
+        item(
+          english ? 'Custom context menu' : '自定义右键菜单',
+          'contextmenu-custom'
+        ),
+        item(english ? 'Plugins' : '插件接入', 'plugin-custom'),
+        item(english ? 'Overrides' : '重写方法', 'override'),
+        item(english ? 'Macros' : '宏', 'macro'),
+        item('DevTools', 'devtools')
+      ]
+    },
+    {
+      text: english ? 'Project' : '项目与维护',
+      items: [
+        item(
+          english ? 'Origin and upstream differences' : '项目来源与上游差异',
+          'fork-and-differences'
+        ),
+        item(
+          english ? 'GitHub Pages deployment' : '文档站部署',
+          'docs-deployment'
+        ),
+        item(
+          english ? 'Engineering records' : '验收与历史记录',
+          'engineering-records'
+        )
+      ]
+    }
+  ]
+}
+
 export default defineConfig({
-  base: '/canvas-editor-docs/',
-  title: 'canvas-editor',
-  description: 'A Canvas/SVG-based rich text editor',
+  base: process.env.DOCS_BASE || '/canvas-editor/',
+  title: '@herberthe/canvas-editor',
+  description: 'HarfBuzz-only typography and Canvas document rendering',
+  lastUpdated: true,
+  markdown: {
+    config(md) {
+      const fence = md.renderer.rules.fence!
+      md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        if (tokens[index].info.trim() === 'mermaid') {
+          const code = md.utils.escapeHtml(
+            JSON.stringify(tokens[index].content)
+          )
+          return `<MermaidDiagram :code="${code}" />`
+        }
+        return fence(tokens, index, options, env, self)
+      }
+    }
+  },
   themeConfig: {
     i18nRouting: false,
-    algolia: {
-      appId: 'RWSVW6F3S5',
-      apiKey: 'e462fffb4d2e9ab4a78c29e0b457ab33',
-      indexName: 'hufe'
-    },
     logo: '/favicon.png',
+    outline: { level: [2, 3], label: '本页目录' },
+    search: { provider: 'local' },
     nav: [
-      {
-        text: '指南',
-        link: '/guide/start',
-        activeMatch: '/guide/'
-      },
-      {
-        text: 'Demo',
-        link: 'https://hufe.club/canvas-editor'
-      },
-      {
-        text: '官方插件',
-        link: 'https://hufe.club/canvas-editor-plugin'
-      },
-      {
-        text: '调试工具',
-        link: '/guide/devtools.html'
-      },
-      {
-        text: '赞助',
-        link: 'https://hufe.club/donate.jpg'
-      }
+      { text: '在线体验', link: '/guide/playground' },
+      { text: '快速上手', link: '/guide/start' },
+      { text: '渲染管线', link: '/guide/rendering-pipeline' },
+      { text: '项目关系', link: '/guide/fork-and-differences' },
+      { text: '文档部署', link: '/guide/docs-deployment' }
     ],
-    sidebar: [
-      {
-        text: '开始',
-        items: [
-          { text: '入门', link: '/guide/start' },
-          { text: '配置', link: '/guide/option' },
-          { text: '国际化', link: '/guide/i18n' },
-          { text: '数据结构', link: '/guide/schema' },
-          { text: '功能总览', link: '/guide/features' },
-          { text: '实验特性', link: '/guide/lab' }
-        ]
-      },
-      {
-        text: '命令',
-        items: [
-          { text: '执行动作命令', link: '/guide/command-execute' },
-          { text: '获取数据命令', link: '/guide/command-get' }
-        ]
-      },
-      {
-        text: '监听',
-        items: [
-          { text: '事件监听(listener)', link: '/guide/listener' },
-          { text: '事件监听(eventBus)', link: '/guide/eventbus' }
-        ]
-      },
-      {
-        text: '快捷键',
-        items: [
-          { text: '内部快捷键', link: '/guide/shortcut-internal' },
-          { text: '自定义快捷键', link: '/guide/shortcut-custom' }
-        ]
-      },
-      {
-        text: '右键菜单',
-        items: [
-          { text: '内部右键菜单', link: '/guide/contextmenu-internal' },
-          { text: '自定义右键菜单', link: '/guide/contextmenu-custom' }
-        ]
-      },
-      {
-        text: '重写方法',
-        items: [{ text: '重写方法', link: '/guide/override' }]
-      },
-      {
-        text: '控件',
-        items: [
-          { text: '配置', link: '/guide/control/option' },
-          { text: '方法', link: '/guide/control/command' },
-          { text: '级联表达式', link: '/guide/control/cascade' },
-          { text: '验证', link: '/guide/control/validate' }
-        ]
-      },
-      {
-        text: '宏',
-        items: [{ text: '宏(Macro)', link: '/guide/macro' }]
-      },
-      {
-        text: 'API',
-        items: [
-          { text: '实例API', link: '/guide/api-instance' },
-          { text: '通用API', link: '/guide/api-common' }
-        ]
-      },
-      {
-        text: '插件',
-        items: [
-          {
-            text: '官方插件',
-            link: 'https://hufe.club/canvas-editor-plugin'
-          },
-          { text: '自定义插件', link: '/guide/plugin-custom' },
-          { text: '开发调试工具', link: '/guide/devtools' }
-        ]
-      }
-    ],
+    sidebar: sidebar(),
     socialLinks: [
-      {
-        icon: 'github',
-        link: 'https://github.com/Hufe921/canvas-editor'
-      }
+      { icon: 'github', link: 'https://github.com/HerbertHe/canvas-editor' }
     ],
+    editLink: {
+      pattern:
+        'https://github.com/HerbertHe/canvas-editor/edit/main/docs/:path',
+      text: '在 GitHub 编辑本页'
+    },
     footer: {
-      message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2021-present Hufe'
+      message: 'MIT · Independent fork of Hufe921/canvas-editor · Canvas-only',
+      copyright:
+        'Fork modifications © 2026-present Herbert He · Original © 2021-present hufe'
     }
   },
   locales: {
-    root: {
-      label: '简体中文',
-      lang: 'zh-CN'
-    },
+    root: { label: '简体中文', lang: 'zh-CN' },
     en: {
       label: 'English',
       lang: 'en',
       link: '/en/',
       themeConfig: {
+        outline: { level: [2, 3], label: 'On this page' },
         nav: [
-          {
-            text: 'Guide',
-            link: '/en/guide/start',
-            activeMatch: '/en/guide/'
-          },
-          {
-            text: 'Demo',
-            link: 'https://hufe.club/canvas-editor'
-          },
-          {
-            text: 'Official plugin',
-            link: 'https://hufe.club/canvas-editor-plugin'
-          },
-          {
-            text: 'DevTools',
-            link: '/en/guide/devtools.html'
-          },
-          {
-            text: 'Donate',
-            link: 'https://hufe.club/donate.jpg'
-          }
+          { text: 'Playground', link: '/en/guide/playground' },
+          { text: 'Get started', link: '/en/guide/start' },
+          { text: 'Rendering pipeline', link: '/en/guide/rendering-pipeline' },
+          { text: 'Project origin', link: '/en/guide/fork-and-differences' },
+          { text: 'Deploy docs', link: '/en/guide/docs-deployment' }
         ],
-        sidebar: [
-          {
-            text: 'Start',
-            items: [
-              { text: 'start', link: '/en/guide/start' },
-              { text: 'option', link: '/en/guide/option' },
-              { text: 'i18n', link: '/en/guide/i18n' },
-              { text: 'schema', link: '/en/guide/schema' },
-              { text: 'features', link: '/en/guide/features' },
-              { text: 'lab', link: '/en/guide/lab' }
-            ]
-          },
-          {
-            text: 'Command',
-            items: [
-              { text: 'execute', link: '/en/guide/command-execute' },
-              { text: 'get', link: '/en/guide/command-get' }
-            ]
-          },
-          {
-            text: 'Listener',
-            items: [
-              { text: 'listener', link: '/en/guide/listener' },
-              { text: 'eventbus', link: '/en/guide/eventbus' }
-            ]
-          },
-          {
-            text: 'Shortcut',
-            items: [
-              { text: 'internal', link: '/en/guide/shortcut-internal' },
-              { text: 'custom', link: '/en/guide/shortcut-custom' }
-            ]
-          },
-          {
-            text: 'Contextmenu',
-            items: [
-              { text: 'internal', link: '/en/guide/contextmenu-internal' },
-              { text: 'custom', link: '/en/guide/contextmenu-custom' }
-            ]
-          },
-          {
-            text: 'Override',
-            items: [{ text: 'override', link: '/en/guide/override' }]
-          },
-          {
-            text: 'Control',
-            items: [
-              { text: 'option', link: '/en/guide/control/option' },
-              { text: 'command', link: '/en/guide/control/command' },
-              { text: 'cascade', link: '/en/guide/control/cascade' },
-              { text: 'validate', link: '/en/guide/control/validate' }
-            ]
-          },
-          {
-            text: 'Macro',
-            items: [{ text: 'macro', link: '/en/guide/macro' }]
-          },
-          {
-            text: 'Api',
-            items: [
-              { text: 'instance', link: '/en/guide/api-instance' },
-              { text: 'common', link: '/en/guide/api-common' }
-            ]
-          },
-          {
-            text: 'Plugin',
-            items: [
-              {
-                text: 'official',
-                link: 'https://hufe.club/canvas-editor-plugin'
-              },
-              { text: 'custom', link: '/en/guide/plugin-custom' },
-              { text: 'devtools', link: '/en/guide/devtools' }
-            ]
-          }
-        ]
+        sidebar: sidebar('/en', true),
+        editLink: {
+          pattern:
+            'https://github.com/HerbertHe/canvas-editor/edit/main/docs/:path',
+          text: 'Edit this page on GitHub'
+        }
       }
     }
   }

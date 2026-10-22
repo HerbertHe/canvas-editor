@@ -1,194 +1,76 @@
-# Data Structure
+# Document model
+
+Persist business content as `IEditorData`, not glyphs, page coordinates or internal row objects. Runtime elements and native geometry are derived layers; see [architecture](./architecture.md). All types/enums in this page are public root exports.
+
+## Document, elements and paragraphs
 
 ```typescript
-interface IElement {
-  // basic
-  id?: string;
-  type?: {
-    TEXT = 'text',
-    IMAGE = 'image',
-    TABLE = 'table',
-    HYPERLINK = 'hyperlink',
-    SUPERSCRIPT = 'superscript',
-    SUBSCRIPT = 'subscript',
-    SEPARATOR = 'separator',
-    PAGE_BREAK = 'pageBreak',
-    CONTROL = 'control',
-    CHECKBOX = 'checkbox',
-    RADIO = 'radio',
-    LATEX = 'latex',
-    TAB = 'tab',
-    DATE = 'date',
-    BLOCK = 'block'
-  };
-  value: string;
-  valueList?: IElement[]; // Use of composite elements (hyperlinks, titles, lists, and so on).
-  extension?: unknown;
-  externalId?: string;
-  hide?: boolean;
-  hint?: string; // Hover hint text (requires the hint option to be enabled)
-  // style
-  font?: string;
-  size?: number;
-  width?: number;
-  height?: number;
-  bold?: boolean;
-  color?: string;
-  highlight?: string;
-  italic?: boolean;
-  underline?: boolean;
-  strikeout?: boolean;
-  rowFlex?: {
-    LEFT = 'left',
-    CENTER = 'center',
-    RIGHT = 'right',
-    ALIGNMENT = 'alignment',
-    JUSTIFY = 'justify'
-  };
-  rowMargin?: number;
-  spacingBefore?: number;
-  spacingAfter?: number;
-  letterSpacing?: number;
-  textDecoration?: {
-    style?: TextDecorationStyle;
-  };
-  // groupIds
-  groupIds?: string[];
-  // table
-  conceptId?: string;
-  colgroup?: {
-    width: number;
-  }[];
-  trList?: {
-    height: number;
-    pagingRepeat?: boolean;
-    extension?: unknown;
-    externalId?: string;
-    tdList: {
-      colspan: number;
-      rowspan: number;
-      conceptId?: string;
-      verticalAlign?: VerticalAlign;
-      backgroundColor?: string;
-      borderColor?: string;
-      borderWidth?: number;
-      borderTypes?: TdBorder[];
-      slashTypes?: TdSlash[];
-      value: IElement[];
-      extension?: unknown;
-      externalId?: string;
-      disabled?: boolean;
-      deletable?: boolean;
-      hint?: string; // Cell hover hint text: shown when the cursor enters any element in the cell
-    }[];
-  }[];
-  borderType?: TableBorder;
-  borderColor?: string;
-  borderWidth?: number;
-  borderExternalWidth?: number;
-  tableToolDisabled?: boolean;
-  // Hyperlinks
-  url?: string;
-  // Superscript and subscript
-  actualSize?: number;
-  // Dividing line
-  dashArray?: number[]; // Array for dashed line style
-  lineWidth?: number; // Line width of the separator
-  paperDirection?: PaperDirection; // Orientation after a page break
-  // control
-  control?: IControl; // Control data structure, see: Control-Options
-  controlComponent?: {
-    PREFIX = 'prefix',
-    POSTFIX = 'postfix',
-    PLACEHOLDER = 'placeholder',
-    VALUE = 'value',
-    CHECKBOX = 'checkbox',
-    RADIO = 'radio'
-  };
-  // checkbox
-  checkbox?: {
-    value: boolean | null;
-  };
-  // radio
-  radio?: {
-    value: boolean | null;
-  };
-  // LaTeX
-  laTexSVG?: string;
-  // date
-  dateFormat?: string;
-  // picture
-  imgDisplay?: {
-    INLINE = 'inline',
-    BLOCK = 'block'
-  }
-  imgFloatPosition?: {
-    x: number;
-    y: number;
-    pageNo?: number;
-  }
-  imgCrop?: {
-    x: number;      // Crop start X coordinate (relative to original image)
-    y: number;      // Crop start Y coordinate (relative to original image)
-    width: number;  // Crop width
-    height: number; // Crop height
-  }
-  imgCaption?: {
-    value: string;  // Caption content, supports {imageNo} placeholder
-    color?: string; // Caption font color
-    font?: string;  // Caption font family
-    size?: number;  // Caption font size
-    top?: number;   // Spacing between caption and image
-  }
-  imgToolDisabled?: boolean;
-  imgPreviewDisabled?: boolean;
-  // block
-  block?: {
-    type: {
-      IFRAME = 'iframe',
-      VIDEO = 'video'
-    };
-    iframeBlock?: {
-      src?: string;
-      srcdoc?: string;
-      sandbox?: string[];
-      allow?: string[];
-    };
-    videoBlock?: {
-      src: string;
-    };
-  };
-  // title
-  level?: TitleLevel;
-  title?: {
-    conceptId?: string;
-    deletable?: boolean;
-    disabled?: boolean;
-  };
-  // list
-  listType?: ListType;
-  listStyle?: ListStyle;
-  listWrap?: boolean;
-  listLevel?: number;
-  // area
-  areaId?: string;
-  area?: {
-    extension?: unknown;
-    top?: number;
-    hide?: boolean;
-    borderColor?: string;
-    backgroundColor?: string;
-    mode?: AreaMode;
-    deletable?: boolean;
-    placeholder?: IPlaceholder;
-  };
-  // label
-  labelId?: string;
-  label?: {
-    color?: string;
-    backgroundColor?: string;
-    borderRadius?: number;
-    padding?: IPadding;
-  };
+import { RowFlex, TextDirection, ElementType } from '@herberthe/canvas-editor'
+import type { IEditorData } from '@herberthe/canvas-editor'
+
+const data: IEditorData = {
+  header: [{ value: 'Weekend plans', rowFlex: RowFlex.CENTER }],
+  main: [
+    { value: 'Shopping list', bold: true, spacingAfter: 8 },
+    { value: '\n' },
+    { value: 'مرحبا بالعائلة', direction: TextDirection.RTL },
+    { value: '\n' },
+    {
+      type: ElementType.HYPERLINK,
+      value: '',
+      url: 'https://example.com',
+      valueList: [{ value: 'Community calendar' }]
+    }
+  ],
+  footer: [{ value: 'Bring a reusable bag.', size: 12 }]
 }
 ```
+
+`main` is required in structured data; header/footer and graffiti are optional. A body-only `IElement[]` is also accepted by Editor.create. `value` stores text or an element-specific payload; composite structures can use `valueList`. Newline input is normalized into internal paragraph markers. Do not manufacture internal compensation markers or assume one runtime element equals one UTF-16 code unit.
+
+Paragraph direction is `element.direction`; alignment is `rowFlex`. Paragraph properties are carried by elements and normalized by the editor. Use paragraph commands for runtime changes. `options.direction` mirrors UI chrome and is distinct from content direction. Paragraph before/after spacing does not replace line height.
+
+## Element field groups
+
+| Group                | Common fields                                                                                   | Notes                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Identity             | id, externalId, extension, type, value                                                          | Application metadata belongs in extension; validate external content |
+| Text style           | font, size, bold, italic, color, highlight, underline, strikeout, letterSpacing, textDecoration | A font family must have usable registered bytes                      |
+| Paragraph            | rowFlex, direction, rowMargin, spacingBefore, spacingAfter                                      | Context affects shaping and pagination                               |
+| Headings/lists       | level, title, listType, listStyle, listLevel, listWrap, valueList                               | Runtime IDs are editor-managed                                       |
+| Tables               | colgroup, trList, borderType, borderColor, borderWidth                                          | Cell value arrays recursively contain elements                       |
+| Links                | url, valueList                                                                                  | Validate URLs from untrusted content                                 |
+| Images               | width, height, imgDisplay, imgFloatPosition, imgCrop, imgCaption                                | Resource URLs and dimensions affect paint/export                     |
+| Controls             | control, valueList                                                                              | See control configuration and cascade references                     |
+| Other objects        | block, dateFormat, laTexSVG, dashArray, lineWidth                                               | SVG formula/image data is not an SVG page renderer                   |
+| Business annotations | groupIds, trace, area, label, hide, hint                                                        | See the corresponding commands and configuration                     |
+
+Exact optional fields and enum members are defined by the package's exported `IElement` type. The table is a navigation aid, not a replacement declaration.
+
+## Nested table example
+
+```typescript
+import { ElementType } from '@herberthe/canvas-editor'
+import type { IElement } from '@herberthe/canvas-editor'
+
+const table: IElement = {
+  type: ElementType.TABLE,
+  value: '',
+  colgroup: [{ width: 220 }, { width: 220 }],
+  trList: [
+    {
+      height: 40,
+      tdList: [
+        { colspan: 1, rowspan: 1, value: [{ value: 'Saturday' }] },
+        { colspan: 1, rowspan: 1, value: [{ value: 'Visit the library' }] }
+      ]
+    }
+  ]
+}
+```
+
+Tables, controls, links and composite objects have their own schema constraints. Use public commands for edits so IDs, ranges, dirty tracking and layout invalidation stay consistent. See [control configuration](./control/option.md) and [mutation commands](./command-execute.md).
+
+## Serialization and restoration
+
+`command.getValue()` returns `{ version, data, options }`. Restore document content with `command.executeSetValue(saved.data)` after ready. Initial creation can also receive `saved.data`. Keep application configuration and font assets under your control rather than blindly restoring untrusted options. Font bytes, caches and native geometry are not a portable document format. See [quick start](./start.md) for persistence examples.

@@ -26,7 +26,6 @@ import {
   IRepaintControlOption,
   ISetControlExtensionOption,
   ISetControlProperties,
-  ISetControlRowFlexOption,
   ISetControlValueOption
 } from '../../../interface/Control'
 import { IEditorData, IEditorOption } from '../../../interface/Editor'
@@ -70,8 +69,6 @@ import {
   LIST_CONTEXT_ATTR,
   TITLE_CONTEXT_ATTR
 } from '../../../dataset/constant/Element'
-import { IRowElement } from '../../../interface/Row'
-import { RowFlex } from '../../../dataset/enum/Row'
 import { ZERO } from '../../../dataset/constant/Common'
 
 interface IMoveCursorResult {
@@ -246,6 +243,16 @@ export class Control {
     if (!~startIndex && !~endIndex) return false
     const elementList = this.getElementList()
     const endElement = elementList[endIndex]
+    // 光标紧贴 PREFIX 前（：|{）视为在控件内，便于激活下拉
+    const startAtControlEntrance =
+      startIndex === endIndex &&
+      !elementList[startIndex]?.controlId &&
+      !!elementList[startIndex + 1]?.controlId &&
+      (elementList[startIndex + 1]?.controlComponent ===
+        ControlComponent.PREFIX ||
+        elementList[startIndex + 1]?.controlComponent ===
+          ControlComponent.PRE_TEXT)
+    if (startAtControlEntrance) return true
     // 嵌套下，选区起止可能属于同一最外层控件的不同子控件
     const startOuter = getOutermostOwner(elementList, startIndex)
     const endOuter = getOutermostOwner(elementList, endIndex)
@@ -535,7 +542,19 @@ export class Control {
   public initControl() {
     const elementList = this.getElementList()
     const range = this.getRange()
-    const element = elementList[range.startIndex]
+    // 光标在 PREFIX 前时，用控件入口元素激活（与 getIsRangeWithinControl 一致）
+    let element = elementList[range.startIndex]
+    if (
+      !element?.controlId &&
+      elementList[range.startIndex + 1]?.controlId &&
+      (elementList[range.startIndex + 1]?.controlComponent ===
+        ControlComponent.PREFIX ||
+        elementList[range.startIndex + 1]?.controlComponent ===
+          ControlComponent.PRE_TEXT)
+    ) {
+      element = elementList[range.startIndex + 1]
+    }
+    if (!element?.controlId) return
     // 判断控件是否已经激活
     if (this.activeControl) {
       // 弹窗类控件唤醒弹窗，后缀处移除弹窗
@@ -793,6 +812,29 @@ export class Control {
         newElement: element
       }
     } else if (element.controlComponent === ControlComponent.POSTFIX) {
+      // 仅占位符（无 VALUE）时点后缀 → 进 PREFIX 后以便输入，而非落到控件外
+      let hasValue = false
+      let prefixEnd = -1
+      for (let i = newIndex; i >= 0; i--) {
+        const cur = elementList[i]
+        if (cur.controlId !== element.controlId) break
+        if (cur.controlComponent === ControlComponent.VALUE) {
+          hasValue = true
+          break
+        }
+        if (
+          cur.controlComponent === ControlComponent.PREFIX ||
+          cur.controlComponent === ControlComponent.PRE_TEXT
+        ) {
+          if (prefixEnd < 0) prefixEnd = i
+        }
+      }
+      if (!hasValue && ~prefixEnd) {
+        return {
+          newIndex: prefixEnd,
+          newElement: elementList[prefixEnd]
+        }
+      }
       // POSTFIX-移动到最后一个后缀字符后
       let startIndex = newIndex + 1
       while (startIndex < elementList.length) {
@@ -1983,61 +2025,5 @@ export class Control {
       isSetCursor: true,
       isSubmitHistory: false
     })
-  }
-
-  public setMinWidthControlInfo(option: ISetControlRowFlexOption) {
-    const { row, rowElement, controlRealWidth, availableWidth } = option
-    if (!rowElement.control?.minWidth) return
-    const { scale } = this.options
-    const controlMinWidth = rowElement.control.minWidth * scale
-    // 设置首字符偏移量：如果控件内设置对齐方式&&存在设置最小宽度
-    let controlFirstElement: IRowElement | null = null
-    if (
-      rowElement.control?.minWidth &&
-      (rowElement.control?.rowFlex === RowFlex.CENTER ||
-        rowElement.control?.rowFlex === RowFlex.RIGHT)
-    ) {
-      // 计算当前控件内容宽度是否超出最小宽度设置
-      let controlContentWidth = rowElement.metrics.width
-      let controlElementIndex = row.elementList.length - 1
-      while (controlElementIndex >= 0) {
-        const controlRowElement = row.elementList[controlElementIndex]
-        controlContentWidth += controlRowElement.metrics.width
-        // 找到首字符结束循环
-        if (
-          row.elementList[controlElementIndex - 1]?.controlComponent ===
-          ControlComponent.PREFIX
-        ) {
-          controlFirstElement = controlRowElement
-          break
-        }
-        controlElementIndex--
-      }
-      // 计算首字符偏移量
-      if (controlFirstElement) {
-        if (controlContentWidth < controlMinWidth) {
-          if (rowElement.control.rowFlex === RowFlex.CENTER) {
-            controlFirstElement.left =
-              (controlMinWidth - controlContentWidth) / 2
-          } else if (rowElement.control.rowFlex === RowFlex.RIGHT) {
-            // 最小宽度 - 实际宽度 - 后缀元素宽度
-            controlFirstElement.left =
-              controlMinWidth - controlContentWidth - rowElement.metrics.width
-          }
-        }
-      }
-    }
-    // 设置后缀偏移量：消费小于实际最小宽度
-    const extraWidth = controlMinWidth - controlRealWidth
-    if (extraWidth > 0) {
-      const controlFirstElementLeft = controlFirstElement?.left || 0
-      // 超出行宽时截断
-      const rowRemainingWidth =
-        availableWidth - row.width - rowElement.metrics.width
-      const left = Math.min(rowRemainingWidth, extraWidth)
-      // 后缀偏移量需减去首字符的偏移量，避免重复偏移
-      rowElement.left = left - controlFirstElementLeft
-      row.width += left - controlFirstElementLeft
-    }
   }
 }

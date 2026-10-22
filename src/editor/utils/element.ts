@@ -44,6 +44,7 @@ import { EditorMode } from '../dataset/enum/Editor'
 import { ElementType } from '../dataset/enum/Element'
 import { ListStyle, ListType, UlStyle } from '../dataset/enum/List'
 import { RowFlex } from '../dataset/enum/Row'
+import { TextDirection } from '../dataset/enum/TextDirection'
 import { TraceType } from '../dataset/enum/Trace'
 import { TableBorder, TdBorder } from '../dataset/enum/table/Table'
 import { VerticalAlign } from '../dataset/enum/VerticalAlign'
@@ -125,6 +126,10 @@ export function formatElementList(
     isForceCompensation = false,
     editorOptions
   } = options
+  // Old saved documents may contain pagination-only minWidth filler nodes.
+  for (let i = elementList.length - 1; i >= 0; i--) {
+    if (elementList[i].isControlMinWidthPlaceholder) elementList.splice(i, 1)
+  }
   const startElement = elementList[0]
   // 非首字符零宽节点文本元素则补偿-列表元素内部会补偿此处忽略
   if (
@@ -176,6 +181,12 @@ export function formatElementList(
               value.bold = true
             }
           }
+          if (!value.direction && el.direction) {
+            value.direction = el.direction
+          }
+          if (!value.rowFlex && el.rowFlex) {
+            value.rowFlex = el.rowFlex
+          }
           elementList.splice(i, 0, value)
           i++
         }
@@ -211,6 +222,13 @@ export function formatElementList(
           value.listType = value.listType || el.listType
           value.listStyle = value.listStyle || el.listStyle
           value.listLevel = listLevel
+          // 列表项继承父 LIST 的段落方向，保证 text-engine 行 direction=rtl
+          if (!value.direction && el.direction) {
+            value.direction = el.direction
+          }
+          if (!value.rowFlex && el.rowFlex) {
+            value.rowFlex = el.rowFlex
+          }
           // 列表容器配置的 hint 向下继承到子元素（子元素自身 hint 优先）
           if (el.hint && !value.hint) {
             value.hint = el.hint
@@ -226,7 +244,8 @@ export function formatElementList(
             : !START_LINE_BREAK_REG.test(elementList[i].value))
         ) {
           elementList.splice(i, 0, {
-            value: ZERO
+            value: ZERO,
+            ...(el.direction ? { direction: el.direction } : {})
           })
           i++
         }
@@ -262,8 +281,10 @@ export function formatElementList(
                 const tdValueList = td.value
                 for (let t = 0; t < tdValueList.length; t++) {
                   const tdValue = tdValueList[t]
-                  tdValue.areaId = el.areaId || areaId
-                  tdValue.area = el.area
+                  if (!tdValue.areaId) {
+                    tdValue.areaId = el.areaId || areaId
+                    tdValue.area = el.area
+                  }
                 }
               }
             }
@@ -388,11 +409,7 @@ export function formatElementList(
         valueSets
       } = el.control
       const {
-        editorOptions: {
-          control: controlOption,
-          checkbox: checkboxOption,
-          radio: radioOption
-        }
+        editorOptions: { control: controlOption }
       } = options
       const controlId = el.controlId || getUUID()
       // 移除父节点
@@ -487,14 +504,12 @@ export function formatElementList(
               const valueStrList = splitText(valueSet.value)
               for (let e = 0; e < valueStrList.length; e++) {
                 const value = valueStrList[e]
-                const isLastLetter = e === valueStrList.length - 1
                 elementList.splice(i, 0, {
                   ...controlContext,
                   ...controlDefaultStyle,
                   ...valueStyleList[valueStyleIndex],
                   controlId,
                   value: value === '\n' ? ZERO : value,
-                  letterSpacing: isLastLetter ? checkboxOption.gap : 0,
                   control: el.control,
                   controlComponent: ControlComponent.VALUE
                 })
@@ -535,14 +550,12 @@ export function formatElementList(
               const valueStrList = splitText(valueSet.value)
               for (let e = 0; e < valueStrList.length; e++) {
                 const value = valueStrList[e]
-                const isLastLetter = e === valueStrList.length - 1
                 elementList.splice(i, 0, {
                   ...controlContext,
                   ...controlDefaultStyle,
                   ...valueStyleList[valueStyleIndex],
                   controlId,
                   value: value === '\n' ? ZERO : value,
-                  letterSpacing: isLastLetter ? radioOption.gap : 0,
                   control: el.control,
                   controlComponent: ControlComponent.VALUE
                 })
@@ -763,6 +776,10 @@ export function zipElementList(
   let e = 0
   while (e < elementList.length) {
     let element = elementList[e]
+    if (element.isControlMinWidthPlaceholder) {
+      e++
+      continue
+    }
     // 上下文首字符（占位符）-列表首字符要保留避免是复选框
     if (
       e === 0 &&
@@ -1227,6 +1244,13 @@ export function convertElementToDom(
   if (element.rowFlex) {
     dom.style.textAlign = convertRowFlexToTextAlign(element.rowFlex)
   }
+  if (
+    element.direction === TextDirection.LTR ||
+    element.direction === TextDirection.RTL ||
+    element.direction === TextDirection.AUTO
+  ) {
+    dom.setAttribute('dir', element.direction)
+  }
   if (element.color) {
     dom.style.color = element.color
   }
@@ -1255,7 +1279,8 @@ export function convertElementToDom(
       element.rowMargin ?? options.defaultRowMargin
     ).toString()
   }
-  dom.innerText = element.value.replace(new RegExp(`${ZERO}`, 'g'), '\n')
+  // textContent：jsdom 对 innerText + dir 组合可能丢文本
+  dom.textContent = element.value.replace(new RegExp(`${ZERO}`, 'g'), '\n')
   return dom
 }
 
@@ -1296,7 +1321,13 @@ export function splitListElement(
 
 export interface IElementListGroupRowFlex {
   rowFlex: RowFlex | null
+  /** Content paragraph direction for HTML dir roundtrip */
+  direction: TextDirection | null
   data: IElement[]
+}
+
+function resolveGroupDirection(element: IElement): TextDirection | null {
+  return element.direction || null
 }
 
 export function groupElementListByRowFlex(
@@ -1305,16 +1336,20 @@ export function groupElementListByRowFlex(
   const elementListGroupList: IElementListGroupRowFlex[] = []
   if (!elementList.length) return elementListGroupList
   let currentRowFlex: RowFlex | null = elementList[0]?.rowFlex || null
+  let currentDirection = resolveGroupDirection(elementList[0])
   elementListGroupList.push({
     rowFlex: currentRowFlex,
+    direction: currentDirection,
     data: [elementList[0]]
   })
   for (let e = 1; e < elementList.length; e++) {
     const element = elementList[e]
     const rowFlex = element.rowFlex || null
-    // 行布局相同&非块元素时追加数据，否则新增分组
+    const direction = resolveGroupDirection(element)
+    // 行布局&方向相同&非块元素时追加数据，否则新增分组
     if (
       currentRowFlex === rowFlex &&
+      currentDirection === direction &&
       !getIsBlockElement(element) &&
       !getIsBlockElement(elementList[e - 1])
     ) {
@@ -1324,9 +1359,11 @@ export function groupElementListByRowFlex(
     } else {
       elementListGroupList.push({
         rowFlex,
+        direction,
         data: [element]
       })
       currentRowFlex = rowFlex
+      currentDirection = direction
     }
   }
   // 压缩数据
@@ -1391,8 +1428,7 @@ export function createDomFromElementList(
                   }`
                 : borderStyle
             if (!element.borderType || element.borderType === TableBorder.ALL) {
-              tdDom.style.borderBottom = tdDom.style.borderRight =
-                tdBorderStyle
+              tdDom.style.borderBottom = tdDom.style.borderRight = tdBorderStyle
             }
             tdDom.colSpan = td.colspan
             tdDom.rowSpan = td.rowspan
@@ -1542,13 +1578,13 @@ export function createDomFromElementList(
         if (payload[e - 1]?.type === ElementType.TITLE) {
           text = text.replace(/^\n/, '')
         }
-        dom.innerText = text.replace(new RegExp(`${ZERO}`, 'g'), '\n')
+        dom.textContent = text.replace(new RegExp(`${ZERO}`, 'g'), '\n')
         clipboardDom.append(dom)
       }
     }
     return clipboardDom
   }
-  // 按行布局分类创建dom
+  // 按行布局/方向分类创建dom（内容 dir，不含 UI options.direction）
   const clipboardDom = document.createElement('div')
   const groupElementList = groupElementListByRowFlex(elementList)
   for (let g = 0; g < groupElementList.length; g++) {
@@ -1557,8 +1593,12 @@ export function createDomFromElementList(
     const isDefaultRowFlex =
       !elementGroupRowFlex.rowFlex ||
       elementGroupRowFlex.rowFlex === RowFlex.LEFT
+    const hasDirection = !!elementGroupRowFlex.direction
     // 块元素使用flex否则使用text-align
     const rowFlexDom = document.createElement('div')
+    if (elementGroupRowFlex.direction) {
+      rowFlexDom.setAttribute('dir', elementGroupRowFlex.direction)
+    }
     if (!isDefaultRowFlex) {
       const firstElement = elementGroupRowFlex.data[0]
       if (getIsBlockElement(firstElement)) {
@@ -1575,18 +1615,45 @@ export function createDomFromElementList(
         }
       }
     }
-    // 布局内容
-    rowFlexDom.innerHTML = buildDom(elementGroupRowFlex.data).innerHTML
-    // 未设置行布局时无需行布局容器
-    if (!isDefaultRowFlex) {
+    // 布局内容（移动节点，避免 innerHTML 往返丢 dir 子树）
+    const built = buildDom(elementGroupRowFlex.data)
+    while (built.firstChild) {
+      rowFlexDom.append(built.firstChild)
+    }
+    // 未设置行布局且无方向时无需行布局容器
+    if (!isDefaultRowFlex || hasDirection) {
       clipboardDom.append(rowFlexDom)
     } else {
-      rowFlexDom.childNodes.forEach(child => {
-        clipboardDom.append(child.cloneNode(true))
-      })
+      while (rowFlexDom.firstChild) {
+        clipboardDom.append(rowFlexDom.firstChild)
+      }
     }
   }
   return clipboardDom
+}
+
+function resolveDomDirection(node: HTMLElement): TextDirection | null {
+  let cur: HTMLElement | null = node
+  while (cur) {
+    const attr = cur.getAttribute?.('dir')
+    if (
+      attr === TextDirection.LTR ||
+      attr === TextDirection.RTL ||
+      attr === TextDirection.AUTO
+    ) {
+      return attr
+    }
+    const styleDir = cur.style?.direction
+    if (
+      styleDir === TextDirection.LTR ||
+      styleDir === TextDirection.RTL ||
+      styleDir === TextDirection.AUTO
+    ) {
+      return styleDir
+    }
+    cur = cur.parentElement
+  }
+  return null
 }
 
 export function convertTextNodeToElement(
@@ -1618,6 +1685,11 @@ export function convertTextNodeToElement(
   // 行对齐
   if (rowFlex !== RowFlex.LEFT) {
     element.rowFlex = rowFlex
+  }
+  // 内容方向（HTML dir / style.direction）
+  const direction = resolveDomDirection(anchorNode)
+  if (direction) {
+    element.direction = direction
   }
   // 高亮色
   if (style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
@@ -2007,36 +2079,61 @@ export function getTextFromElementList(
   )
 }
 
+const HISTORY_LAYOUT_KEYS = new Set([
+  'metrics',
+  'style',
+  'visualLeft',
+  'visualIndex',
+  'sourceIndex',
+  'clusterStart',
+  'clusterEnd',
+  'bidiLevel',
+  'actualSize',
+  'left',
+  'rowList',
+  'positionList',
+  'mainHeight',
+  'realHeight',
+  'realMinHeight',
+  'rowIndex',
+  'colIndex',
+  'trIndex',
+  'tdIndex',
+  'isLastRowTd',
+  'isLastColTd',
+  'isLastTd'
+])
+
 // 历史快照专用克隆：与 deepCloneOmitKeys(obj, ['metrics', 'style']) 语义一致，
 // 但标量字段直接赋值不再递归，仅深拷贝实际存在的嵌套可变结构
-function cloneOmitRenderKeys<T>(value: T): T {
-  if (!value || typeof value !== 'object') {
-    return value
+function cloneOmitRenderKeys<T>(
+  value: T,
+  seen: WeakMap<object, unknown>,
+  omitLayout = true
+): T {
+  if (!value || typeof value !== 'object') return value
+  if (seen.has(value)) return seen.get(value) as T
+  if (!omitLayout) {
+    const cloned = deepClone(value)
+    seen.set(value, cloned)
+    return cloned
   }
-  if (Array.isArray(value)) {
-    const list = value as unknown[]
-    const clonedArray: unknown[] = new Array(list.length)
-    for (let i = 0; i < list.length; i++) {
-      clonedArray[i] = cloneOmitRenderKeys(list[i])
-    }
-    return clonedArray as T
-  }
-  const cloned: Record<string, unknown> = {}
-  for (const key in value) {
-    if (key === 'metrics' || key === 'style') continue
+  const cloned: any = Array.isArray(value) ? [] : {}
+  seen.set(value, cloned)
+  for (const key of Object.keys(value)) {
+    if (omitLayout && HISTORY_LAYOUT_KEYS.has(key)) continue
     const item = (value as Record<string, unknown>)[key]
-    cloned[key] =
-      item && typeof item === 'object' ? cloneOmitRenderKeys(item) : item
+    cloned[key] = cloneOmitRenderKeys(
+      item,
+      seen,
+      omitLayout && key !== 'extension'
+    )
   }
   return cloned as T
 }
 
 export function getSlimCloneElementList(elementList: IElement[]) {
-  const clonedList = new Array<IElement>(elementList.length)
-  for (let i = 0; i < elementList.length; i++) {
-    clonedList[i] = cloneOmitRenderKeys(elementList[i])
-  }
-  return clonedList
+  return cloneOmitRenderKeys(elementList, new WeakMap())
 }
 
 export function getIsBlockElement(element?: IElement) {
@@ -2081,6 +2178,27 @@ export function deleteSurroundElementList(
       elementList.splice(s, 1)
     }
   }
+}
+
+/**
+ * 排版/行高折叠用的隐藏判定（与 legacy computeRowList 一致）。
+ * 设计模式下不隐藏。
+ */
+export function isElementLayoutHidden(
+  element: IElement | undefined,
+  ctx?: {
+    isDesignMode?: boolean
+    isAreaHideDisabled?: boolean
+    isTraceHidden?: (el: IElement) => boolean
+  }
+): boolean {
+  if (!element || ctx?.isDesignMode) return false
+  return !!(
+    element.hide ||
+    element.control?.hide ||
+    (element.area?.hide && !ctx?.isAreaHideDisabled) ||
+    ctx?.isTraceHidden?.(element)
+  )
 }
 
 export function getNonHideElementIndex(

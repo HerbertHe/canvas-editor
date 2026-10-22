@@ -2,8 +2,7 @@ import { ImageDisplay } from '../../../dataset/enum/Common'
 import { EditorMode } from '../../../dataset/enum/Editor'
 import { ElementType } from '../../../dataset/enum/Element'
 import { MouseEventButton } from '../../../dataset/enum/Event'
-import { ControlComponent } from '../../../dataset/enum/Control'
-import { ControlType } from '../../../dataset/enum/Control'
+import { ControlComponent, ControlType } from '../../../dataset/enum/Control'
 import { IPreviewerDrawOption } from '../../../interface/Previewer'
 import { deepClone } from '../../../utils'
 import { isMod } from '../../../utils/hotkey'
@@ -165,14 +164,15 @@ export function mousedown(evt: MouseEvent, host: CanvasEvent) {
     }
     rangeManager.setRange(startIndex, endIndex)
     const isShiftSelection = startIndex !== endIndex
-    position.setCursorPosition(positionList[anchorIndex])
     // 更新只读状态
     isReadonly = draw.isReadonly()
-    // 复选框
+    // 复选框/单选框：点击切换时不定位光标、不绘制光标
     if (isDirectHitCheckbox && !isReadonly) {
       hitCheckbox(curElement, draw)
+      draw.getCursor().recoveryCursor()
     } else if (isDirectHitRadio && !isReadonly) {
       hitRadio(curElement, draw)
+      draw.getCursor().recoveryCursor()
     } else if (
       curElement.controlComponent === ControlComponent.VALUE &&
       (curElement.control?.type === ControlType.CHECKBOX ||
@@ -191,7 +191,9 @@ export function mousedown(evt: MouseEvent, host: CanvasEvent) {
         }
         preIndex--
       }
+      draw.getCursor().recoveryCursor()
     } else {
+      position.setCursorPosition(positionList[anchorIndex])
       draw.render({
         curIndex,
         isCompute: false,

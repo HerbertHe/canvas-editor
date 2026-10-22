@@ -1,24 +1,18 @@
 # Event Listening(eventBus)
 
-## How to Use
+## Usage
 
-```javascript
-import Editor from "@hufe921/canvas-editor"
+```typescript
+import Editor from '@herberthe/canvas-editor'
 
-const instance = new Editor(container, <IElement[]>data, options)
-
-// register
-instance.eventBus.on<K keyof EventMap>(
-  eventName: K,
-  callback: EventMap[K]
-)
-
-// remove
-instance.eventBus.off<K keyof EventMap>(
-  eventName: K,
-  callback: EventMap[K]
-)
+const instance = await Editor.create(container, data, options)
+const onContentChange = () => console.log('Document changed')
+instance.eventBus.on('contentChange', onContentChange)
+// On unmount, remove the same callback:
+instance.eventBus.off('contentChange', onContentChange)
 ```
+
+EventBus supports multiple subscribers. `on()` returns void, not an unsubscribe function. Read a current snapshot for stateful reports after subscribing. The signatures below describe callback payloads; import their types from the package root.
 
 ## rangeChange
 
@@ -271,13 +265,10 @@ instance.eventBus.on('labelMousedown', (payload: {
 
 ## renderChange
 
-Feature: Fires after editor computation and rendering are complete, allowing
-plugins that depend on the latest content to refresh
+Emitted for layout-compute render passes. The initial event is deferred until ready; ordinary events precede subsequent nextTick tool updates. It does not mean all fonts, images and offscreen pages have finished. See [render timing](./rendering-pipeline.md).
 
-Usage:
-
-```javascript
-instance.eventBus.on('renderChange', () => void)
+```typescript
+instance.eventBus.on('renderChange', () => {})
 ```
 
 ## spellcheckClick
@@ -292,3 +283,20 @@ instance.eventBus.on('spellcheckClick', (payload: {
   range: ISpellcheckRange
 }) => void)
 ```
+
+## fontCoverageChange
+
+Receives the current `FontCoverageReport` when coverage/download state changes;
+resolved issues are removed. Query once after subscribing to avoid depending on
+initial event timing. Built-in hints need no subscription.
+
+```typescript
+import type { FontCoverageReport } from '@herberthe/canvas-editor'
+
+const onCoverage = (report: FontCoverageReport) => console.log(report.issues)
+instance.eventBus.on('fontCoverageChange', onCoverage)
+// instance.eventBus.off('fontCoverageChange', onCoverage)
+const current = instance.getFontCoverageReport()
+```
+
+[Font APIs and coverage limits](./font-and-esm-migration.md).

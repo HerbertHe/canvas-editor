@@ -5,5 +5,14 @@ dist
 dist-ssr
 *.local
 cache
+!src/editor/core/text-engine/cache/
+!src/editor/core/text-engine/cache/*.ts
 .temp
 coverage
+
+cypress/screenshots/
+cypress/videos/
+cypress/results/
+
+# Generated online editor bundled into the documentation site
+/docs/public/playground/

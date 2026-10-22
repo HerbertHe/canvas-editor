@@ -1,6 +1,5 @@
 import { DeepRequired } from '../../../interface/Common'
 import { IEditorOption } from '../../../interface/Editor'
-import { IRowElement } from '../../../interface/Row'
 import { I18n } from '../../i18n/I18n'
 import {
   drawPlainText,
@@ -19,9 +18,10 @@ export class PageBreakParticle {
     this.i18n = draw.getI18n()
   }
 
+  // Width is supplied by placement geometry and already includes page zoom.
   public render(
     ctx: CanvasRenderingContext2D,
-    element: IRowElement,
+    elementWidth: number,
     x: number,
     y: number
   ) {
@@ -31,7 +31,6 @@ export class PageBreakParticle {
     const displayName = this.i18n.t('pageBreak.displayName')
     const { scale, defaultRowMargin } = this.options
     const size = fontSize * scale
-    const elementWidth = element.width! * scale
     const offsetY =
       this.draw.getDefaultBasicRowMarginHeight() * defaultRowMargin
     const style = {

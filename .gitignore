@@ -13,3 +13,6 @@ coverage
 cypress/screenshots/
 cypress/videos/
 cypress/results/
+
+# Generated online editor bundled into the documentation site
+/docs/public/playground/

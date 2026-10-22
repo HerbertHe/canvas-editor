@@ -9,7 +9,8 @@ export default tseslint.config(
       'dist/**',
       'index.html',
       'docs/.vitepress/cache/**',
-      'docs/.vitepress/dist/**'
+      'docs/.vitepress/dist/**',
+      'docs/public/playground/**'
     ]
   },
   js.configs.recommended,

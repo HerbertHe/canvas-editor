@@ -28,6 +28,18 @@ export const options: IEditorOption = {
     width: 1
   },
   fonts: [
+    ...(import.meta.env.VITE_DOCS_PLAYGROUND === 'true'
+      ? [
+          {
+            family: 'Noto Sans',
+            url: `${fontBaseUrl}NotoSans-Latin-Regular.woff2`
+          },
+          {
+            family: 'Noto Sans SC',
+            url: `${fontBaseUrl}NotoSansSC-Regular.woff2`
+          }
+        ]
+      : []),
     {
       family: 'Noto Naskh Arabic',
       url: `${fontBaseUrl}NotoNaskhArabic-Regular.ttf`,

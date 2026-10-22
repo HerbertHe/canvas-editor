@@ -1,24 +1,14 @@
 /// <reference types="vitepress/client" />
 import DefaultTheme from 'vitepress/theme'
-import { h } from 'vue'
 import type { Theme } from 'vitepress'
-import PluginNavIcons from './components/PluginNavIcons.vue'
+import MermaidDiagram from './components/MermaidDiagram.vue'
+import EditorPlayground from './components/EditorPlayground.vue'
 import './style.css'
 
 export default {
   extends: DefaultTheme,
-  Layout() {
-    return h(DefaultTheme.Layout, null, {
-      'nav-bar-content-after': () =>
-        h(
-          'div',
-          {
-            class: 'nav-badges',
-            style:
-              'display:flex;align-items:center;gap:8px;margin-left:12px;position:relative;'
-          },
-          [h(PluginNavIcons)]
-        )
-    })
+  enhanceApp({ app }) {
+    app.component('MermaidDiagram', MermaidDiagram)
+    app.component('EditorPlayground', EditorPlayground)
   }
 } satisfies Theme

@@ -4,6 +4,7 @@ import { LineNumber } from '@/editor/core/draw/frame/LineNumber'
 import { PageNumber } from '@/editor/core/draw/frame/PageNumber'
 import { Placeholder } from '@/editor/core/draw/frame/Placeholder'
 import { Watermark } from '@/editor/core/draw/frame/Watermark'
+import { SeparatorParticle } from '@/editor/core/draw/particle/SeparatorParticle'
 import { PageBreakParticle } from '@/editor/core/draw/particle/PageBreakParticle'
 import { Ruler } from '@/editor/core/draw/ruler/Ruler'
 import { EventBus } from '@/editor/core/event/eventbus/EventBus'
@@ -202,8 +203,8 @@ describe('T16 native auxiliary text and measurement', () => {
     expect(numberCall[2]).toBeLessThan(page.width)
     new PageNumber(draw).render(ctx, 1)
     new Watermark(draw).renderText(ctx, 1)
-    const element = draw.getRowList().find(r => r.isPageBreak)!.elementList[0]
-    new PageBreakParticle(draw).render(ctx, element, 20, 20)
+    const row = draw.getRowList().find(r => r.isPageBreak)!
+    new PageBreakParticle(draw).render(ctx, row.width, 20, 20)
     draw.getOptions().ruler.disabled = false
     const ruler = new Ruler(draw)
     ruler.render()
@@ -211,6 +212,50 @@ describe('T16 native auxiliary text and measurement', () => {
     expect(renderer.mock.calls.length).toBeGreaterThan(10)
     expect(ctx.rotate).toHaveBeenCalledWith(-Math.PI / 4)
   })
+  it.each([0.75, 1, 1.5, 2])(
+    'paints page-break text and separators from layout widths at scale %s',
+    async scale => {
+      const draw = await setup(
+        [
+          { value: 'body' },
+          { type: ElementType.SEPARATOR, value: '' },
+          { type: ElementType.PAGE_BREAK, value: '' },
+          { value: 'tail' }
+        ],
+        { scale }
+      )
+      const source = draw.getOriginalMainElementList()
+      const objects = source.filter(element =>
+        [ElementType.PAGE_BREAK, ElementType.SEPARATOR].includes(element.type!)
+      )
+      expect(objects).toHaveLength(2)
+      expect(objects.every(element => element.width === undefined)).toBe(true)
+      const renderer = vi.spyOn(
+        draw.getLayoutHostAdapter().getGlyphRenderer(),
+        'drawLine'
+      )
+      const separator = vi.spyOn(SeparatorParticle.prototype, 'render')
+      draw.render({
+        isCompute: false,
+        isLazy: false,
+        isSetCursor: false,
+        isSubmitHistory: false
+      })
+      expect(renderer).toHaveBeenCalled()
+      for (const [, line, x, y] of renderer.mock.calls) {
+        expect(Number.isFinite(x)).toBe(true)
+        expect(Number.isFinite(y)).toBe(true)
+        // The label stays centered on the page, without applying zoom twice.
+        expect(x + line.width / 2).toBeCloseTo(150 * scale)
+      }
+      expect(separator).toHaveBeenCalled()
+      for (const [, , x, , width] of separator.mock.calls) {
+        expect(x).toBeCloseTo(20 * scale)
+        expect(width).toBeCloseTo(260 * scale)
+      }
+      expect(objects.every(element => element.width === undefined)).toBe(true)
+    }
+  )
   it('isolates placeholder and standalone text/table measurement from body and cell handles', async () => {
     const table: IElement = {
       type: ElementType.TABLE,

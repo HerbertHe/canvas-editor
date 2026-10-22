@@ -46,8 +46,8 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type:check": "tsc --noEmit",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:dev": "node scripts/build-docs-demo.mjs && vitepress dev docs",
+    "docs:build": "node scripts/check-docs-diagrams.mjs && node scripts/build-docs-demo.mjs && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "postinstall": "simple-git-hooks",
     "pre-release": "node scripts/pre-release.js",
@@ -56,7 +56,8 @@
     "test:migration:engines": "node scripts/test-native-browsers.mjs",
     "test:migration:performance": "node scripts/test-native-performance.mjs",
     "test:migration:audit": "node scripts/audit-native-release.mjs",
-    "test:migration:baseline": "node scripts/serve-native-baseline.mjs"
+    "test:migration:baseline": "node scripts/serve-native-baseline.mjs",
+    "docs:check": "node scripts/check-docs-diagrams.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -72,6 +73,7 @@
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
+    "mermaid": "^11.17.2",
     "simple-git-hooks": "^2.14.0",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",

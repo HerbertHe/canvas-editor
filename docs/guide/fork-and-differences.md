@@ -89,9 +89,13 @@ const editor = await Editor.create(
 先运行 `npm run lib`、`npm run test:package`、`npm run docs:build`，
 再用 `npm pack --dry-run` 检查包内容。实际发布需使用有 `@herberthe` scope
 发布权限的 npm 账号，命令为 `npm publish --access public`；这是一项独立发布操作。
-预发布检查、包名检查和文件清单并不替代暂缓中的 T23/T24 验收。
+T23/T24 已完成，结果见[最终验收](./native-release-acceptance.md)；每次新发布仍需重新执行适用的检查。
 
 fork 修改版权为 **Copyright (c) 2026-present Herbert He**。
 继承部分保留 **Copyright (c) 2021-present hufe** 与完整 MIT 许可正文，
 详见仓库 `LICENSE`、`NOTICE`，两者随 npm 包分发。
 第三方依赖和字体保持各自许可证；修改项目作者不会转移原代码的版权。
+
+## 如何阅读本项目文档
+
+[快速上手](./start.md)说明当前接入方式，[渲染管线](./rendering-pipeline.md)解释新增文字布局与继承容器功能的组合，[工程记录](./engineering-records.md)保存历史迁移证据。上游文档中的同步初始化、系统字体回退、UMD 和内部对象示例不应直接应用到本 fork。

@@ -1,48 +1,40 @@
 ---
 layout: home
-
-title: canvas-editor
-titleTemplate: A HarfBuzz-powered Canvas-only rich text editor
-
+title: Canvas Editor
+titleTemplate: HarfBuzz typography and Canvas pages
 hero:
   name: '@herberthe/canvas-editor'
-  text: HarfBuzz layout · Canvas-only rendering
-  tagline: 'Independent fork by Herbert He · 0.1.0 · ESM only'
+  text: HarfBuzz layout · Canvas pages
+  tagline: 'Herbert He · Independent fork · 0.1.0 · ESM only'
   actions:
     - theme: brand
-      text: Get Started
-      link: /en/guide/start.html
+      text: Try the editor
+      link: /en/guide/playground
+    - theme: brand
+      text: Get started
+      link: /en/guide/start
     - theme: alt
-      text: View on Github
-      link: https://github.com/HerbertHe/canvas-editor
-
+      text: Explore the pipeline
+      link: /en/guide/rendering-pipeline
 features:
-  - icon: 🌱
-    title: Origin and differences
-    details: Based on Hufe921/canvas-editor; independently maintained and versioned
+  - title: Quick start
+    details: Initialize asynchronously, manage fonts and save everyday documents.
+    link: /en/guide/start
+  - title: Rendering pipeline
+    details: Follow shaping, line breaking, pagination and Canvas painting through diagrams.
+    link: /en/guide/rendering-pipeline
+  - title: Origin and compatibility
+    details: An independent fork with a pinned upstream comparison and retained MIT attribution.
     link: /en/guide/fork-and-differences
-  - icon: 💡
-    title: WYSIWYG
-    details: Similar to word pageable, what you see is what you get
-  - icon: ⚡️
-    title: Lightweight Data Structure
-    details: A piece of JSON can render complex styles
-  - icon: 🛠️
-    title: Rich Features
-    details: Supports familiar rich text operations, tables, watermarks, controls, formulas, etc
-  - icon: 📦
-    title: Easy to Use
-    details: Independent fork by Herbert He, version series starts at 0.1.0; SVG pages are deferred
-  - icon: 🔩
-    title: Flexible Development Mechanism
-    details: Through the interface, you can obtain the life cycle, event callback, custom right-click menu, and shortcut keys
-  - icon: 🔑
-    title: Full TypeScript Types API
-    details: Flexible apis and full TypeScript types
+  - title: Fonts and offline use
+    details: Automatic Bunny basic fonts, explicit registration and missing-glyph diagnostics.
+    link: /en/guide/font-and-esm-migration
+  - title: Support boundaries
+    details: Canvas-only pages, ESM-only modules and measured incremental-layout limitations.
+    link: /en/guide/features
+  - title: Deploy documentation
+    details: Main merges build gh-pages and deploy the same artifact with Pages Actions.
+    link: /en/guide/docs-deployment
 ---
 
-<style>
-  .main>p {
-    max-width:100% !important;
-  }
-</style>
+Canvas is the only document page renderer. SVG pages and standalone SVG export are deferred. This is an independent fork of [Hufe921/canvas-editor](https://github.com/Hufe921/canvas-editor), not an official upstream release.

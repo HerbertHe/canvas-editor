@@ -1,148 +1,67 @@
-# 架构分析
+# 架构与模块职责
 
-> 当前默认且仅支持 Canvas 页面绘制；SVG 实现暂缓。项目来源与差异见[独立 fork 说明](./fork-and-differences.md)。
+本页描述 `@herberthe/canvas-editor` 0.1.0 的当前实现。文字由 HarfBuzz 统一整形，页面由 Canvas 绘制；不存在 legacy 文字排版回退、UMD 包或可切换的 SVG 页面后端。完整执行过程见[渲染管线与时序](./rendering-pipeline.md)。
 
-> 基于源码静态分析（约 v0.9.137）。本文描述当前主干架构，作为 RTL 混排改造的基线。相关设计见 [RTL 排版设计](./rtl-layout-design.md)，延期事项见 [RTL 延期 TODO](./rtl-deferred-todo.md)。
-
-## 核心结论
-
-`@herberthe/canvas-editor` 是一套基于上游 fork 的 HarfBuzz + Canvas 富文本引擎，面向日常文档 / 表单 / 套打。架构可概括为：
-
-> **Draw（内核）+ Command（门面）+ IElement[]（模型）+ Particle（视图）+ Zone/Control/Cascade（EMR 能力层）**
-
-生产依赖极少（主要为 `prismjs`）。构建：Vite 8 → UMD + ESM + d.ts；质量门禁含 ESLint、tsc、Vitest、Cypress。
-
-## 工程骨架
-
-| 路径                       | 职责                                        |
-| -------------------------- | ------------------------------------------- |
-| `src/editor/`              | 库核心：Draw / Command / 事件 / 粒子 / 接口 |
-| `src/editor/core/`         | 约 22 个运行时子系统                        |
-| `src/editor/interface/`    | TypeScript 接口                             |
-| `src/editor/dataset/`      | 枚举与常量                                  |
-| `src/editor/utils/`        | `formatElementList` / zip / HTML 转换等     |
-| `src/main.ts` + `plugins/` | Demo 与示例插件                             |
-| `tests/` + `cypress/`      | 单元测试与 E2E                              |
-| `docs/`                    | VitePress 中英文档                          |
-
-体量上，`Draw.ts`、`CommandAdapt.ts`、`utils/element.ts` 是三大核心文件。
-
-## 分层与数据流
+## 分层视图
 
 ```mermaid
 flowchart TB
-  subgraph Public
-    Editor
-    Command
-    Listener
-    EventBus
-    Register
-    Plugin
-  end
-
-  subgraph Core
-    CommandAdapt
-    Draw
-    Position
-    RangeManager
-    HistoryManager
-    Zone
-    CanvasEvent
-    Control
-    CascadeManager
-    WorkerManager
-  end
-
-  Editor --> Draw
-  Editor --> Command
-  Command --> CommandAdapt
-  CommandAdapt --> Draw
-  Draw --> Position
-  Draw --> RangeManager
-  Draw --> HistoryManager
-  Draw --> Zone
-  Draw --> CanvasEvent
-  Draw --> Control
-  Draw --> CascadeManager
-  Draw --> WorkerManager
-  Draw --> Listener
-  Draw --> EventBus
-  Plugin --> Editor
-  Register --> Editor
+  Host[宿主应用：工具栏、存储、业务表单] --> API[Editor / Command / Register / EventBus]
+  API --> Lifecycle[EditorLifecycle：异步初始化与状态保护]
+  API --> Model[文档元素 / Range / History]
+  Model --> Draw[Draw：渲染调度、脏区与页面管理]
+  Draw --> HostLayout[LayoutHostAdapter / 原生容器布局]
+  HostLayout --> Text[TextLayoutService / TextLayoutEngine]
+  Text --> Bidi[BiDi、脚本与样式分段]
+  Bidi --> HB[HarfBuzzTextShaper]
+  HB --> Fonts[FontManager / HarfBuzzRuntime]
+  HostLayout --> Geometry[TextLine / Cluster / Caret / 对象与页面几何]
+  Geometry --> Paint[GlyphRenderer / 对象绘制 / Canvas]
+  Geometry --> Interaction[命中测试、选区、光标与键盘导航]
+  Fonts --> Coverage[覆盖诊断 / FontDownloadManager]
+  Coverage --> Draw
 ```
 
-典型编辑路径：
+图中箭头表示职责与数据依赖，不代表每个模块都在独立线程运行。当前 HarfBuzz 排版在主线程执行；已有 Worker 负责字数、序列化等辅助任务，不是文字排版 Worker。
 
-1. **交互**：CursorAgent / DOM → CanvasEvent handlers → 改 `IElement[]` → `Draw.render()`
-2. **API**：`editor.command.execute*` → CommandAdapt → 改模型 → `Draw.render()`
-3. **渲染**：`computeRowList` → Position → Particle/Frame 绘制 → Listener + EventBus
+## 模块索引
 
-## Editor 公共 API
+以下路径相对于仓库根目录，属于内部实现，不能作为 npm 深路径导入。
 
-构造：`mergeOption` → 拆分 header/main/footer → `formatElementList` → Listener/EventBus/Override → Draw → Command → Macro/ContextMenu/Shortcut/Register。
+| 模块         | 主要位置                                                     | 职责                                               |
+| ------------ | ------------------------------------------------------------ | -------------------------------------------------- |
+| 公开入口     | `src/editor/index.ts`                                        | 数据标准化、模块组装、create/ready、销毁、公开导出 |
+| 生命周期     | `src/editor/core/EditorLifecycle.ts`                         | 初始化/就绪/失败/销毁状态，命令时机保护            |
+| 命令         | `src/editor/core/command/`                                   | 对外操作入口、选区修改、格式与文档命令             |
+| 渲染调度     | `src/editor/core/draw/Draw.ts`                               | 消费脏区、容器布局、分页、位置、页面与绘制调度     |
+| 原生布局宿主 | `src/editor/core/text-engine-host/`                          | 段落桥接、表格、对象、页眉页脚与文档流             |
+| 文字整形     | `src/editor/core/text-engine/`                               | 字体字节、BiDi、HarfBuzz、断行、字形轮廓与诊断     |
+| 原生几何协议 | `src/editor/core/layout/`、`src/editor/interface/Layout.ts`  | 行、glyph、cluster、caret、容器和对象的统一几何    |
+| 交互         | `src/editor/core/position/`、`core/range/`、`core/listener/` | 输入事件、命中、选区、光标和键盘行为               |
+| 数据与扩展   | `src/editor/interface/`、`src/plugins/`                      | 公开类型、文档模型与插件接入                       |
 
-| 成员       | 作用                                       |
-| ---------- | ------------------------------------------ |
-| `command`  | 全部 mutate / query（`execute*` / `get*`） |
-| `listener` | 单回调槽位（旧式）                         |
-| `eventBus` | 多订阅 pub/sub                             |
-| `override` | 覆盖 paste / copy / drop                   |
-| `register` | 右键菜单 / 快捷键 / i18n                   |
-| `macro`    | 宏命令编排                                 |
-| `use`      | 插件安装                                   |
-| `destroy`  | 释放资源                                   |
+## 三类数据不能混用
 
-## Draw 引擎
+1. **持久化文档**：`IEditorData` 中的 header/main/footer 与元素样式、表格和控件信息。保存业务内容时使用 `command.getValue()` 的结果，不保存内部坐标和字体对象。
+2. **运行期元素**：标准化、拆分后的元素与逻辑来源，用于编辑、历史和布局桥接。不能把运行期数组下标等同于 UTF-16 字符下标；组合文字、代理对、控件与段落标记会影响映射。
+3. **布局几何**：TextLine、glyph、cluster、caret、内联对象及分页位置。几何来源于当前字体版本、宽度与排版结果，字体或约束变化后必须重新计算。
 
-`Draw` 是运行时内核（God-object）：多页 Canvas、文档模型、行排版、分页、粒子分发、历史提交与回调。
+内部 `LayoutRow` 仍承担容器流与宿主兼容职责；名称中保留 row 不代表旧文字测量循环仍在运行。公开查询返回的行快照是脱离内部对象的兼容 DTO，不是下一轮布局输入。
 
-`render` 流水线概要：`isCompute` → header/footer/column compute → `computeRowList` → tablePaging → position / area / search → 页 canvas 创建或删除 → 绘制 → `setCursor` → `submitHistory` → nextTick 通知。
+## 文字、容器与绘制的分工
 
-内部模块：`particle/`、`control/`、`frame/`、`richtext/`、`interactive/`、`graffiti/`、`column/`、`ruler/`。
+HarfBuzz 负责上下文整形，给出 glyph ID、cluster、advance 和 offset；它不负责整篇编辑器的分页、表格拆页或工具栏。TextLayoutEngine 结合双向分析、字体选择与断行规则生成行；TextLayoutService 将字体度量与墨迹边界转成基线、行框、cluster 和 caret。
 
-## Command 模式
+段落布局之外，容器宿主处理页宽、分栏、浮动图环绕、表格单元格和跨页分片，文档流组合页眉、正文与页脚。GlyphRenderer 使用真实字体的字形轮廓绘制文字；图片、公式、控件外观和块对象仍有专用绘制逻辑。DOM 继续承载输入代理、工具浮层和无障碍提示，因此 Canvas-only 指的是文档页面绘制方式，不代表整个应用没有 DOM。
 
-- `Command`：Facade，对外 `execute*` / `get*`
-- `CommandAdapt`：持有 Draw，执行实际变更
-- 外部禁止直接操作 Draw 内部 API
+## 状态、事件与历史
 
-## 元素与段落语义
+`EditorLifecycle` 将初始化失败与缺字分开：前者使 ready 拒绝，后者保留可编辑的缺字占位并输出诊断。字体下载完成会改变字体版本，触发布局失效和重新绘制，不是直接替换 Canvas 上的几个字符。
 
-- 持久化可为嵌套（`valueList`）；运行时布局为**扁平一字一 `IElement`**
-- 段落由 `ZERO`（`\u200B`，由 `\n` 归一）及 `listId` / `titleId` 边界隐式界定，**无独立 Paragraph 节点**
-- 段落样式（如 `rowFlex` / `rowMargin`）挂在元素上，命令写到选区行内元素
-- `IElement.direction` / 段落 bidi 方向由 text-engine host 解析；GlyphRenderer 负责 HarfBuzz 字形绘制，表格/控件通过适配层接入
+Command 负责业务操作，History 保存文档与选区等状态以支持撤销重做。它不是 CRDT 或协同操作日志。Listener 是单回调槽，EventBus 支持多个订阅者；宿主销毁时需清理自己的订阅、工具栏和外部资源。
 
-## Position / Range / Cursor
+## 扩展与性能边界
 
-- `IElementPosition`：逻辑 index 对齐元素下标；坐标为四角矩形
-- `RangeManager`：索引选区（非 DOM Range），支持表格跨单元格
-- `Cursor` + `CursorAgent`：闪烁模拟光标 DOM + 隐藏 textarea 承接 IME；当前默认用字符 `rightTop` 作为光标 x
+应用通过包根公开 API 集成。插件如需操作内部 Draw、旧行坐标或浏览器字体测量，必须重新适配；上游插件不能仅因包名相近就认为兼容。字体与 ESM 迁移见[迁移指南](./font-and-esm-migration.md)。
 
-## 历史
-
-`HistoryManager` 使用**闭包全量快照**（克隆 main/header/footer + range + zone），非增量 patch。大文档内存成本高，增量历史见延期 TODO。
-
-## Zone / 模式 / 扩展
-
-- Zone：`HEADER` / `MAIN` / `FOOTER`，切换活动数据源
-- `EditorMode`：EDIT / CLEAN / READONLY / FORM / PRINT / DESIGN / GRAFFITI / TRACE
-- 扩展：`Plugin.use`、`Override`、`Register`；EMR：Control + Cascade + Validate + Trace
-
-## 测试
-
-- Vitest：command、history、zone、cascade、validate、表格分页等
-- Cypress：menus 与 control；依赖 demo 暴露 `window.editor`
-
-## 取舍
-
-| 优势                             | 代价                         |
-| -------------------------------- | ---------------------------- |
-| 真分页 / 页眉页脚 / 打印像素可控 | Draw 体量大，改动牵连面广    |
-| Canvas 一致性适合套打/EMR        | 选区与可访问性需自研         |
-| API 面完整、依赖极少             | 无协同 OT/CRDT；历史全量克隆 |
-| Worker 卸载部分重计算            | 仍需主线程克隆元素列表       |
-
-## 与 RTL 改造的关系
-
-正文 RTL/LTR 混排已由独立 `text-engine` 通过 HarfBuzz 整形与 Bidi 实现，并经薄适配层接入 Draw；未迁移的 legacy/复合布局路径及后续事项见 [RTL 延期 TODO](./rtl-deferred-todo.md)。
+`lab.incrementalCompute` 默认关闭，开启后复用未变化段落的原生布局，仍需重建文档流、分页和位置。单个长段落的上下文整形、缓存克隆与全局流处理可能使增量更慢。[最终验收](./native-release-acceptance.md)记录了 T23/T24 的实际结果，性能目标与未来 SVG 设计不等于已交付能力。

@@ -3063,10 +3063,10 @@ export class Draw {
           this.labelParticle.ensureDefaults(element)
           this.labelParticle.renderBackground(ctx, element, x, y + offsetY)
         } else if (element.type === ElementType.SEPARATOR) {
-          this.separatorParticle.render(ctx, element, x, y)
+          this.separatorParticle.render(ctx, element, x, y, metrics.width)
         } else if (element.type === ElementType.PAGE_BREAK) {
           if (this.mode !== EditorMode.CLEAN && !isPrintMode) {
-            this.pageBreakParticle.render(ctx, element, x, y)
+            this.pageBreakParticle.render(ctx, metrics.width, x, y)
           }
         } else if (
           element.type === ElementType.CHECKBOX ||

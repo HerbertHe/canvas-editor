@@ -10,11 +10,13 @@ export class SeparatorParticle {
     this.options = draw.getOptions()
   }
 
+  // Width is supplied by placement geometry and already includes page zoom.
   public render(
     ctx: CanvasRenderingContext2D,
     element: IRowElement,
     x: number,
-    y: number
+    y: number,
+    width: number
   ) {
     ctx.save()
     const {
@@ -30,7 +32,7 @@ export class SeparatorParticle {
     ctx.translate(0, ctx.lineWidth / 2)
     ctx.beginPath()
     ctx.moveTo(x, offsetY)
-    ctx.lineTo(x + element.width! * scale, offsetY)
+    ctx.lineTo(x + width, offsetY)
     ctx.stroke()
     ctx.restore()
   }

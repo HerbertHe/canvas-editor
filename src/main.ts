@@ -402,6 +402,7 @@ window.onload = async function () {
     console.log('uiDirection', next)
     instance.command.executeUiDirection(next)
     syncUiDirectionChrome()
+    requestDrawCommentLines()
   }
 
   const rowMarginDom = document.querySelector<HTMLDivElement>(
@@ -1934,13 +1935,17 @@ window.onload = async function () {
       const rectList = instance.command.getGroupRectList(comment.id)
       if (!rectList?.length) continue
       const firstRect = rectList[0]
-      // 起点：批注文字首行右端中点；终点：批注卡片左端中点
-      const startX = pageRect.left + firstRect.x + firstRect.width
-      const startY = pageRect.top + firstRect.y + firstRect.height / 2
+      // Connect the facing edges in viewport coordinates. RTL chrome places
+      // cards on the left; paragraph direction does not mirror page geometry.
       const itemRect = commentItemDom.getBoundingClientRect()
-      const endX = itemRect.left
+      const textLeft = pageRect.left + firstRect.x
+      const cardOnLeft =
+        itemRect.left + itemRect.width / 2 < textLeft + firstRect.width / 2
+      const startX = cardOnLeft ? textLeft : textLeft + firstRect.width
+      const startY = pageRect.top + firstRect.y + firstRect.height / 2
+      const endX = cardOnLeft ? itemRect.right : itemRect.left
       const endY = itemRect.top + itemRect.height / 2
-      const controlOffset = Math.max((endX - startX) / 2, 0)
+      const controlOffset = (endX - startX) / 2
       const path = document.createElementNS(
         'http://www.w3.org/2000/svg',
         'path'

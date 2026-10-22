@@ -26,8 +26,7 @@ Cache keys include content/styles, source identity, font revision, spacing,
 available width and per-line flow constraints. Changed inputs invalidate reuse;
 field writes, history restoration and font registration cause appropriate full
 invalidation. Cache misses or disabling the option use full HarfBuzz layout.
-There is no browser/legacy fallback. Performance evaluation remains in T23;
-current differential checks establish layout consistency, not a speed guarantee.
+There is no browser/legacy fallback. T23/T24 are complete; the [acceptance record](../../guide/native-release-acceptance.md) documents consistency and measured costs. Incremental mode is not necessarily faster.
 
 Internal contributors should mutate through spliceElementList/deleteElementList
 and setElementProperty/deleteElementProperty so dirty ranges and invalidation

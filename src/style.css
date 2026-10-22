@@ -975,7 +975,8 @@ ul {
 }
 
 /* RTL 模式：批注镜像到纸张左侧 */
-#app.ui-rtl .comment {
+#app.ui-rtl .comment,
+#app.ui-rtl .comment-line-toggle {
   transform: translateX(calc(-100% - 420px));
   direction: rtl;
 }

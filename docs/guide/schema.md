@@ -1,197 +1,76 @@
-# 数据结构
+# 文档数据结构
+
+业务持久化保存 `IEditorData`，不保存字形、页面坐标或内部行对象。运行期元素与原生布局几何都是派生层，关系见[架构说明](./architecture.md)。本页类型与枚举均可从包根导入。
+
+## 文档、元素与段落
 
 ```typescript
-interface IElement {
-  // 基础
-  id?: string;
-  type?: {
-    TEXT = 'text',
-    IMAGE = 'image',
-    TABLE = 'table',
-    HYPERLINK = 'hyperlink',
-    SUPERSCRIPT = 'superscript',
-    SUBSCRIPT = 'subscript',
-    SEPARATOR = 'separator',
-    PAGE_BREAK = 'pageBreak',
-    CONTROL = 'control',
-    CHECKBOX = 'checkbox',
-    RADIO = 'radio',
-    LATEX = 'latex',
-    TAB = 'tab',
-    DATE = 'date',
-    BLOCK = 'block'
-  };
-  value: string;
-  valueList?: IElement[]; // 复合元素（超链接、标题、列表等）使用
-  extension?: unknown;
-  externalId?: string;
-  hide?: boolean;
-  hint?: string; // 悬浮提示文案：（需在配置中开启 hint 总开关）
-  // 样式
-  font?: string;
-  size?: number;
-  width?: number;
-  height?: number;
-  bold?: boolean;
-  color?: string;
-  highlight?: string;
-  italic?: boolean;
-  underline?: boolean;
-  strikeout?: boolean;
-  rowFlex?: {
-    LEFT = 'left',
-    CENTER = 'center',
-    RIGHT = 'right',
-    ALIGNMENT = 'alignment',
-    JUSTIFY = 'justify',
-    START = 'start', // 逻辑起点（RTL 为右）
-    END = 'end' // 逻辑终点（RTL 为左）
-  };
-  direction?: 'ltr' | 'rtl' | 'auto'; // 段落基础方向
-  rowMargin?: number;
-  spacingBefore?: number;
-  spacingAfter?: number;
-  letterSpacing?: number;
-  textDecoration?: {
-    style?: TextDecorationStyle;
-  };
-  // 组信息-可用于批注等其他成组使用场景
-  groupIds?: string[];
-  // 表格
-  conceptId?: string;
-  colgroup?: {
-    width: number;
-  }[];
-  trList?: {
-    height: number;
-    pagingRepeat?: boolean;
-    extension?: unknown;
-    externalId?: string;
-    tdList: {
-      colspan: number;
-      rowspan: number;
-      conceptId?: string;
-      verticalAlign?: VerticalAlign;
-      backgroundColor?: string;
-      borderColor?: string;
-      borderWidth?: number;
-      borderTypes?: TdBorder[];
-      slashTypes?: TdSlash[];
-      value: IElement[];
-      extension?: unknown;
-      externalId?: string;
-      disabled?: boolean;
-      deletable?: boolean;
-      hint?: string; // 单元格悬浮提示文案：鼠标移入单元格内任意元素时展示
-    }[];
-  }[];
-  borderType?: TableBorder;
-  borderColor?: string;
-  borderWidth?: number;
-  borderExternalWidth?: number;
-  tableToolDisabled?: boolean;
-  // 超链接
-  url?: string;
-  // 上下标
-  actualSize?: number;
-  // 分割线
-  dashArray?: number[]; // 分割线的虚线样式数组
-  lineWidth?: number; // 分割线的线宽
-  paperDirection?: PaperDirection; // 分页符之后页面的纸张方向
-  // 控件
-  control?: IControl; // 控件数据结构详见：控件-配置
-  controlComponent?: {
-    PREFIX = 'prefix',
-    POSTFIX = 'postfix',
-    PLACEHOLDER = 'placeholder',
-    VALUE = 'value',
-    CHECKBOX = 'checkbox',
-    RADIO = 'radio'
-  };
-  // 复选框
-  checkbox?: {
-    value: boolean | null;
-  };
-  // 单选框
-  radio?: {
-    value: boolean | null;
-  };
-  // LaTeX
-  laTexSVG?: string;
-  // 日期
-  dateFormat?: string;
-  // 图片
-  imgDisplay?: {
-    INLINE = 'inline',
-    BLOCK = 'block'
-  }
-  imgFloatPosition?: {
-    x: number;
-    y: number;
-    pageNo?: number;
-  }
-  imgCrop?: {
-    x: number;      // 裁剪起始X坐标（相对于原图）
-    y: number;      // 裁剪起始Y坐标（相对于原图）
-    width: number;  // 裁剪宽度
-    height: number; // 裁剪高度
-  }
-  imgCaption?: {
-    value: string;  // 题注内容，支持{imageNo}占位符
-    color?: string; // 题注字体颜色
-    font?: string;  // 题注字体
-    size?: number;  // 题注字号
-    top?: number;   // 题注与图片的间距
-  }
-  imgToolDisabled?: boolean;
-  imgPreviewDisabled?: boolean;
-  // 内容块
-  block?: {
-    type: {
-      IFRAME = 'iframe',
-      VIDEO = 'video'
-    };
-    iframeBlock?: {
-      src?: string;
-      srcdoc?: string;
-      sandbox?: string[];
-      allow?: string[];
-    };
-    videoBlock?: {
-      src: string;
-    };
-  };
-  // 标题
-  level?: TitleLevel;
-  title?: {
-    conceptId?: string;
-    deletable?: boolean;
-    disabled?: boolean;
-  };
-  // 列表
-  listType?: ListType;
-  listStyle?: ListStyle;
-  listWrap?: boolean;
-  listLevel?: number;
-  // 区域
-  areaId?: string;
-  area?: {
-    extension?: unknown;
-    top?: number;
-    hide?: boolean;
-    borderColor?: string;
-    backgroundColor?: string;
-    mode?: AreaMode;
-    deletable?: boolean;
-    placeholder?: IPlaceholder;
-  };
-  // 标签
-  labelId?: string;
-  label?: {
-    color?: string;
-    backgroundColor?: string;
-    borderRadius?: number;
-    padding?: IPadding;
-  };
+import { RowFlex, TextDirection, ElementType } from '@herberthe/canvas-editor'
+import type { IEditorData } from '@herberthe/canvas-editor'
+
+const data: IEditorData = {
+  header: [{ value: '周末计划', rowFlex: RowFlex.CENTER }],
+  main: [
+    { value: '购物清单', bold: true, spacingAfter: 8 },
+    { value: '\n' },
+    { value: 'مرحبا بالعائلة', direction: TextDirection.RTL },
+    { value: '\n' },
+    {
+      type: ElementType.HYPERLINK,
+      value: '',
+      url: 'https://example.com',
+      valueList: [{ value: '社区活动日历' }]
+    }
+  ],
+  footer: [{ value: '记得带购物袋。', size: 12 }]
 }
 ```
+
+结构化数据中的 `main` 必填，header/footer 和 graffiti 可选；`Editor.create` 也接受只含正文的 `IElement[]`。`value` 保存文字或对应元素的内容，复合元素可使用 `valueList`。输入换行会被标准化为内部段落标记；外部不要自行制造补偿标记，也不要假设一个运行期元素等于一个 UTF-16 单元。
+
+段落内容方向使用 `element.direction`，对齐使用 `rowFlex`。段落属性由元素承载并由编辑器标准化，运行期修改应使用段落命令。`options.direction` 控制 UI 镜像，与内容方向分离。段前/段后间距不是行高的替代品。
+
+## 元素字段分组
+
+| 分组       | 常用字段                                                                                        | 说明                                 |
+| ---------- | ----------------------------------------------------------------------------------------------- | ------------------------------------ |
+| 身份与扩展 | id、externalId、extension、type、value                                                          | 业务扩展放入 extension；校验外部输入 |
+| 文字样式   | font、size、bold、italic、color、highlight、underline、strikeout、letterSpacing、textDecoration | 字体家族需要实际注册的可用字节       |
+| 段落       | rowFlex、direction、rowMargin、spacingBefore、spacingAfter                                      | 上下文影响整形和分页                 |
+| 标题/列表  | level、title、listType、listStyle、listLevel、listWrap、valueList                               | 运行期 ID 由编辑器维护               |
+| 表格       | colgroup、trList、borderType、borderColor、borderWidth                                          | 单元格 value 递归包含元素数组        |
+| 超链接     | url、valueList                                                                                  | 外部 URL 需校验                      |
+| 图片       | width、height、imgDisplay、imgFloatPosition、imgCrop、imgCaption                                | 资源与尺寸影响绘制及导出             |
+| 控件       | control、valueList                                                                              | 参见控件配置和级联参考               |
+| 其他对象   | block、dateFormat、laTexSVG、dashArray、lineWidth                                               | SVG 公式/图片数据不代表 SVG 页面引擎 |
+| 业务标注   | groupIds、trace、area、label、hide、hint                                                        | 参见对应命令与配置                   |
+
+可选字段和完整枚举成员以包根导出的 `IElement` 类型为准。本表用于按职责查找，不维护一份容易漂移的伪类型声明。
+
+## 表格嵌套示例
+
+```typescript
+import { ElementType } from '@herberthe/canvas-editor'
+import type { IElement } from '@herberthe/canvas-editor'
+
+const table: IElement = {
+  type: ElementType.TABLE,
+  value: '',
+  colgroup: [{ width: 220 }, { width: 220 }],
+  trList: [
+    {
+      height: 40,
+      tdList: [
+        { colspan: 1, rowspan: 1, value: [{ value: '周六' }] },
+        { colspan: 1, rowspan: 1, value: [{ value: '去图书馆借书' }] }
+      ]
+    }
+  ]
+}
+```
+
+表格、控件、超链接和复合对象各自有结构约束。编辑时使用公开 command，使 ID、选区、脏区和缓存失效保持一致。参见[控件配置](./control/option.md)与[执行命令](./command-execute.md)。
+
+## 保存与恢复
+
+`command.getValue()` 返回 `{ version, data, options }`。ready 后通过 `command.executeSetValue(saved.data)` 恢复内容，也可在创建实例时传入 saved.data。配置和字体资源由宿主管理，不应直接信任外部存储的 options。字体字节、缓存和原生几何不是可移植的文档内容。完整持久化示例见[快速上手](./start.md)。

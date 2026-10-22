@@ -20,7 +20,7 @@ cluster、caret 及对象锚点。表格单元格有独立 scope，列表序号�
 缓存键包括文字/样式、来源身份、字体 revision、间距、可用宽度及逐行 flow 约束。
 样式、字体或约束变化会失效；字段修改、历史恢复、字体补充触发相应全量失效。
 缓存关闭或未命中时仍进行完整 HarfBuzz 排版，不存在浏览器或旧引擎回退。
-性能评估按 T23 执行，当前只能依据定向差分验证其布局一致性。
+T23/T24 已完成；[最终验收](./native-release-acceptance.md)记录了布局一致性及实际性能成本，增量不一定更快。
 
 内部二次开发应通过 `spliceElementList` / `deleteElementList` 记录脏区，
 通过 `setElementProperty` / `deleteElementProperty` 修改字段，避免绕过失效追踪。

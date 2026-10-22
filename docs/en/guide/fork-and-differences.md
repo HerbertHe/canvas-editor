@@ -89,10 +89,13 @@ Run `npm run dev` for this fork's everyday multilingual demo and
 
 Run `npm run lib`, `npm run test:package`, `npm run docs:build` and
 `npm pack --dry-run`. Actual publication uses an npm account with `@herberthe`
-scope permissions and `npm publish --access public`. Packaging checks do not
-replace the deferred T23/T24 acceptance work.
+scope permissions and `npm publish --access public`. T23/T24 acceptance is complete; see the [results](../../guide/native-release-acceptance.md). Rerun applicable checks for each new release.
 
 Fork modifications: Copyright (c) 2026-present **Herbert He**.
 Original code: Copyright (c) 2021-present **hufe**. The upstream copyright and
 full MIT permission notice are retained in `LICENSE`; `NOTICE` records origin.
 Both files ship with the package. Third-party assets and fonts keep their own licenses.
+
+## Reading this documentation
+
+[Quick start](./start.md) describes current integration, the [pipeline](./rendering-pipeline.md) explains typography and inherited containers, and [engineering records](./engineering-records.md) preserve migration evidence. Upstream synchronous initialization, system-font fallback, UMD and internal-object examples require review before use with this fork.

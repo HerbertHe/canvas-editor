@@ -1,52 +1,75 @@
-# Instance API
+# Editor lifecycle and font APIs
 
-## How to Use
+Import public runtime values and types from `@herberthe/canvas-editor`. Internal Draw objects, caches and hosts are not stable public APIs. Use `editor.command` for document operations and `editor.register` for registration.
 
-```javascript
+## Creation and lifecycle
+
+```typescript
 import Editor from '@herberthe/canvas-editor'
 
-const instance = await Editor.create(container, data, options)
-instance.apiName()
+const editor = await Editor.create(container, {
+  main: [{ value: 'Weekend plans' }]
+})
+console.log(editor.version, editor.state)
+// On unmount: editor.destroy()
 ```
 
-## Lifecycle and font APIs
+| Member                                     | Contract                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| `Editor.create(container, data, options?)` | Return a ready editor asynchronously; clean up on initialization failure        |
+| `new Editor(container, data, options?)`    | Construct synchronously; await `.ready` afterward                               |
+| `ready: Promise<void>`                     | WASM, explicit fonts and first layout, not background fonts/all offscreen pages |
+| `state`                                    | `initializing` / `ready` / `failed` / `destroyed`                               |
+| `initializationError`                      | Initialization failure with code/cause, not coverage diagnostics                |
+| `version`                                  | Package version                                                                 |
+| `destroy()`                                | Release editor resources; the application owns external tools/listeners         |
 
-| API                                                                     | Contract                                                                                 |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `Editor.create(container, data, options?)`                              | Returns a ready instance; cleans up on failure                                           |
-| `ready: Promise<void>`                                                  | Waits for WASM, configured fonts and first layout, not background downloads              |
-| `state` / `initializationError`                                         | Lifecycle state and initialization error with code/cause                                 |
-| `register.fonts(faces)`                                                 | Waits for ready; per-face registered/duplicate/failed results; refreshes layout/coverage |
-| `register.getFontFaces()` / `getFontRevision()`                         | Registered metadata snapshots / font revision                                            |
-| `getFontCoverageReport()`                                               | Current missing-text, source and download snapshot                                       |
-| `retryFontDownloads()`                                                  | Retries current missing fonts after ready, respecting the switch                         |
-| `listener.fontCoverageChange` / `eventBus.on('fontCoverageChange', cb)` | Single callback / multiple subscribers                                                   |
-
-Import `IEditorOption`, `IUpdateOption`, `IEditorFontFace`, `FontCoverageReport`,
-`FontRegistrationResult`, `RegisteredFontFace`, `EditorRuntimeState`,
-`EditorRuntimeErrorCode` and the `EditorRuntimeError` class from the package root.
-See [Fonts and ESM migration](./font-and-esm-migration.md) for examples and recovery.
-
-## version
-
-Feature: version number
-
-Usage：
-
-```javascript
-instance.version
+```mermaid
+stateDiagram-v2
+  [*] --> initializing
+  initializing --> ready: Runtime and first layout succeed
+  initializing --> failed: Initialization fails
+  initializing --> destroyed: Early destruction
+  ready --> destroyed: Destroy
+  failed --> destroyed: Cleanup
+  destroyed --> [*]
 ```
 
-## destroy
+Create cleans up failed instances; catch its rejection. With synchronous construction, handle ready rejection and destroy the instance yourself. Missing glyphs do not reject ready. Most non-ready mutation/geometry commands fail rather than queue; see [migration](./font-and-esm-migration.md) for exceptions.
 
-Feature: Destroy the editor
+## Fonts and diagnostics
 
-Usage：
+| API                                         | Purpose                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------- |
+| `register.fonts(faces)`                     | Wait for ready; return per-face registered/duplicate/failed results |
+| `register.getFontFaces()`                   | Snapshot of registered font metadata                                |
+| `register.getFontRevision()`                | Font revision used for layout invalidation                          |
+| `getFontCoverageReport()`                   | Current missing text, sources, styles and download states           |
+| `retryFontDownloads()`                      | Retry current missing fonts after ready; respect the toggle         |
+| `listener.fontCoverageChange`               | Single callback slot                                                |
+| `eventBus.on/off('fontCoverageChange', cb)` | Multiple subscribers                                                |
 
-```javascript
-instance.destroy()
+```typescript
+import type { FontCoverageReport } from '@herberthe/canvas-editor'
+
+const onCoverage = (report: FontCoverageReport) => {
+  for (const issue of report.issues) {
+    console.log(issue.script, issue.reason, issue.downloadStatus)
+  }
+}
+editor.eventBus.on('fontCoverageChange', onCoverage)
+onCoverage(editor.getFontCoverageReport())
+// Cleanup uses the same callback:
+editor.eventBus.off('fontCoverageChange', onCoverage)
 ```
 
-::: warning
-Only destroy the editor DOM and related events, menu bars, toolbars, external variables, etc. need to be handled by themselves.
-:::
+`on()` does not return an unsubscribe function. Read a current snapshot after subscribing to avoid relying on the first event's timing. Reports can contain document characters and locations; applications control logging/sharing. Basic font downloads do not guarantee complete coverage.
+
+Root-exported types include `IEditorOption`, `IUpdateOption`, `IEditorFontFace`, `FontCoverageReport`, `FontRegistrationResult`, `RegisteredFontFace`, `EditorRuntimeState` and `EditorRuntimeErrorCode`, plus runtime class `EditorRuntimeError`. See [fonts and ESM migration](./font-and-esm-migration.md) for errors, offline use and registration examples.
+
+## Related APIs
+
+- [Mutation commands](./command-execute.md): content, range, style, pages and modes.
+- [Queries and export](./command-get.md): values, images, HTML and geometry.
+- [Listener](./listener.md) / [EventBus](./eventbus.md): callback and subscription interfaces.
+- [Quick start](./start.md): creation, persistence, printing and cleanup.

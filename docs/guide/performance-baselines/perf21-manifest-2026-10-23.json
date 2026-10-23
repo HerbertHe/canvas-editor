@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "performance": [
+    "docs/guide/performance-baselines/perf-position-worker-sync-2026-10-23.json"
+  ],
+  "supplemental": [
+    "docs/guide/performance-baselines/perf-position-worker-1000-2026-10-23.json",
+    "docs/guide/performance-baselines/perf-position-worker-long-2026-10-23.json",
+    "docs/guide/performance-baselines/perf-position-worker-transfer-2026-10-23.json",
+    "docs/guide/performance-baselines/perf-position-worker-uninstrumented-2026-10-23.json"
+  ],
+  "automated": [],
+  "manual": {
+    "systemIME": {
+      "status": "pending",
+      "evidence": null,
+      "reason": "Synthetic composition only; real system candidate UI not tested"
+    },
+    "systemKeyRepeat": {
+      "status": "pending",
+      "evidence": null,
+      "reason": "Trusted Playwright repeat is not OS keyboard repeat"
+    },
+    "presentation": {
+      "status": "pending",
+      "evidence": null,
+      "reason": "Geometry/rAF/trace proxies do not measure screen presentation"
+    },
+    "longTermMemory": {
+      "status": "pending",
+      "evidence": null,
+      "reason": "Six short forced-GC lifecycle cycles do not establish long-term native memory stability"
+    }
+  },
+  "output": "cypress/results/perf21/acceptance.json"
+}

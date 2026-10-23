@@ -57,6 +57,7 @@
     "test:migration:performance": "node scripts/test-native-performance.mjs",
     "test:migration:audit": "node scripts/audit-native-release.mjs",
     "test:migration:baseline": "node scripts/serve-native-baseline.mjs",
+    "test:performance:acceptance": "node scripts/test-performance-acceptance.mjs",
     "docs:check": "node scripts/check-docs-diagrams.mjs"
   },
   "devDependencies": {

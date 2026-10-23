@@ -31,7 +31,7 @@ HarfBuzz pipeline does not imply browsers cannot display those scripts.
 | Basic-font downloads                                              | No equivalent Bunny pipeline                  | Enabled by default, runtime toggle, retry and manual/offline mode           |
 | Complex scripts and BiDi                                          | No equivalent HarfBuzz cluster/caret pipeline | Native glyph/cluster/caret geometry, visual navigation and logical deletion |
 | Initialization                                                    | Synchronous construction                      | `Editor.create()` / `editor.ready`, failure states and cleanup              |
-| Incremental layout                                                | Row-level optimization already exists         | Native paragraph reuse, with pagination and positions recomputed            |
+| Incremental layout                                                | Row-level optimization already exists         | Opt-in flow and unchanged-line position/query reuse; experimental layout Worker            |
 | Distribution                                                      | ESM and UMD                                   | ESM-only root exports and declarations                                      |
 | SVG pages                                                         | Separate upstream experimental branch         | Deferred and unavailable; Canvas-only                                       |
 | Tables, controls, pagination, paragraph spacing, comments, macros | Existing features                             | Inherited and adapted, not fork inventions                                  |
@@ -43,7 +43,7 @@ Fork implementation: `core/text-engine`, `core/layout` and `core/text-engine-hos
 Not every language/style is fully validated. Basic fonts do not guarantee rare
 characters or color emoji. T23/T24 acceptance is complete; measured costs and remaining performance work
 are documented in the [acceptance report](../../guide/native-release-acceptance.md).
-Incremental mode is not always faster.
+The latest opt-in input improvements and remaining tail latency are documented in [Benchmark](benchmark.md). Paragraph caching alone is not always faster.
 
 ## Canvas-only release
 

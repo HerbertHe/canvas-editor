@@ -15,7 +15,10 @@ import { ITextShaper } from './ITextShaper'
  * Uncovered text uses explicit diagnostics/placeholders; never browser shaping.
  */
 export class HarfBuzzTextShaper implements ITextShaper {
-  constructor(private fontManager: FontManager) {}
+  constructor(
+    private fontManager: FontManager,
+    private includePathData = true
+  ) {}
 
   shape(run: StyleRun): ShapedGlyph[] {
     if (run.style.objectWidth != null) {
@@ -72,7 +75,7 @@ export class HarfBuzzTextShaper implements ITextShaper {
       const charEnd = run.textStart + unit.end
       const font = this.fontManager.getFont(run.style)
       const outline =
-        !invisible && metrics.source === 'notdef' && font
+        this.includePathData && !invisible && metrics.source === 'notdef' && font
           ? this.fontManager.getGlyphOutline(font, 0)
           : undefined
       return {
@@ -197,10 +200,11 @@ export class HarfBuzzTextShaper implements ITextShaper {
         style: run.style,
         bidiLevel: run.direction === 'rtl' ? 1 : 0
       }
-      shaped.pathData = this.fontManager.getGlyphOutline(
-        fontInst,
-        g.codepoint
-      ).pathData
+      if (this.includePathData)
+        shaped.pathData = this.fontManager.getGlyphOutline(
+          fontInst,
+          g.codepoint
+        ).pathData
       return shaped
     })
 

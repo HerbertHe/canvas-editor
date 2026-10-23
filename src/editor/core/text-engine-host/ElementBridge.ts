@@ -181,6 +181,12 @@ function isTextLike(el: IElement): boolean {
   )
 }
 
+export function isParagraphObject(el: IElement) {
+  return el.type === ElementType.PAGE_BREAK ||
+    el.type === ElementType.SEPARATOR || el.type === ElementType.TABLE ||
+    el.type === ElementType.BLOCK || isParagraphBreakImage(el)
+}
+
 export class ElementBridge {
   scanParagraphs(
     elementList: IElement[],
@@ -202,11 +208,7 @@ export class ElementBridge {
       }
       const isObjectBreak =
         i < endIndex &&
-        (el.type === ElementType.PAGE_BREAK ||
-          el.type === ElementType.SEPARATOR ||
-          el.type === ElementType.TABLE ||
-          el.type === ElementType.BLOCK ||
-          isParagraphBreakImage(el))
+        isParagraphObject(el)
       const isBreak = i === endIndex || el.value === ZERO || isObjectBreak
       if (!isBreak) continue
       if (i > start) {

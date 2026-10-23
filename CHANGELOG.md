@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — input performance rollout
+
+- Add opt-in `baseline`, `sync` and `worker` performance presets and detached
+  `getPerformanceDiagnostics()` snapshots. Existing defaults remain unchanged.
+- Prevent continuous Worker input from indefinitely postponing geometry commits
+  by scheduling synchronous recovery after 100ms of waiting.
+- Reuse unchanged line positions and query blocks across source-index shifts.
+- Commit incremental geometry during repeat deletion, batch ordered mirror edits,
+  and recover idle Workers after backpressure or faults without losing edits.
+- Preserve asynchronous utility API snapshots with synchronous computation when
+  workers are blocked or unavailable, including restrictive worker CSP policies.
+- Add seeded edit/geometry/pixel comparisons, lifecycle checks and a release gate
+  that keeps incomplete, stale or over-budget evidence from enabling rollout.
+- Keep Worker experimental and transfer activation deferred. System IME,
+  presentation latency and long-term native memory require separate evidence.
+
 ## 0.1.0 — Independent fork release line
 
 - Publish under `@herberthe/canvas-editor`, maintained by Herbert He.

@@ -42,6 +42,8 @@ export default defineConfig(({ mode }) => {
     return {
       resolve,
       test,
+      // HarfBuzz initializes WASM with top-level await inside the layout worker.
+      worker: { format: 'es', rolldownOptions: { output: { codeSplitting: false } } },
       plugins: [
         cssInjectedByJsPlugin({
           attributes: { id: `${name}-style` },
@@ -89,6 +91,7 @@ export default defineConfig(({ mode }) => {
   return {
     resolve,
     test,
+    worker: { format: 'es', rolldownOptions: { output: { codeSplitting: false } } },
     base: `/${name}/`,
     server: {
       host: '0.0.0.0',

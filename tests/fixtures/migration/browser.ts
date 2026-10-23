@@ -1,3 +1,4 @@
+import type { PerformanceProfile } from '../../../src/editor'
 import Editor, { EditorMode } from '../../../src/editor'
 import {
   migrationEnvironment,
@@ -12,6 +13,11 @@ async function run() {
     migrationSamples().find(item => item.id === params.get('sample')) ||
     migrationSamples()[0]
 
+  const worker = params.has('worker')
+  if (worker) sample.data = { main: [
+    { value: 'office مرحبا sample '.repeat(8) },
+    { value: '\u200B' }, { value: 'second paragraph '.repeat(8) }
+  ] }
   const woff2 = params.get('format') === 'woff2'
   if (woff2) sample.data = { main: [{ value: 'office café 123' }] }
   const fontUrl =
@@ -29,6 +35,11 @@ async function run() {
     {
       ...migrationOptions,
       ...sample.options,
+      lab: {
+        performanceProfile: (worker ? 'worker' : params.get('profile') ||
+          'baseline') as PerformanceProfile,
+        workerTransfer: params.has('transfer')
+      },
       fonts: [{ family: migrationEnvironment.font, data }]
     }
   )

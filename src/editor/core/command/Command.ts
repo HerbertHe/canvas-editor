@@ -175,14 +175,21 @@ export class Command {
     this.interceptor = fn
   }
 
+  private closeHistoryGroup?: () => void
+
   private wrap<T extends (...args: any[]) => any>(name: string, fn: T): T {
     return ((...args: any[]) => {
+      if (name.startsWith('execute') && name !== 'executeBackspace')
+        this.closeHistoryGroup?.()
       this.interceptor?.(name, args)
       return fn(...args)
     }) as T
   }
 
   constructor(adapt: CommandAdapt, guard?: (name: string) => void) {
+    Object.defineProperty(this, 'closeHistoryGroup', {
+      value: () => adapt.closeHistoryGroup?.(), enumerable: false
+    })
     // 全局命令
     this.executeMode = this.wrap('executeMode', adapt.mode.bind(adapt))
     this.executeCut = this.wrap('executeCut', adapt.cut.bind(adapt))

@@ -33,7 +33,7 @@ It does not assert that future upstream versions will lack these features.
 | Automatic basic fonts                                        | No equivalent Bunny download pipeline         | Default-enabled Bunny downloads, runtime switch, retry and manual/offline mode                   |
 | Bidirectional and complex-script geometry                    | No equivalent HarfBuzz cluster/caret pipeline | Native glyph/cluster/caret geometry, visual navigation and logical deletion                      |
 | Initialization                                               | Synchronous editor construction               | `Editor.create()` or `await editor.ready`, with failure/cleanup states                           |
-| Incremental layout                                           | Row-level incremental layout already exists   | Native paragraph layout reuse adapted to HarfBuzz, followed by pagination/position recomputation |
+| Incremental layout                                           | Row-level incremental layout already exists   | Opt-in bounded flow, unchanged-line position/query reuse and experimental layout Worker |
 | Distribution                                                 | ESM and UMD                                   | ESM-only root exports and declarations; no UMD/CommonJS                                          |
 | SVG pages                                                    | Separate upstream experimental branch         | Deferred and unavailable; Canvas is the only page renderer                                       |
 | Rich text, tables, controls, pagination, annotations, macros | Existing upstream capabilities                | Inherited and adapted; not claimed as fork inventions                                            |
@@ -41,10 +41,40 @@ It does not assert that future upstream versions will lack these features.
 See [项目关系与差异（中文）](docs/guide/fork-and-differences.md) /
 [full comparison and migration notes](docs/en/guide/fork-and-differences.md).
 The font pipeline still has limits: basic downloads do not guarantee rare
-characters, every language/style or color emoji support. T23/T24 acceptance is recorded in the
-[performance/resource and removal report](docs/guide/native-release-acceptance.md).
-Measured editing costs exceed T01 in these samples; incremental mode is not
-always faster. Further performance work remains open.
+characters, every language/style or color emoji support. See the
+[testing and acceptance guide](docs/en/guide/engineering-records.md) and
+[current benchmark](docs/en/guide/benchmark.md) for validation and limits.
+
+## Benchmark
+
+Measured on Apple M1 Pro (8 logical CPUs, 16 GiB), Node 24.19.0, Chrome
+155, with fixed fonts, paging, history enabled, DPR 1 and middle edits at
+2Hz for 10 seconds. Values below are handler P50 in milliseconds, fixed
+trial 0; the final optimized configuration uses synchronous opt-in features.
+
+| Document / action | Initial baseline | Optimized | Reduction |
+| --- | ---: | ---: | ---: |
+| 100 paragraphs / input | 339.6 | 6.3 | 98.1% |
+| 100 paragraphs / Backspace | 357.1 | 7.5 | 97.9% |
+| 1000 paragraphs / input | 5296.0 | 34.8 | 99.3% |
+| 1000 paragraphs / Backspace | 5349.9 | 32.1 | 99.4% |
+| One long paragraph / input | 471.1 | 189.8 | 59.7% |
+| Large table / input | 42.4 | 20.0 | 52.8% |
+
+These are historical same-machine trends: Chrome changed from
+155.0.8059.85 to .86, so they are not a strict same-browser A/B.
+Compared with the immediately preceding optimization, thousand-paragraph
+position work fell 97.0% and query-index work fell 95.8%. In the 100-paragraph,
+30-second Worker Backspace test, offer-to-geometry P95 fell from 6718.4ms
+to 72.4ms and the mirror finished ready with no pending requests or edits.
+
+The default remains `baseline`; enable `lab.performanceProfile: 'sync'`
+only after validating your documents. Worker remains experimental and transfer
+is deferred. Long paragraphs, large tables and thousand-paragraph pressure
+still have expensive cases; handler/geometry budgets are not universally met.
+Geometry is a latency proxy, not measured screen presentation.
+Read the [full benchmark, three-trial ranges and raw data](docs/en/guide/benchmark.md)
+([中文](docs/guide/benchmark.md)) and [configuration](docs/en/guide/lab.md).
 
 ## Rendering support
 
@@ -151,6 +181,11 @@ Run the local demo and documentation rather than using the upstream hosted
 sites, which describe a different package. Report fork issues at
 [HerbertHe/canvas-editor/issues](https://github.com/HerbertHe/canvas-editor/issues).
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution instructions.
+
+## AI-assisted repository guides
+
+[DeepWiki](https://deepwiki.com/HerbertHe/canvas-editor) ·
+[Zread](https://zread.ai/HerbertHe/canvas-editor)
 
 ## License and attribution
 

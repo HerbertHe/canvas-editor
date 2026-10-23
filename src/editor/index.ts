@@ -2,6 +2,7 @@
 import type { EditorLifecycle } from './core/EditorLifecycle'
 import type { FontCoverageReport } from './interface/FontCoverage'
 import type { EditorRuntimeState } from './interface/Runtime'
+import type { EditorPerformanceDiagnostics } from './interface/Performance'
 import './assets/css/index.css'
 import { version } from '../../package.json'
 import {
@@ -125,6 +126,8 @@ export default class Editor {
   public retryFontDownloads: () => void
   /** Detached current coverage snapshot; subscribe to fontCoverageChange for updates. */
   public getFontCoverageReport: () => FontCoverageReport
+  /** Read-only detached counters; safe before ready and after destroy. */
+  public getPerformanceDiagnostics: () => EditorPerformanceDiagnostics
   public command: Command
   public version: string
   public listener: Listener
@@ -202,6 +205,10 @@ export default class Editor {
           'executeComputeElementListHeightAsync'
         ].includes(name)
       )
+      if (draw.isReady() && draw.getOptions().lab?.layoutWorker &&
+        !['getValue', 'getValueAsync', 'getWordCount', 'getGroupIds',
+          'getRange', 'getRangeText', 'getContainer', 'getLocale'].includes(name))
+        draw.flushGeometry()
     })
     // 宏
     this.macro = new MacroManager(this.command)
@@ -211,6 +218,7 @@ export default class Editor {
     const shortcut = new Shortcut(draw, this.command)
     this.retryFontDownloads = draw.retryFontDownloads.bind(draw)
     this.getFontCoverageReport = draw.getFontCoverageReport.bind(draw)
+    this.getPerformanceDiagnostics = draw.getPerformanceDiagnostics.bind(draw)
     // 注册
     this.register = new Register({
       contextMenu,
@@ -365,6 +373,8 @@ export type {
   EditorRuntimeErrorCode,
   EditorRuntimeState
 } from './interface/Runtime'
+export type { EditorPerformanceDiagnostics, WorkerFallbackReason } from './interface/Performance'
+export type { PerformanceProfile } from './utils/performanceProfile'
 
 export type {
   FontBinaryFormat,

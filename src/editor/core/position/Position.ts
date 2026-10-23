@@ -1,5 +1,12 @@
+import { NativeQueryIndex } from '../layout/NativeQueryIndex'
+import { getTextLineOrigin } from '../layout/relativeLayout'
+import type { TextLine } from '../../interface/Layout'
 import type { LayoutRow } from '../../interface/LayoutRow'
 import { getHostRowsHeight } from '../layout/hostRowGeometry'
+import {
+  LineGeometryCache,
+  NativeRowIndex
+} from '../layout/LineGeometryIndex'
 import {
   hitTextLine,
   intersectRect,
@@ -40,6 +47,7 @@ import { EventBusMap } from '../../interface/EventBus'
 
 // 单页新增位置信息的缓存切片
 interface IPagePositionCache {
+  nativeLines: PlacedTextLine[]
   positionList: IElementPosition[]
   floatPositionList: IFloatPosition[]
   tablePagingPositionList: IElementPosition[]
@@ -62,7 +70,19 @@ export class Position {
   private options: DeepRequired<IEditorOption>
 
   private nativeLines = new WeakMap<IElementPosition[], PlacedTextLine[]>()
+  private nativeRows = new WeakMap<IElementPosition[], NativeRowIndex>()
+  private lineGeometry = new LineGeometryCache()
+  private nativeQueries = new WeakMap<IElementPosition[], NativeQueryIndex>()
   private nativeCaretHint: NativeCaret | null = null
+  private placementStats = { computedElements: 0, reusedElements: 0 }
+  public getPlacementStats() { return { ...this.placementStats } }
+  private rowPositions = new WeakMap<TextLine, {
+    key: string
+    delta: number
+    rowIndex: number
+    rowNo: number
+    positions: IElementPosition[]
+  }>()
 
   public getNativeLines(positions = this.getPositionList()): PlacedTextLine[] {
     return this.nativeLines.get(positions) || []
@@ -73,22 +93,8 @@ export class Position {
     positions: IElementPosition[],
     pageNo?: number
   ) {
-    return (
-      this.getNativeLines(positions).find(
-        placed =>
-          placed.line === row.nativeLine &&
-          (pageNo === undefined || placed.pageNo === pageNo)
-      ) ||
-      this.getNativeLines(positions).find(
-        placed =>
-          placed.line.id === row.nativeLine?.id &&
-          placed.line.source.scope === row.nativeLine.source.scope &&
-          (pageNo === undefined ||
-            placed.pageNo === pageNo ||
-            placed.line.source.scope.startsWith('header:') ||
-            placed.line.source.scope.startsWith('footer:'))
-      )
-    )
+    if (!row.nativeLine) return undefined
+    return this.nativeRows.get(positions)?.find(row.nativeLine, pageNo)
   }
 
   public getNativeRangeRects(
@@ -108,154 +114,52 @@ export class Position {
     })
   }
 
+  public getNativeCaretHint() { return this.nativeCaretHint }
+
   public setNativeCaretHint(caret: NativeCaret | null) {
     this.nativeCaretHint = caret
   }
 
-  public getNativeCaret(
-    index: number,
-    hitLineStartIndex?: number
-  ): NativeCaret | null {
-    const lines = this.getNativeLines().filter(p => !p.line.hidden)
-    const hint = this.nativeCaretHint
-    const candidates = lines.flatMap(lineCarets).filter(c => c.index === index)
-    if (hitLineStartIndex !== undefined) {
-      const next = lines.find(p => p.line.source.start === hitLineStartIndex)
-      if (next)
-        return hitTextLine(
-          next,
-          next.line.direction === 'rtl' ? Infinity : -Infinity
-        )
-    }
-    if (hint?.index === index) {
-      const found = candidates.find(
-        c =>
-          c.lineId === hint.lineId &&
-          c.scope === hint.scope &&
-          c.pageNo === hint.pageNo &&
-          Math.abs(c.x - hint.x) < 0.01
+  private getNativeQuery(positions = this.getPositionList()) {
+    let query = this.nativeQueries.get(positions)
+    if (!query) {
+      query = NativeQueryIndex.create(
+        this.getNativeLines(positions), this.lineGeometry,
+        !!this.options.lab?.incrementalFlow
       )
-      if (found) return found
+      this.nativeQueries.set(positions, query)
     }
-    return (
-      candidates.find(c => c.affinity === 'upstream') || candidates[0] || null
+    return query
+  }
+
+  public getNativeCaret(index: number, hitLineStartIndex?: number) {
+    return this.getNativeQuery().caret(
+      index, this.nativeCaretHint, hitLineStartIndex
     )
   }
 
-  public normalizeNativeIndex(
-    index: number,
-    bias: 'before' | 'after' = 'after'
-  ) {
-    for (const placed of this.getNativeLines()) {
-      if (placed.line.hidden) continue
-      const segment = lineSegments(placed).find(
-        s => s.start <= index && index < s.end - 1
-      )
-      if (segment)
-        return bias === 'before'
-          ? Math.max(0, segment.start - 1)
-          : segment.end - 1
-    }
-    return index
+  public normalizeNativeIndex(index: number, bias: 'before' | 'after' = 'after') {
+    return this.getNativeQuery().normalize(index, bias)
   }
 
   public getNativeCaretAtX(
-    positions: IElementPosition[],
-    index: number,
-    x: number,
-    pageNo?: number
+    positions: IElementPosition[], index: number, x: number, pageNo?: number
   ) {
-    const placed = this.getNativeLines(positions).find(
-      p =>
-        !p.line.hidden &&
-        index >= p.line.source.start &&
-        index < p.line.source.end &&
-        (pageNo === undefined || pageNo === p.pageNo)
-    )
-    return placed ? hitTextLine(placed, x) : null
+    return this.getNativeQuery(positions).atX(index, x, pageNo)
   }
 
   public moveNativeCaret(
-    index: number,
-    delta: 1 | -1,
-    visual = true,
-    vertical = false
+    index: number, delta: 1 | -1, visual = true, vertical = false
   ): NativeCaret | null {
-    const lines = this.getNativeLines().filter(p => !p.line.hidden)
-    const current = this.getNativeCaret(index)
-    if (!current) return null
-    const at = lines.findIndex(
-      p =>
-        p.line.id === current.lineId &&
-        p.line.source.scope === current.scope &&
-        p.pageNo === current.pageNo
-    )
-    if (vertical) {
-      const next = lines[at + delta]
-      return next ? hitTextLine(next, current.x) : null
-    }
-    if (!visual) {
-      const candidates = lines
-        .flatMap(lineCarets)
-        .filter(c => (delta > 0 ? c.index > index : c.index < index))
-      candidates.sort((a, b) => delta * (a.index - b.index))
-      return candidates[0] || null
-    }
-    const slots = lineCarets(lines[at])
-    const slot = slots.findIndex(
-      c => c.index === current.index && Math.abs(c.x - current.x) < 0.01
-    )
-    const neighbour = slots[slot + delta]
-    if (neighbour) return neighbour
-    const next =
-      lines[at + (lines[at].line.direction === 'rtl' ? -delta : delta)]
-    if (!next) return null
-    const nextSlots = lineCarets(next)
-    return (delta > 0 ? nextSlots[0] : nextSlots.at(-1)) || null
+    const query = this.getNativeQuery()
+    const current = query.caret(index, this.nativeCaretHint)
+    return current ? query.move(current, delta, visual, vertical) : null
   }
 
-  public getNativeDeleteRange(
-    index: number,
-    backward: boolean,
-    visual: boolean
-  ) {
-    const current = this.getNativeCaret(index)
-    if (!current) return null
-    const lines = this.getNativeLines()
-    const segments = lines.flatMap(placed =>
-      lineSegments(placed).map(segment => ({ ...segment, placed }))
-    )
-    const candidates = segments.filter(segment => {
-      if (visual)
-        return (
-          segment.placed.line.id === current.lineId &&
-          segment.placed.pageNo === current.pageNo &&
-          (backward
-            ? segment.rect.x + segment.rect.width <= current.x + 0.01
-            : segment.rect.x >= current.x - 0.01)
-        )
-      return backward ? segment.end - 1 <= index : segment.start > index
-    })
-    candidates.sort((a, b) =>
-      visual
-        ? backward
-          ? b.rect.x + b.rect.width - (a.rect.x + a.rect.width)
-          : a.rect.x - b.rect.x
-        : backward
-          ? b.end - a.end
-          : a.start - b.start
-    )
-    const target = candidates[0]
-    if (!target) return null
-    if (!visual) {
-      const adjacent = backward ? index : index + 1
-      if (adjacent < target.start || adjacent >= target.end) return null
-    }
-    return {
-      index: target.start,
-      count: target.end - target.start,
-      cursorIndex: target.start - 1
-    }
+  public getNativeDeleteRange(index: number, backward: boolean, visual: boolean) {
+    const query = this.getNativeQuery()
+    const current = query.caret(index, this.nativeCaretHint)
+    return current ? query.deleteRange(current, backward, visual) : null
   }
 
   private hitNativeText(
@@ -677,7 +581,35 @@ export class Position {
     return { x, y }
   }
 
+  private pendingQueryLists: Set<IElementPosition[]> | null = null
+
+  private withNativeQueryCommit<T>(compute: () => T): T {
+    if (this.pendingQueryLists) return compute()
+    this.pendingQueryLists = new Set()
+    try {
+      const result = compute()
+      for (const positions of this.pendingQueryLists) {
+        this.nativeQueries.set(positions, NativeQueryIndex.create(
+          this.getNativeLines(positions), this.lineGeometry,
+          !!this.options.lab?.incrementalFlow
+        ))
+      }
+      return result
+    } finally {
+      this.pendingQueryLists = null
+    }
+  }
+
   public computePageRowPosition(
+    payload: IComputePageRowPositionPayload
+  ): IComputePageRowPositionResult {
+    return this.withNativeQueryCommit(() => {
+      this.pendingQueryLists!.add(payload.positionList)
+      return this.computePageRowPositionInternal(payload)
+    })
+  }
+
+  private computePageRowPositionInternal(
     payload: IComputePageRowPositionPayload
   ): IComputePageRowPositionResult {
     const {
@@ -696,7 +628,11 @@ export class Position {
       scale,
       table: { tdPadding }
     } = this.options
-    if (!positionList.length) this.nativeLines.set(positionList, [])
+    if (!positionList.length) {
+      this.nativeQueries.delete(positionList)
+      this.nativeLines.set(positionList, [])
+      this.nativeRows.set(positionList, new NativeRowIndex())
+    }
     let x = startX
     let y = startY
     let index = startIndex
@@ -775,12 +711,50 @@ export class Position {
           clip: payload.clip
         }
         lines.push(nativePlacement)
+        this.nativeQueries.delete(positionList)
         this.nativeLines.set(positionList, lines)
+        let rows = this.nativeRows.get(positionList)
+        if (!rows) {
+          rows = new NativeRowIndex()
+          this.nativeRows.set(positionList, rows)
+        }
+        rows.add(nativePlacement)
       }
+      // Exact flow convergence preserves the immutable native line and its
+      // placement. Source/row shifts only change the public position metadata.
+      const origin = curRow.nativeLine && getTextLineOrigin(curRow.nativeLine)
+      const cacheable = this.options.lab?.incrementalFlow && origin &&
+        curRow.flow && !payload.isTable && !zone && !payload.clip &&
+        !curRow.isSurround && !curRow.tableFragment
+      const positionKey = cacheable ? JSON.stringify([
+        x, y, pageNo, scale, curRow.width, curRow.height, curRow.ascent,
+        curRow.columnIndex, curRow.direction, curRow.elementList.length
+      ]) : ''
+      const cached = cacheable ? this.rowPositions.get(origin.base) : undefined
+      if (cached?.key === positionKey) {
+        this.placementStats.reusedElements += cached.positions.length
+        const shift = origin!.delta - cached.delta
+        const rowIndex = startRowIndex + i
+        for (const position of cached.positions) {
+          const projected = !shift && cached.rowIndex === rowIndex &&
+            cached.rowNo === i ? position : { ...position,
+              index: position.index + shift, rowIndex, rowNo: i }
+          positionList[projected.index] = projected
+          index = Math.max(index, projected.index + 1)
+        }
+        x = startX
+        y += curRow.height
+        continue
+      }
+      const rowPositions: IElementPosition[] = []
+      const nativeGeometry = nativePlacement
+        ? this.lineGeometry.get(nativePlacement)
+        : undefined
       // 当前td所在位置
       const tablePreX = x
       const tablePreY = y
       for (let j = 0; j < curRow.elementList.length; j++) {
+        this.placementStats.computedElements++
         const model = curRow.elementList[j]
         const element = model
         // 表格跨页片段行：同一数据元素对应多个视觉片段（跨页/跨栏），
@@ -807,21 +781,12 @@ export class Position {
         if (element.translateX) {
           x += element.translateX * scale
         }
-        const nativeRects = nativePlacement
-          ? textRangeRects(
-              nativePlacement,
-              rowSourceIndex(curRow, j),
-              rowSourceIndex(curRow, j) + 1
-            )
-          : []
+        const source = rowSourceIndex(curRow, j)
+        const nativeRects = nativeGeometry?.getElementRects(source) || []
         const nativeLeft = nativeRects.length
           ? Math.min(...nativeRects.map(rect => rect.x))
           : undefined
-        const nativeCaret = nativePlacement
-          ? lineCarets(nativePlacement).find(
-              c => c.index === rowSourceIndex(curRow, j)
-            )
-          : undefined
+        const nativeCaret = nativeGeometry?.getCarets(source)[0]
         const drawX = nativePlacement
           ? (nativeLeft ?? nativeCaret?.x ?? rowContentStartX)
           : x
@@ -855,6 +820,7 @@ export class Position {
             rightBottom: [drawX + metrics.width, y + contentHeight]
           }
         }
+        if (cacheable) rowPositions.push(positionItem)
         // 缓存浮动元素信息
         if (
           element.imgDisplay === ImageDisplay.SURROUND ||
@@ -1041,6 +1007,10 @@ export class Position {
           y = tablePreY
         }
       }
+      if (cacheable) this.rowPositions.set(origin.base, {
+        key: positionKey, delta: origin.delta,
+        rowIndex: startRowIndex + i, rowNo: i, positions: rowPositions
+      })
       x = startX
       y += curRow.height
     }
@@ -1070,8 +1040,11 @@ export class Position {
         td.verticalAlign
       ) * scale
     if (offsetHeight > 0) {
-      for (const placed of this.getNativeLines(positionList))
+      for (const placed of this.getNativeLines(positionList)) {
         placed.y += offsetHeight
+        this.nativeQueries.delete(positionList)
+        this.lineGeometry.invalidate(placed)
+      }
       positionList.forEach(tdPosition => {
         const {
           coordinate: { leftTop, leftBottom, rightBottom, rightTop }
@@ -1100,6 +1073,9 @@ export class Position {
                       ? intersectRect(moved, parentClip)
                       : moved
                   }
+                  if (cell.positionList)
+                    this.nativeQueries.delete(cell.positionList)
+                  this.lineGeometry.invalidate(placed)
                 }
                 for (const position of cell.positionList || []) {
                   for (const point of Object.values(position.coordinate))
@@ -1114,6 +1090,12 @@ export class Position {
   }
 
   public computePositionList(payload?: IComputePositionListPayload) {
+    return this.withNativeQueryCommit(() =>
+      this.computePositionListInternal(payload)
+    )
+  }
+
+  private computePositionListInternal(payload?: IComputePositionListPayload) {
     // 按每页行计算（混排横竖版时每页宽度/边距可能不同，按页取值）
     const pageRowList = this.draw.getLayoutPages()
     const fromPageNo = payload?.fromPageNo ?? 0
@@ -1122,10 +1104,16 @@ export class Position {
     const isResume =
       fromPageNo > 0 &&
       cache.length >= fromPageNo &&
-      pageRowList.length > fromPageNo
+      pageRowList.length >= fromPageNo
     if (isResume) {
       const keptCache = cache.slice(0, fromPageNo)
       this.positionList = keptCache.flatMap(c => c.positionList)
+      const lines = keptCache.flatMap(c => c.nativeLines)
+      this.nativeLines.set(this.positionList, lines)
+      const rows = new NativeRowIndex()
+      for (const line of lines) rows.add(line)
+      this.nativeRows.set(this.positionList, rows)
+      this.pendingQueryLists!.add(this.positionList)
       // 页眉页脚浮动信息已在本次渲染重新追加（当前列表前部），正文按页恢复
       this.floatPositionList = [
         ...this.floatPositionList,
@@ -1162,6 +1150,7 @@ export class Position {
       const startX = margins[3]
       // 每页页眉禁用状态不同，startY 需按页计算
       const startY = margins[0] + header.getExtraHeight(i)
+      const markLines = this.getNativeLines(this.positionList).length
       const markPosition = this.positionList.length
       const markFloat = this.floatPositionList.length
       const markTablePaging = this.tablePagingPositionList.length
@@ -1178,6 +1167,7 @@ export class Position {
       startRowIndex += rowList.length
       // 记录本页新增的位置信息，供增量复用
       this.pagePositionCacheList.push({
+        nativeLines: this.getNativeLines(this.positionList).slice(markLines),
         positionList: this.positionList.slice(markPosition),
         floatPositionList: this.floatPositionList.slice(markFloat),
         tablePagingPositionList:
@@ -1202,6 +1192,24 @@ export class Position {
       startRowIndex: 0
     })
     return positionList
+  }
+
+  public destroy() {
+    this.pendingQueryLists = null
+    // Drop the owner as well as its placement maps: query-block caches are
+    // weakly keyed by this cache and must not survive a retained destroyed Draw.
+    this.lineGeometry = new LineGeometryCache()
+    this.nativeQueries = new WeakMap()
+    this.nativeRows = new WeakMap()
+    this.nativeLines = new WeakMap()
+    this.nativeCaretHint = null
+    this.rowPositions = new WeakMap()
+    this.cursorPosition = null
+    this.positionList = []
+    this.pagePositionCacheList = []
+    this.tablePagingPositionList = []
+    this.tablePagingPositionMap.clear()
+    this.floatPositionList = []
   }
 
   public setCursorPosition(position: IElementPosition | null) {

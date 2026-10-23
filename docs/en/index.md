@@ -32,9 +32,9 @@ features:
   - title: Support boundaries
     details: Canvas-only pages, ESM-only modules and measured incremental-layout limitations.
     link: /en/guide/features
-  - title: Deploy documentation
-    details: Main merges build gh-pages and deploy the same artifact with Pages Actions.
-    link: /en/guide/docs-deployment
+  - title: Performance benchmark
+    details: Before/after timings, three-trial ranges, pressure results and reproducible evidence.
+    link: /en/guide/benchmark
 ---
 
 Canvas is the only document page renderer. SVG pages and standalone SVG export are deferred. This is an independent fork of [Hufe921/canvas-editor](https://github.com/Hufe921/canvas-editor), not an official upstream release.

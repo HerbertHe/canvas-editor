@@ -106,6 +106,14 @@ export class FontManager {
     return this.revision
   }
 
+  getFontManifest(): IEditorFontFace[] {
+    return [...this.faceCache.values()].map(({ info, buffer }) => ({
+      family: info.family, weight: info.weight, style: info.style,
+      fallback: info.fallback, scripts: [...info.scripts],
+      resourceId: info.resourceId, data: buffer.slice(0)
+    }))
+  }
+
   getFaces(): RegisteredFontFace[] {
     return [...this.faceCache.values()].map(({ info }) => ({
       ...info,

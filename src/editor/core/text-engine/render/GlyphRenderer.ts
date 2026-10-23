@@ -1,9 +1,24 @@
 import type { FontManager } from '../font/FontManager'
 import type { LayoutLine, ShapedGlyph } from '../types'
+import type { GlyphOutline } from '../font/GlyphOutline'
 
 /** Paint the shaped face/glyph outline at its HB pen position, without reshaping. */
 export class GlyphRenderer {
-  constructor(private fontManager?: FontManager) {}
+  private paths = new Map<GlyphOutline, { path: Path2D; bytes: number }>()
+  private pathBytes = 0
+  private fontRevision = -1
+  readonly stats = { builds: 0, hits: 0, evictions: 0, bytes: 0, entries: 0 }
+
+  constructor(
+    private fontManager?: FontManager,
+    private cachePaths: () => boolean = () => false
+  ) {}
+
+  destroy() {
+    this.paths.clear()
+    this.pathBytes = 0
+    this.stats.bytes = this.stats.entries = 0
+  }
 
   drawNativeLine(
     ctx: CanvasRenderingContext2D,
@@ -36,7 +51,7 @@ export class GlyphRenderer {
           line.rect.y + line.baseline + glyph.y + glyph.offsetY
         )
         ctx.fillStyle = live?.color || glyph.color
-        this.paintOutline(ctx, outline.commands)
+        this.paintOutline(ctx, outline)
         ctx.restore()
       }
       for (const inline of line.inlines) {
@@ -63,22 +78,64 @@ export class GlyphRenderer {
 
   private paintOutline(
     ctx: CanvasRenderingContext2D,
-    commands: import('../font/GlyphOutline').GlyphOutline['commands']
+    outline: GlyphOutline
   ) {
+    const revision = this.fontManager?.getRevision() || 0
+    if (revision !== this.fontRevision) {
+      this.destroy()
+      this.fontRevision = revision
+    }
+    const cachePaths = this.cachePaths()
+    if (!cachePaths && this.paths.size) this.destroy()
+    if (cachePaths && typeof Path2D !== 'undefined') {
+      let entry = this.paths.get(outline)
+      if (!entry) {
+        const path = new Path2D()
+        this.replay(path, outline.commands)
+        entry = { path, bytes: outline.commands.length * 64 + 128 }
+        this.stats.builds++
+        if (entry.bytes <= 4 * 1024 * 1024) {
+          this.paths.set(outline, entry)
+          this.pathBytes += entry.bytes
+          while (this.paths.size > 1024 || this.pathBytes > 4 * 1024 * 1024) {
+            const oldest = this.paths.keys().next().value!
+            this.pathBytes -= this.paths.get(oldest)!.bytes
+            this.paths.delete(oldest)
+            this.stats.evictions++
+          }
+        }
+      } else {
+        this.stats.hits++
+        this.paths.delete(outline)
+        this.paths.set(outline, entry)
+      }
+      this.stats.bytes = this.pathBytes
+      this.stats.entries = this.paths.size
+      ctx.fill(entry.path)
+      return
+    }
     ctx.beginPath()
+    this.replay(ctx, outline.commands)
+    ctx.fill()
+  }
+
+  private replay(
+    target: CanvasPath,
+    commands: GlyphOutline['commands']
+  ) {
     for (const command of commands) {
       switch (command.type) {
         case 'M':
-          ctx.moveTo(command.x, command.y)
+          target.moveTo(command.x, command.y)
           break
         case 'L':
-          ctx.lineTo(command.x, command.y)
+          target.lineTo(command.x, command.y)
           break
         case 'Q':
-          ctx.quadraticCurveTo(command.x1, command.y1, command.x, command.y)
+          target.quadraticCurveTo(command.x1, command.y1, command.x, command.y)
           break
         case 'C':
-          ctx.bezierCurveTo(
+          target.bezierCurveTo(
             command.x1,
             command.y1,
             command.x2,
@@ -88,11 +145,10 @@ export class GlyphRenderer {
           )
           break
         case 'Z':
-          ctx.closePath()
+          target.closePath()
           break
       }
     }
-    ctx.fill()
   }
 
   drawLine(
@@ -142,34 +198,7 @@ export class GlyphRenderer {
         this.drawMissingBox(ctx, glyph)
         return
       }
-      ctx.beginPath()
-      for (const command of outline!.commands) {
-        switch (command.type) {
-          case 'M':
-            ctx.moveTo(command.x, command.y)
-            break
-          case 'L':
-            ctx.lineTo(command.x, command.y)
-            break
-          case 'Q':
-            ctx.quadraticCurveTo(command.x1, command.y1, command.x, command.y)
-            break
-          case 'C':
-            ctx.bezierCurveTo(
-              command.x1,
-              command.y1,
-              command.x2,
-              command.y2,
-              command.x,
-              command.y
-            )
-            break
-          case 'Z':
-            ctx.closePath()
-            break
-        }
-      }
-      ctx.fill()
+      this.paintOutline(ctx, outline!)
     } finally {
       ctx.restore()
     }

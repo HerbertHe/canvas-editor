@@ -1,3 +1,11 @@
+import { IncrementalParagraphComputer } from '@/editor/core/draw/IncrementalParagraphComputer'
+import { FontCoverageTracker } from '@/editor/core/text-engine/font/FontCoverageTracker'
+import { countWords } from '@/editor/core/worker/works/wordCountModel'
+import { applyOperation } from '@/editor/core/history/EditTransaction'
+import { getSlimCloneElementList } from '@/editor/utils/element'
+import * as markers from '@/editor/core/text-engine-host/ListMarker'
+import { ListStyle, ListType } from '@/editor/dataset/enum/List'
+import { compareNativeQueries } from '../../fixtures/migration/compareNativeQueries'
 import { CommandAdapt } from '@/editor/core/command/CommandAdapt'
 import { Draw } from '@/editor/core/draw/Draw'
 import { EventBus } from '@/editor/core/event/eventbus/EventBus'
@@ -6,6 +14,7 @@ import {
   pageRect,
   textRangeRects
 } from '@/editor/core/layout/InteractionGeometry'
+import { LineGeometryIndex } from '@/editor/core/layout/LineGeometryIndex'
 import { Listener } from '@/editor/core/listener/Listener'
 import { Override } from '@/editor/core/override/Override'
 import { ZERO } from '@/editor/dataset/constant/Common'
@@ -79,6 +88,114 @@ function caret(draw: Draw, index: number) {
   draw.getRange().setRange(index, index)
   draw.render({ curIndex: index, isCompute: false, isSubmitHistory: false })
 }
+
+it('reuses unchanged suffix positions while matching a fresh full commit', async () => {
+  const draw = await setup(Array.from({ length: 80 }, () => [
+    { value: ZERO }, { value: 'abcdefghijklmno' }
+  ]).flat(), { lab: { performanceProfile: 'sync' } })
+  const position = draw.getPosition()
+  caret(draw, 40 * 16 + 5)
+  const before = position.getPlacementStats()
+  draw.getCanvasEvent().input('x')
+  draw.flushGeometry()
+  const after = position.getPlacementStats()
+  expect(after.reusedElements - before.reusedElements).toBeGreaterThan(500)
+  expect(after.computedElements - before.computedElements).toBeLessThan(100)
+  const indices = [0, 1, 640, 645, 646, 1000, 1280]
+  const incremental = structuredClone(position.getOriginalMainPositionList())
+  const carets = indices.map(index => position.getNativeCaret(index))
+  draw.getOptions().lab.incrementalFlow = false
+  draw.render({ isCompute: true, isSubmitHistory: false })
+  expect(position.getOriginalMainPositionList()).toEqual(incremental)
+  expect(indices.map(index => position.getNativeCaret(index))).toEqual(carets)
+})
+
+it('commits repeat deletion geometry without posting redundant Worker layouts', async () => {
+  const draw = await setup([{ value: 'abcdefghijklmnopqrstuvwxyz' }], {
+    lab: { performanceProfile: 'sync' }
+  })
+  caret(draw, 20)
+  const client = { ready: true, stats: {},
+    getRevision: () => draw.getDocumentRevision(), getSession: () => 1,
+    edit: () => Promise.resolve(), layout: vi.fn(), destroy: vi.fn() }
+  Object.assign(draw, { layoutWorkerClient: client,
+    workerFontRevision: draw.getLayoutHostAdapter().getFontManager().getRevision() })
+  draw.getOptions().lab.layoutWorker = true
+  const original = draw.getOriginalMainElementList().map(e => e.value).join('')
+  for (let i = 0; i < 10; i++) {
+    key(draw, 'Backspace')
+    expect(draw.hasPendingWorkerGeometry()).toBe(false)
+    expect(draw.getRange().getRange().endIndex).toBe(19 - i)
+    expect(draw.getPosition().getOriginalMainPositionList().length)
+      .toBe(draw.getOriginalMainElementList().length)
+  }
+  expect(client.layout).not.toHaveBeenCalled()
+  draw.getHistoryManager().undo()
+  expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(original)
+})
+
+it('commits current geometry when a worker cannot keep up and releases its deadline', async () => {
+  const draw = await setup([{ value: 'office مرحبا' }], {
+    lab: { performanceProfile: 'sync' }
+  })
+  caret(draw, 2)
+  let rejectLayout: (error: Error) => void = () => {}
+  const client = { ready: true, stats: {},
+    getRevision: () => draw.getDocumentRevision(), getSession: () => 1,
+    getQueueStats: () => ({ requests: 0, waiting: false, queuedBytes: 0 }),
+    edit: () => Promise.resolve(), destroy: vi.fn(),
+    layout: () => new Promise((_, reject) => { rejectLayout = reject }) }
+  Object.assign(draw, { layoutWorkerClient: client,
+    workerFontRevision: draw.getLayoutHostAdapter().getFontManager().getRevision() })
+  draw.getOptions().lab.layoutWorker = true
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  try {
+    const history = draw.getHistoryManager().getStats().undo
+    draw.getCanvasEvent().input('x')
+    await Promise.resolve()
+    expect(draw.hasPendingWorkerGeometry()).toBe(true)
+    await vi.advanceTimersByTimeAsync(101)
+    expect(draw.hasPendingWorkerGeometry()).toBe(false)
+    const diagnostics = draw.getPerformanceDiagnostics()
+    expect(diagnostics.worker.fallbackReasons.deadline).toBe(1)
+    expect(draw.getOriginalMainElementList().length)
+      .toBe(draw.getPosition().getOriginalMainPositionList().length)
+    expect(draw.getHistoryManager().getStats().undo).toBe(history + 1)
+    rejectLayout(new Error('Superseded worker result'))
+    await Promise.resolve()
+    expect(draw.getPerformanceDiagnostics().worker.fallbackReasons.error).toBe(0)
+    diagnostics.options.layoutWorker = false
+    diagnostics.worker.fallbackReasons.deadline = 99
+    expect(draw.getPerformanceDiagnostics().worker.fallbackReasons.deadline).toBe(1)
+    draw.destroy()
+    expect(client.destroy).toHaveBeenCalledOnce()
+    expect(draw.getPerformanceDiagnostics().pages.observed).toBe(0)
+    expect(vi.getTimerCount()).toBe(0)
+  } finally { vi.useRealTimers() }
+})
+
+it('groups real printable keydown/input pairs and closes the group on movement', async () => {
+  const draw = await setup([{ value: 'abc' }], {
+    lab: { incrementalEditing: true, transactionHistory: true }
+  })
+  caret(draw, 2)
+  const host = draw.getCanvasEvent()
+  const before = draw.getOriginalMainElementList().map(e => e.value).join('')
+  const history = draw.getHistoryManager()
+  const count = history.getStats().undo
+  for (const key of ['x', 'y', 'z']) {
+    host.keydown(new KeyboardEvent('keydown', { key }))
+    host.input(key)
+  }
+  expect(history.getStats().undo).toBe(count + 1)
+  history.undo()
+  expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(before)
+  history.redo()
+  host.keydown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+  host.keydown(new KeyboardEvent('keydown', { key: 'q' }))
+  host.input('q')
+  expect(history.getStats().undo).toBe(count + 2)
+})
 function key(draw: Draw, key: string, shiftKey = false) {
   draw.getCanvasEvent().keydown(
     new KeyboardEvent('keydown', {
@@ -90,6 +207,52 @@ function key(draw: Draw, key: string, shiftKey = false) {
   )
 }
 describe('T17 native interaction geometry', () => {
+  it('builds one geometry index per placed row and directly indexes row lookup', async () => {
+    const draw = await setup([{ value: 'office é مرحبا '.repeat(20) }])
+    const position = draw.getPosition()
+    const builds = vi.spyOn(LineGeometryIndex, 'create')
+    position.computePositionList({})
+    const positions = position.getOriginalMainPositionList()
+    const lines = position.getNativeLines(positions)
+    expect(builds).toHaveBeenCalledTimes(lines.length)
+    expect(lines.length).toBeGreaterThan(1)
+    const expected = draw.getLayoutPages().flatMap((rows, pageNo) =>
+      rows.filter(row => row.nativeLine).map(row => ({
+        row,
+        pageNo,
+        placed: lines.find(p => p.line === row.nativeLine && p.pageNo === pageNo)
+      }))
+    )
+    const reads = vi.spyOn(position, 'getNativeLines').mockImplementation(() => {
+      throw new Error('Row lookup scanned the native line array')
+    })
+    for (const { row, pageNo, placed } of expected) {
+      expect(placed).toBeDefined()
+      expect(position.getNativeRow(row, positions, pageNo)).toBe(placed)
+      expect(position.getNativeRow({ ...row,
+        nativeLine: structuredClone(row.nativeLine) }, positions, pageNo))
+        .toBe(placed)
+    }
+    reads.mockRestore()
+  })
+
+  it('isolates new position arrays and releases indices on editor destruction', async () => {
+    const draw = await setup([{ value: 'abc مرحبا '.repeat(4) }])
+    const position = draw.getPosition()
+    const before = position.getOriginalMainPositionList()
+    const row = draw.getLayoutPages()[0][0]
+    const old = position.getNativeRow(row, before, 0)
+    expect(old).toBeDefined()
+    position.computePositionList({})
+    const after = position.getOriginalMainPositionList()
+    expect(after).not.toBe(before)
+    expect(position.getNativeRow(row, after, 0)).not.toBe(old)
+    expect(position.getNativeRow(row, before, 0)).toBe(old)
+    draw.destroy()
+    expect(position.getNativeRow(row, before, 0)).toBeUndefined()
+    expect(position.getNativeLines(before)).toEqual([])
+  })
+
   for (const scale of [0.75, 1.75])
     for (const direction of [TextDirection.LTR, TextDirection.RTL]) {
       it(`round-trips native carets, keeps graphemes intact and scales once: ${scale}/${direction}`, async () => {
@@ -480,5 +643,462 @@ describe('T17 native interaction geometry', () => {
       y: stop.y + stop.height / 2
     })
     expect(hit.nativeCaret?.scope).toBe('header:horizontal')
+  })
+})
+
+
+describe('PERF-03/04/05 interaction pipeline', () => {
+  it('matches frozen queries on real mixed-font, wrapped and empty lines', async () => {
+    const draw = await setup([
+      { value: 'abc مرحبا office 👩‍👩‍👧‍👦 é '.repeat(2) },
+      { value: ZERO }, { value: ZERO }, { value: 'نهاية end' }
+    ])
+    expect(compareNativeQueries(draw.getPosition().getNativeLines()))
+      .toBeGreaterThan(1000)
+  })
+
+  it('scans marker anchors once per scope pass, independent of paragraph count', async () => {
+    const draw = await setup([{ value: 'seed' }])
+    const scan = vi.spyOn(markers, 'collectListMarkers')
+    for (const count of [10, 100]) {
+      const elements: IElement[] = Array.from({ length: count }, () => [
+        { value: ZERO, listId: 'same', listType: ListType.OL,
+          listStyle: ListStyle.DECIMAL },
+        { value: 'item', listId: 'same', listType: ListType.OL }
+      ]).flat()
+      formatElementList(elements, { editorOptions: draw.getOptions() })
+      scan.mockClear()
+      const rows = draw.computeRowList({ elementList: elements,
+        innerWidth: 300, layoutScope: 'td:first' })
+      expect(scan).toHaveBeenCalledTimes(1)
+      expect(rows.filter(row => row.isList)).toHaveLength(count)
+      // A new scope with the same listId restarts from its own first anchor.
+      const other = elements.slice(0, 5).map(e => ({ ...e }))
+      scan.mockClear()
+      draw.computeRowList({ elementList: other,
+        innerWidth: 300, layoutScope: 'td:other' })
+      expect(scan).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('commits every edit and notification before a single deferred paint', async () => {
+    const draw = await setup([{ value: 'abcd' }])
+    const callbacks = new Map<number, FrameRequestCallback>()
+    let serial = 0
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      callbacks.set(++serial, callback)
+      return serial
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => {
+      callbacks.delete(id)
+    })
+    const paint = vi.spyOn(draw as any, 'paintRender')
+    const history = vi.spyOn(draw, 'submitHistory')
+    const changed = vi.fn()
+    draw.getEventBus().on('contentChange', changed)
+    let revision = draw.flushGeometry()
+    for (let i = 0; i < 3; i++) {
+      draw.spliceElementList(draw.getOriginalMainElementList(), 2, 0,
+        [{ value: 'x' }])
+      draw.getRange().setRange(2, 2)
+      draw.render({ curIndex: 2, isDeferredPaint: true })
+      expect(draw.getPosition().getNativeCaret(2)).not.toBeNull()
+      expect(draw.flushGeometry()).toBeGreaterThan(revision)
+      revision = draw.flushGeometry()
+    }
+    expect(history).toHaveBeenCalledTimes(3)
+    expect(paint).not.toHaveBeenCalled()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(changed).toHaveBeenCalledTimes(3)
+    // flushPaint is the immediate-pixel path; its cancelled rAF cannot repaint.
+    draw.flushPaint()
+    expect(paint).toHaveBeenCalledTimes(1)
+    draw.flushPaint()
+    expect(paint).toHaveBeenCalledTimes(1)
+    draw.render({ isCompute: false, isDeferredPaint: true,
+      isSubmitHistory: false })
+    draw.destroy()
+    for (const callback of callbacks.values()) callback(0)
+    expect(paint).toHaveBeenCalledTimes(1)
+  })
+
+  it('merges same-frame paints and preserves synchronous render by default', async () => {
+    const draw = await setup([{ value: 'abcd' }])
+    let callback: FrameRequestCallback | undefined
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(fn => {
+      callback = fn
+      return 42
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    const paint = vi.spyOn(draw as any, 'paintRender')
+    for (let i = 0; i < 3; i++) draw.render({ isDeferredPaint: true,
+      isCompute: false, isSubmitHistory: false, isSetCursor: false })
+    expect(paint).not.toHaveBeenCalled()
+    callback!(0)
+    expect(paint).toHaveBeenCalledTimes(1)
+    draw.render({ isCompute: false, isSubmitHistory: false })
+    expect(paint).toHaveBeenCalledTimes(2)
+  })
+
+  it('matches immediate editing through input, delete, movement, IME and undo', async () => {
+    const deferred = await setup([{ value: 'abc مرحبا é' }], {
+      lab: { deferredPaint: true }
+    })
+    const immediate = await setup([{ value: 'abc مرحبا é' }])
+    const original = immediate.render.bind(immediate)
+    vi.spyOn(immediate, 'render').mockImplementation(payload => {
+      original({ ...payload, isDeferredPaint: false })
+    })
+    const callbacks = new Map<number, FrameRequestCallback>()
+    let id = 0
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(fn => {
+      callbacks.set(++id, fn)
+      return id
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(value => {
+      callbacks.delete(value)
+    })
+    const state = (draw: Draw) => ({
+      text: draw.getOriginalMainElementList().map(e => e.value).join(''),
+      range: draw.getRange().getRange(),
+      caret: draw.getPosition().getNativeCaret(draw.getRange().getRange().endIndex)
+    })
+    const operations = [
+      (draw: Draw) => caret(draw, 2),
+      (draw: Draw) => draw.getCanvasEvent().input('xy'),
+      (draw: Draw) => key(draw, 'Backspace'),
+      (draw: Draw) => key(draw, 'ArrowLeft'),
+      (draw: Draw) => key(draw, 'Delete'),
+      (draw: Draw) => draw.getCanvasEvent().compositionstart(),
+      (draw: Draw) => draw.getCanvasEvent().input('n'),
+      (draw: Draw) => draw.getCanvasEvent().input('ni'),
+      (draw: Draw) => draw.getCanvasEvent().compositionend(
+        new CompositionEvent('compositionend', { data: '你' })),
+      (draw: Draw) => new CommandAdapt(draw).undo(),
+      (draw: Draw) => new CommandAdapt(draw).redo()
+    ]
+    for (const operation of operations) {
+      operation(deferred)
+      operation(immediate)
+      expect(state(deferred)).toEqual(state(immediate))
+    }
+    deferred.flushPaint()
+    expect(deferred.getPosition().getNativeLines()).toEqual(
+      immediate.getPosition().getNativeLines())
+  })
+
+
+  it('flushes geometry after soft deletion and property changes', async () => {
+    const draw = await setup([{ value: 'abcd' }], { trace: { disabled: false } })
+    let revision = draw.flushGeometry()
+    const before = draw.getPosition().getOriginalMainPositionList()
+    draw.deleteElementList(draw.getOriginalMainElementList(), 2, 1)
+    expect(draw.flushGeometry()).toBeGreaterThan(revision)
+    expect(draw.getPosition().getOriginalMainPositionList()).not.toBe(before)
+    revision = draw.flushGeometry()
+    draw.setElementProperty(draw.getOriginalMainElementList()[1], { size: 24 })
+    // A caller cannot opt out of geometry commit for a tracked dirty model.
+    draw.render({ isCompute: false, isSubmitHistory: false })
+    expect(draw.flushGeometry()).toBeGreaterThan(revision)
+  })
+
+})
+
+
+describe('PERF-06–10 tracked edits', () => {
+  const lab = { incrementalEditing: true, incrementalCompute: true,
+    transactionHistory: true, incrementalCoverage: true }
+
+  it('replays trace edits and rolls back a command affecting multiple scopes', async () => {
+    const draw = await setup([{ value: 'abcd', bold: true }], {
+      lab, trace: { disabled: false }
+    })
+    caret(draw, 3)
+    const model = () => ({
+      main: getSlimCloneElementList(draw.getOriginalMainElementList()),
+      header: getSlimCloneElementList(draw.getHeader().getElementList()),
+      footer: getSlimCloneElementList(draw.getFooter().getElementList())
+    })
+    const before = model()
+    let mirror = structuredClone(before)
+    draw.getEditJournal().subscribe(transaction => {
+      if (transaction.source === 'rollback') {
+        expect(draw.getLayoutChangeSet()!.documentRevision).toBe(transaction.targetRevision)
+        expect(draw.getPosition().getOriginalMainPositionList().length)
+          .toBe(draw.getOriginalMainElementList().length)
+      }
+      for (const operation of transaction.operations)
+        applyOperation(operation, scope => {
+          if (scope !== 'main' && scope !== 'header' && scope !== 'footer')
+            throw new Error('Unexpected scope')
+          return mirror[scope]
+        }, next => { mirror = next })
+    })
+    key(draw, 'Backspace')
+    expect(mirror).toEqual(model())
+    new CommandAdapt(draw).undo()
+    expect(model()).toEqual(before)
+    expect(mirror).toEqual(before)
+    expect(() => draw.runEditTransaction('attributes', () => {
+      draw.setElementProperty(draw.getOriginalMainElementList()[1], { color: '#abcdef' })
+      draw.spliceElementList(draw.getHeader().getElementList(), 1, 0, [{ value: 'header' }])
+      draw.spliceElementList(draw.getFooter().getElementList(), 1, 0, [{ value: 'footer' }])
+      draw.render({ isSubmitHistory: false })
+      throw new Error('Abort multi-scope command')
+    })).toThrow('Abort multi-scope command')
+    expect(model()).toEqual(before)
+    expect(mirror).toEqual(before)
+  })
+
+  it('groups input, undo/redo and snapshot barriers without changing text', async () => {
+    const draw = await setup([{ value: 'abc' }, { value: ZERO }, { value: 'tail' }], { lab })
+    caret(draw, 2)
+    const revisions: number[] = []
+    draw.getEditJournal().subscribe(tx => revisions.push(tx.targetRevision))
+    const host = draw.getCanvasEvent()
+    host.input('x')
+    host.input('y')
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toContain('abxyc')
+    new CommandAdapt(draw).undo()
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toContain('abc')
+    new CommandAdapt(draw).redo()
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toContain('abxyc')
+    const text = draw.getOriginalMainElementList().map(e => e.value).join('')
+    draw.setElementProperty(draw.getOriginalMainElementList()[1], { bold: true })
+    draw.render({ curIndex: 4 })
+    new CommandAdapt(draw).undo()
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(text)
+    expect(draw.getOriginalMainElementList()[1].bold).not.toBe(true)
+    new CommandAdapt(draw).undo()
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toContain('abc')
+    expect(revisions.every((value, i) => !i || value > revisions[i - 1])).toBe(true)
+  })
+
+  it('keeps remote paragraph revisions stable and rolls back failed mutations', async () => {
+    const draw = await setup([{ value: 'abc' }, { value: ZERO }, { value: 'tail' }], { lab })
+    caret(draw, 2)
+    const elements = draw.getOriginalMainElementList()
+    const directory = draw.getLayoutHostAdapter().paragraphs
+    const before = directory.get(elements).entries().at(-1)!.record
+    const id = before.id
+    draw.getCanvasEvent().input('x')
+    const after = directory.get(elements).entries().at(-1)!.record
+    expect(after.id).toBe(id)
+    expect(after.content).toBe(before.content)
+    const text = elements.map(e => e.value).join('')
+    expect(() => draw.runEditTransaction('input', () => {
+      draw.spliceElementList(elements, 2, 0, [{ value: 'error' }])
+      throw new Error('abort')
+    })).toThrow('abort')
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(text)
+  })
+
+  it('commits IME once and cancellation restores the selected original text', async () => {
+    const draw = await setup([{ value: 'abcdef' }], { lab })
+    caret(draw, 2)
+    const host = draw.getCanvasEvent()
+    const before = draw.getOriginalMainElementList().map(e => e.value).join('')
+    host.compositionstart()
+    host.input('n')
+    host.input('ni')
+    host.compositionend(new CompositionEvent('compositionend', { data: '你' }))
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toContain('你')
+    new CommandAdapt(draw).undo()
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(before)
+    draw.getRange().setRange(1, 3)
+    host.compositionstart()
+    host.input('temp')
+    host.compositionend(new CompositionEvent('compositionend', { data: '' }))
+    expect(draw.getOriginalMainElementList().map(e => e.value).join('')).toBe(before)
+  })
+})
+
+
+describe('tracked edit differential and work budgets', () => {
+  const lab = { incrementalEditing: true, incrementalCompute: true,
+    transactionHistory: true, incrementalCoverage: true }
+
+  it('reuses remote geometry and coverage while editing one paragraph', async () => {
+    const draw = await setup(Array.from({ length: 40 }, () => [
+      { value: ZERO }, { value: 'abc مرحبا end' }
+    ]).flat(), { lab })
+    caret(draw, 2)
+    const adapter = draw.getLayoutHostAdapter()
+    const oldGlyphs = draw.getPosition().getNativeLines().at(-1)!.line.glyphs
+    const coverage = { ...adapter.coverageStats }
+    const clone = vi.spyOn(globalThis, 'structuredClone')
+    draw.getCanvasEvent().input('x')
+    expect(draw.getPosition().getNativeLines().at(-1)!.line.glyphs).toBe(oldGlyphs)
+    expect(adapter.coverageStats.updated - coverage.updated).toBeLessThan(5)
+    expect(adapter.coverageStats.reused - coverage.reused).toBeGreaterThan(30)
+    expect(clone.mock.calls.some(([value]) => value && typeof value === 'object' && 'lines' in value && 'shaped' in value)).toBe(false)
+    expect(await draw.getWorkerManager().getWordCount()).toBe(
+      countWords(draw.getOriginalMainElementList()))
+    const beforeWords = draw.getDerivedState().stats.wordUpdated
+    draw.getCanvasEvent().input('y')
+    expect(await draw.getWorkerManager().getWordCount()).toBe(
+      countWords(draw.getOriginalMainElementList()))
+    expect(draw.getDerivedState().stats.wordUpdated - beforeWords).toBeLessThan(5)
+  })
+
+  it('matches full coverage including deletion of the final missing glyph', async () => {
+    const draw = await setup([{ value: 'abc 漢' }, { value: ZERO }, { value: 'مرحبا' }], { lab })
+    const adapter = draw.getLayoutHostAdapter()
+    const verify = () => {
+      const full = new FontCoverageTracker()
+      const inputs = adapter.collectFontCoverage([
+        { scope: 'main', elements: draw.getOriginalMainElementList() }
+      ])
+      full.update(full.begin(), inputs, adapter.getFontManager(), false)
+      const actual = draw.getFontCoverageReport().issues.filter(issue =>
+        issue.locations.some(location => location.scope === 'main'))
+      expect(actual).toEqual(full.getReport().issues)
+      full.destroy()
+    }
+    verify()
+    caret(draw, 5)
+    key(draw, 'Backspace')
+    verify()
+  })
+
+  it('publishes one reversible change per undo across a snapshot barrier', async () => {
+    const draw = await setup([{ value: 'abc' }], { lab })
+    caret(draw, 2)
+    let mirror = { main: getSlimCloneElementList(draw.getOriginalMainElementList()),
+      header: getSlimCloneElementList(draw.getHeaderElementList()),
+      footer: getSlimCloneElementList(draw.getFooterElementList()) }
+    const events: string[] = []
+    draw.getEditJournal().subscribe(tx => {
+      events.push(tx.source)
+      for (const operation of tx.operations)
+        applyOperation(operation, scope => mirror[scope as 'main'], model => { mirror = model })
+      expect(mirror.main).toEqual(getSlimCloneElementList(draw.getOriginalMainElementList()))
+    })
+    draw.getCanvasEvent().input('x')
+    draw.setElementProperty(draw.getOriginalMainElementList()[1], { bold: true })
+    draw.render({ curIndex: 3 })
+    const before = events.length
+    new CommandAdapt(draw).undo()
+    expect(events.slice(before)).toEqual(['undo'])
+    new CommandAdapt(draw).undo()
+    new CommandAdapt(draw).redo()
+    new CommandAdapt(draw).redo()
+    const revision = draw.getDocumentRevision()
+    draw.render({ isSubmitHistory: false })
+    expect(draw.getDocumentRevision()).toBe(revision)
+  })
+})
+
+
+describe('immutable cache ownership and disabled history', () => {
+  it('projects shifted source offsets without cloning on a trusted cache hit', async () => {
+    const draw = await setup([{ value: 'office مرحبا é' }])
+    const adapter = draw.getLayoutHostAdapter()
+    const service = adapter.getTextLayoutService()
+    const compute = vi.spyOn(service, 'layoutParagraph')
+    const elements = draw.getOriginalMainElementList()
+    const paragraph = adapter.scanParagraphs(elements)[0]
+    adapter.layoutParagraph(paragraph, elements, 250)
+    const input = compute.mock.calls.at(-1)![0]
+    const cache = new IncrementalParagraphComputer(1024 * 1024)
+    const first = cache.compute(input, value => service.layoutParagraph(value), 'p:1')
+    const count = compute.mock.calls.length
+    const clone = vi.spyOn(globalThis, 'structuredClone')
+    const second = cache.compute({ ...input,
+      source: { ...input.source, start: input.source.start + 10, end: input.source.end + 10 }
+    }, value => service.layoutParagraph(value), 'p:1')
+    expect(compute).toHaveBeenCalledTimes(count)
+    expect(clone).not.toHaveBeenCalled()
+    expect(second.lines[0].source.start).toBe(first.lines[0].source.start + 10)
+    expect(second.lines[0].glyphs).toBe(first.lines[0].glyphs)
+    const originalX = second.lines[0].carets[0].x
+    first.lines[0].carets[0].x = 999
+    expect(second.lines[0].carets[0].x).toBe(originalX)
+    expect(() => { first.lines[0].glyphs[0].color = '#f00' }).toThrow()
+    const bytes = cache.stats.bytes
+    cache.setByteBudget(bytes + 1)
+    cache.compute(input, value => service.layoutParagraph(value), 'p:2')
+    expect(cache.stats.bytes).toBeLessThanOrEqual(bytes + 1)
+    expect(cache.stats.evictions).toBeGreaterThan(0)
+    cache.releaseScope('main')
+    expect(cache.stats.bytes).toBe(0)
+  })
+
+  it('keeps no undo payload when history is disabled and still publishes edits', async () => {
+    const draw = await setup([{ value: 'abcdef' }], {
+      historyMaxRecordCount: 0,
+      lab: { incrementalEditing: true, transactionHistory: true }
+    })
+    caret(draw, 3)
+    const snapshot = vi.spyOn(draw, 'createHistorySnapshot')
+    draw.getCanvasEvent().input('x')
+    key(draw, 'Backspace')
+    expect(snapshot).not.toHaveBeenCalled()
+    expect(draw.getHistoryManager().getStats()).toEqual({ undo: 0, redo: 0, bytes: 0 })
+    expect(draw.getDocumentRevision()).toBe(2)
+  })
+})
+
+
+describe('PERF-12–14 incremental flow', () => {
+  it('publishes page-limit truncation as a reversible model snapshot', async () => {
+    const draw = await setup(Array.from({ length: 30 }, () => [
+      { value: ZERO }, { value: 'paragraph text' }
+    ]).flat(), { lab: { incrementalEditing: true, incrementalFlow: true } })
+    expect(draw.getPageCount()).toBeGreaterThan(1)
+    let mirror = {
+      main: getSlimCloneElementList(draw.getOriginalMainElementList()),
+      header: getSlimCloneElementList(draw.getHeader().getElementList()),
+      footer: getSlimCloneElementList(draw.getFooter().getElementList())
+    }
+    const revision = draw.getDocumentRevision()
+    const kinds: string[] = []
+    draw.getEditJournal().subscribe(transaction => {
+      for (const operation of transaction.operations) {
+        kinds.push(operation.kind)
+        applyOperation(operation, () => { throw new Error('Expected snapshot') },
+          model => { mirror = model })
+      }
+    })
+    draw.getOptions().pageNumber.maxPageNo = 1
+    draw.render({ curIndex: 1 })
+    expect(kinds).toEqual(['snapshot'])
+    expect(mirror.main).toEqual(getSlimCloneElementList(draw.getOriginalMainElementList()))
+    expect(draw.getDocumentRevision()).toBe(revision + 1)
+    draw.render({ isSubmitHistory: false, curIndex: 1 })
+    expect(draw.getDocumentRevision()).toBe(revision + 1)
+  })
+
+  it('reuses prefix flow and all committed prefix native indices', async () => {
+    const content = Array.from({ length: 30 }, () => [
+      { value: ZERO }, { value: 'abc مرحبا xyz' }
+    ]).flat()
+    const options = { incrementalEditing: true, incrementalFlow: true,
+      transactionHistory: true, incrementalCoverage: true }
+    const incremental = await setup(structuredClone(content), { lab: options })
+    const full = await setup(structuredClone(content))
+    const at = Math.floor(incremental.getOriginalMainElementList().length * 0.8)
+    caret(incremental, at)
+    caret(full, at)
+    const position = incremental.getPosition()
+    const prefix = position.getOriginalMainPositionList()[1]
+    const placement = position.getNativeLines()[0]
+    const before = incremental.getFlowStats().computed
+    const state = (draw: Draw) => draw.getPosition().getOriginalMainPositionList()
+      .map(p => ({ index: p.index, pageNo: p.pageNo, coordinate: p.coordinate,
+        rowIndex: p.rowIndex }))
+    incremental.getCanvasEvent().input('X')
+    full.getCanvasEvent().input('X')
+    expect(state(incremental)).toEqual(state(full))
+    expect(incremental.getFlowStats().computed - before).toBeLessThan(5)
+    expect(position.getOriginalMainPositionList()[1]).toBe(prefix)
+    expect(position.getNativeLines()[0]).toBe(placement)
+    expect(position.getNativeRow(incremental.getLayoutPages()[0][0], position.getOriginalMainPositionList(), 0)).toBe(placement)
+    expect(incremental.getLayoutChangeSet()!.firstPage).toBeGreaterThan(0)
+    for (const action of ['Backspace', 'Enter', 'Delete']) {
+      key(incremental, action)
+      key(full, action)
+      expect(state(incremental)).toEqual(state(full))
+    }
   })
 })

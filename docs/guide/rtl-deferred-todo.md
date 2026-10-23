@@ -162,7 +162,7 @@
 - Notes: 常用字形 atlas、脏段 LayoutCache、大文档帧率/内存指标。
 
 - 2026-10-22：T23 已实测多段/超长段的克隆、坐标重建与绘制成本；增量开关不保证更快。
-  此项仍 pending，参见 [性能边界](./native-release-acceptance.md#t23性能结果与可比性)。
+  此项仍 pending，参见 [性能边界](./benchmark.md)。
 
 ### DEFER-011
 

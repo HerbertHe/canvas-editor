@@ -50,11 +50,12 @@ export class GlyphOutlineCache {
       const commands = path.commands.map(command =>
         Object.freeze({ ...command })
       )
+      let pathData: string | undefined
       outline = commands.length
         ? {
             status: 'ready',
             commands: Object.freeze(commands),
-            pathData: path.toPathData(3),
+            get pathData() { return pathData ??= path.toPathData(3) },
             bounds: Object.freeze(path.getBoundingBox())
           }
         : { status: 'empty', commands: EMPTY_COMMANDS }
@@ -63,7 +64,7 @@ export class GlyphOutlineCache {
     }
     Object.freeze(outline)
     const bytes =
-      outline.commands.length * 64 + (outline.pathData?.length || 0) * 2
+      outline.commands.length * 112 + 128
     if (bytes <= 4 * 1024 * 1024) {
       this.entries.set(key, { outline, bytes })
       this.bytes += bytes

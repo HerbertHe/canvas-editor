@@ -1,4 +1,5 @@
 import { defaultBackground } from '../dataset/constant/Background'
+import { performanceProfile } from './performanceProfile'
 import { defaultCheckboxOption } from '../dataset/constant/Checkbox'
 import { LETTER_CLASS } from '../dataset/constant/Common'
 import { defaultControlOption } from '../dataset/constant/Control'
@@ -100,8 +101,26 @@ export function mergeOption(
   )
     throw new TypeError('autoDownloadFonts must be a boolean')
   const labOptions: Required<ILabOption> = {
+    performanceProfile: 'baseline',
     incrementalCompute: false,
+    deferredPaint: false,
+    glyphPathCache: false,
+    shapingRunCache: false,
+    incrementalFlow: false,
+    dirtyPagePaint: false,
+    layoutWorker: false,
+    workerTransfer: false,
+    incrementalEditing: false,
+    transactionHistory: false,
+    incrementalCoverage: false,
+    historyByteBudget: 16 * 1024 * 1024,
+    paragraphCacheByteBudget: 64 * 1024 * 1024,
+    ...performanceProfile(options.lab?.performanceProfile ?? 'baseline'),
     ...options.lab
+  }
+  for (const key of ['historyByteBudget', 'paragraphCacheByteBudget'] as const) {
+    if (!Number.isFinite(labOptions[key]) || labOptions[key] <= 0)
+      throw new TypeError(`${key} must be a positive finite number`)
   }
   const tableOptions: Required<ITableOption> = {
     ...defaultTableOption,

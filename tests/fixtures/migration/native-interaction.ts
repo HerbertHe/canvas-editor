@@ -56,7 +56,10 @@ async function run() {
       }))
     ]
   }
-  const main: IElement[] = params.has('tables')
+  const main: IElement[] = params.has('plain')
+    ? Array.from({ length: 12 }, () => [{ value: ZERO, direction },
+      { value: 'office é مرحبا sample '.repeat(6), direction }]).flat()
+    : params.has('tables')
     ? [table]
     : [
         {
@@ -75,7 +78,16 @@ async function run() {
       ]
   const options = mergeOption({
     autoDownloadFonts: false,
-    lab: { incrementalCompute: params.has('incremental') },
+    lab: { incrementalCompute: params.has('incremental'),
+      glyphPathCache: params.has('advanced'),
+      shapingRunCache: params.has('advanced'),
+      incrementalFlow: params.has('advanced'),
+      dirtyPagePaint: params.has('advanced'),
+      layoutWorker: params.has('worker'),
+      workerTransfer: params.has('transfer'),
+      incrementalEditing: params.has('tracked'),
+      transactionHistory: params.has('tracked'),
+      incrementalCoverage: params.has('tracked') },
     defaultFont: 'Latin',
     fonts: [
       { family: 'Latin', data: latin },
@@ -89,7 +101,7 @@ async function run() {
     direction,
     caretMovement: CaretMovement.VISUAL,
     pageNumber: { disabled: true },
-    header: { disabled: false, top: 4 },
+    header: { disabled: params.has('plain'), top: 4 },
     footer: { disabled: true },
     spellcheck: { disabled: false }
   })
@@ -113,6 +125,7 @@ async function run() {
     new Override()
   )
   await draw.ready
+  if (params.has('worker')) await draw.waitForWorkerLayout()
   draw.render({ isLazy: false, isSetCursor: false, isSubmitHistory: false })
   for (const name of ['measureText', 'fillText', 'strokeText'] as const)
     CanvasRenderingContext2D.prototype[name] = () => {

@@ -1,3 +1,4 @@
+import { freezeLayout, projectLayout } from '../layout/relativeLayout'
 import type {
   LayoutCaret,
   LayoutSource,
@@ -69,23 +70,127 @@ function rebase(layout: NativeParagraphLayout, delta: number) {
  */
 export class IncrementalParagraphComputer {
   private cache = new Map<string, NativeParagraphLayout>()
+  private immutable = new Map<string, {
+    scope: string; layout: NativeParagraphLayout; bytes: number
+  }>()
+  private order = new Map<string, { native: boolean; key: string; bytes: number }>()
+  readonly stats = { hits: 0, misses: 0, bytes: 0, evictions: 0, bypasses: 0 }
+
+  constructor(private byteBudget = 32 * 1024 * 1024) {}
+
+  setByteBudget(bytes: number) {
+    if (!Number.isFinite(bytes) || bytes <= 0)
+      throw new TypeError('Paragraph cache byte budget must be positive')
+    this.byteBudget = bytes
+    while (this.stats.bytes > bytes) this.drop(this.order.keys().next().value!)
+  }
+
+  private remember(native: boolean, key: string, bytes: number) {
+    const id = (native ? 'native:' : 'legacy:') + key
+    this.order.delete(id)
+    this.order.set(id, { native, key, bytes })
+    this.stats.bytes += bytes
+    while (this.stats.bytes > this.byteBudget || this.order.size > 2048)
+      this.drop(this.order.keys().next().value!)
+  }
+
+  private touch(native: boolean, key: string) {
+    const id = (native ? 'native:' : 'legacy:') + key
+    const cost = this.order.get(id)
+    if (cost) { this.order.delete(id); this.order.set(id, cost) }
+  }
+
+  private drop(id: string) {
+    const cost = this.order.get(id)
+    if (!cost) return
+    this.order.delete(id)
+    if (cost.native) this.immutable.delete(cost.key)
+    else this.cache.delete(cost.key)
+    this.stats.bytes -= cost.bytes
+    this.stats.evictions++
+  }
+
+  private estimate(layout: NativeParagraphLayout) {
+    return layout.lines.reduce((n, line) => n + 512 +
+      line.glyphs.length * 128 + line.clusters.length * 256 +
+      line.carets.length * 128 + line.inlines.length * 256, 0) +
+      layout.shaped.lines.reduce((n, line) => n + 256 + line.glyphs.length * 384, 0)
+  }
+
+  private trusted(
+    input: NativeParagraphInput,
+    compute: (input: NativeParagraphInput) => NativeParagraphLayout,
+    identity: string
+  ) {
+    if (input.spans.reduce((n, span) => n + span.text.length, 0) > 32768) {
+      this.stats.bypasses++
+      return compute(input)
+    }
+    const { spans: _spans, positions: _positions, source: _source,
+      revision: _revision, ...constraints } = input
+    void _spans; void _positions; void _source; void _revision
+    const key = JSON.stringify([identity, input.source.scope,
+      input.source.nodeId, input.revision.fontRevision, constraints], (_, value) =>
+      typeof value === 'number' && !Number.isFinite(value) ? String(value) : value)
+    let entry = this.immutable.get(key)
+    if (!entry) {
+      this.stats.misses++
+      const start = input.source.start
+      const relative = { ...input,
+        source: { ...input.source, start: 0, end: input.source.end - start },
+        spans: input.spans.map(span => ({ ...span,
+          logicalIndex: span.logicalIndex - start,
+          logicalIndices: span.logicalIndices?.map(index => index - start) })),
+        positions: input.positions.map(position => ({ ...position,
+          start: position.start - start }))
+      }
+      const layout = freezeLayout(compute(relative))
+      const bytes = this.estimate(layout) + key.length * 2
+      entry = { scope: input.source.scope, layout, bytes }
+      if (bytes > this.byteBudget) {
+        this.stats.bypasses++
+        return projectLayout(layout, start, input.revision)
+      }
+      this.immutable.set(key, entry)
+      this.remember(true, key, bytes)
+    } else {
+      this.stats.hits++
+      this.immutable.delete(key)
+      this.immutable.set(key, entry)
+      this.touch(true, key)
+    }
+    return projectLayout(entry.layout, input.source.start, input.revision)
+  }
 
   reset() {
     this.cache.clear()
+    this.immutable.clear()
+    this.order.clear()
+    this.stats.bytes = 0
   }
 
   releaseScope(scope: string) {
+    for (const [key, value] of this.immutable)
+      if (value.scope === scope || value.scope.startsWith(`${scope}/`)) {
+        this.drop('native:' + key)
+      }
     for (const key of this.cache.keys()) {
       const cachedScope = JSON.parse(key).source.scope as string
       if (cachedScope === scope || cachedScope.startsWith(`${scope}/`))
-        this.cache.delete(key)
+        this.drop('legacy:' + key)
     }
   }
 
   compute(
     input: NativeParagraphInput,
-    compute: (input: NativeParagraphInput) => NativeParagraphLayout
+    compute: (input: NativeParagraphInput) => NativeParagraphLayout,
+    identity?: string
   ): NativeParagraphLayout {
+    if (identity) return this.trusted(input, compute, identity)
+    if (input.spans.reduce((n, span) => n + span.text.length, 0) > 32768) {
+      this.stats.bypasses++
+      return compute(input)
+    }
     const start = input.source.start
     const relative = {
       ...input,
@@ -111,12 +216,17 @@ export class IncrementalParagraphComputer {
     let result = this.cache.get(key)
     if (!result) {
       result = structuredClone(rebase(compute(input), -start))
-      if (this.cache.size >= 256)
-        this.cache.delete(this.cache.keys().next().value!)
-      this.cache.set(key, result)
+      this.stats.misses++
+      const bytes = this.estimate(result) + key.length * 2
+      if (bytes <= this.byteBudget) {
+        this.cache.set(key, result)
+        this.remember(false, key, bytes)
+      } else this.stats.bypasses++
     } else {
       this.cache.delete(key)
       this.cache.set(key, result)
+      this.touch(false, key)
+      this.stats.hits++
     }
     // Projection/flow consumers can mutate their own result, never the cache.
     return rebase(structuredClone(result), start)

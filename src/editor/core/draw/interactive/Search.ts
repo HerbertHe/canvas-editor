@@ -1,3 +1,4 @@
+import type { ParagraphRecord } from '../../layout/ParagraphIndex'
 import type { ITablePositionContext } from '../../../interface/Position'
 import { ZERO } from '../../../dataset/constant/Common'
 import { TEXTLIKE_ELEMENT_TYPE } from '../../../dataset/constant/Element'
@@ -31,6 +32,31 @@ export class Search {
   private searchNavigateIndex: number | null
   private searchOptions: ISearchOption | null
   private searchMatchList: ISearchResult[]
+  private paragraphMatches = new WeakMap<ParagraphRecord, {
+    key: string; matches: ISearchResult[]
+  }>()
+
+  public getDependencyKey() { return JSON.stringify(this.searchOptions) }
+
+  private incrementalMatches(payload: string, elements: IElement[]) {
+    if (!this.draw.getOptions().lab?.incrementalEditing ||
+      !this.draw.getOptions().lab?.incrementalCoverage ||
+      this.searchOptions?.isRegEnable || this.searchOptions?.isLimitSelection ||
+      payload.includes(ZERO)) return null
+    const index = this.draw.getLayoutHostAdapter().paragraphs.get(elements)
+    const entries = index.entries()
+    if (entries.some(entry => !entry.record.plain)) return null
+    return entries.flatMap(({ record, start }) => {
+      const key = JSON.stringify([payload, this.searchOptions,
+        record.content, record.metrics, record.paint])
+      let cached = this.paragraphMatches.get(record)
+      if (cached?.key !== key) {
+        cached = { key, matches: this.getMatchList(payload, record.elements) }
+        this.paragraphMatches.set(record, cached)
+      }
+      return cached.matches.map(match => ({ ...match, index: match.index + start }))
+    })
+  }
 
   constructor(draw: Draw) {
     this.draw = draw
@@ -326,7 +352,8 @@ export class Search {
       this.searchMatchList = []
       return
     }
-    this.searchMatchList = this.getMatchList(payload, searchElementList)
+    this.searchMatchList = this.incrementalMatches(payload, searchElementList) ||
+      this.getMatchList(payload, searchElementList)
     // 根据选区位置index/tableIndex往后移动
     if (!isPickSelectionElementList || !this.searchMatchList.length) return
     const { startIndex } = this.range.getRange()

@@ -190,6 +190,10 @@ export class CommandAdapt {
     this.tableOperate = draw.getTableOperate()
   }
 
+  public closeHistoryGroup() {
+    this.historyManager.closeGroup()
+  }
+
   public mode(payload: EditorMode) {
     this.draw.setMode(payload)
   }

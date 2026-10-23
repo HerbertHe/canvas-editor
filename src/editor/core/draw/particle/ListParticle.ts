@@ -311,7 +311,9 @@ export class ListParticle {
     const widths = new Map<string, number>()
     const { scale, checkbox } = this.options
     const adapter = this.draw.getLayoutHostAdapter()
-    const markers = collectListMarkers(elements)
+    const markers = adapter.getListMarkers
+      ? adapter.getListMarkers(elements)
+      : collectListMarkers(elements)
     for (const { anchor, text } of markers) {
       const native = text
         ? adapter.layoutListMarker(elements, anchor, text, 'ltr')

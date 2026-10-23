@@ -22,7 +22,7 @@ flowchart TB
   Coverage --> Draw
 ```
 
-Arrows show responsibilities and data dependencies, not worker boundaries. HarfBuzz layout currently runs on the main thread. Existing workers support tasks such as word counting and serialization; they are not text layout workers.
+Arrows show responsibilities and data dependencies, not worker boundaries. By default HarfBuzz layout runs on the main thread. The experimental `worker` profile can move supported simple-body text kernels to a layout Worker; complex scopes and geometry consumers still flush synchronously. Utility workers handle counting, catalogs and serialization. See [configuration and fallback](lab.md).
 
 ## Source map
 
@@ -64,4 +64,6 @@ Commands apply business operations. History captures document/selection state fo
 
 Integrate through public root exports. Plugins that depend on internal Draw objects, old row coordinates or browser text measurement require adaptation. Upstream package compatibility must be verified individually; see [migration](./font-and-esm-migration.md).
 
-`lab.incrementalCompute` defaults to false. It reuses unchanged native paragraph layouts, while document flow, pagination and positions still run. Long dirty paragraphs, cache cloning and global flow can make it slower. The [final acceptance record](../../guide/native-release-acceptance.md) contains T23/T24 measurements; performance targets and future SVG designs are not shipped capabilities.
+`lab.incrementalCompute` is a default-off paragraph cache, separate from `performanceProfile`. The `sync` profile adds tracked transactions, flow convergence, prefix/unchanged-line position and query reuse, dirty pages and paint coalescing. Simple-body queries cache canonical line geometry and project current source indices; complex scopes conservatively recompute. Global metadata traversal and whole dirty-paragraph shaping remain.
+
+The Worker mirror acknowledges ordered edit batches, with one edit batch in flight and a buffer capped at 128 transactions and 4 MiB. Faults or overflow rebuild from the authoritative document after idle or explicit draining. Session guards reject stale results. Backspace/Delete commit synchronous incremental geometry and coalesce paint; input may use asynchronous layout. Destruction releases caches, timers, requests and observers. See [diagnostics](lab.md) and [measured gains and remaining latency](benchmark.md).

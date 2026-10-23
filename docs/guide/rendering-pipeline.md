@@ -167,6 +167,8 @@ Bunny 的基本字体不是完整 Unicode 保证。罕见字、emoji、地区字
 
 这些是当前实现细节，不是稳定公开 API。不要据此承诺单次编辑只计算 1–3 行。T23 压力场景中多段落全量/增量约为 348/383 ms，单长段落约为 447/803 ms；测试强制绘制全部页面，不能等同于生产环境可见页输入延迟。完整环境和数据见[最终验收](./native-release-acceptance.md)。
 
+当前输入优化通过独立的 `lab.performanceProfile` 配置：`sync` 可复用收敛的 flow、前缀页及未变行的位置与查询几何；`worker` 增加实验性异步文本内核。删除同步提交几何并合并绘制。全局元数据、复杂范围和脏长段落仍有完整计算成本。详见[实验配置](lab.md)、[最新 Benchmark](benchmark.md)及[当前架构](architecture.md)。上面的 T23 数字属于不同负载的历史迁移验收。
+
 ## 8. 图片导出与打印
 
 `command.getImage()` 走 Canvas 页面导出，准备绘制状态与像素比、绘制所有目标页、等待图片观察器后返回 PNG data URL 数组，并恢复临时状态。打印使用临时编辑器等待 ready，再经页面图片和 iframe 交给浏览器打印。
@@ -178,4 +180,4 @@ Bunny 的基本字体不是完整 Unicode 保证。罕见字、emoji、地区字
 - [架构模块图](./architecture.md)：职责与源码位置。
 - [快速上手](./start.md)：初始化、字体、保存和清理。
 - [最终验收](./native-release-acceptance.md)：T23/T24、浏览器与性能结论。
-- [工程记录](./engineering-records.md)：各阶段设计、历史基线及 SVG 暂缓方案。
+- [测试与验收](./engineering-records.md)：复现命令、发布门禁与保留设计。

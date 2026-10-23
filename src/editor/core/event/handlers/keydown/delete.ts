@@ -175,12 +175,16 @@ export function del(evt: KeyboardEvent, host: CanvasEvent) {
   if (curIndex === null) {
     rangeManager.setRange(startIndex, startIndex)
     draw.render({
+      isDeferredPaint: !!(draw.getOptions().lab?.deferredPaint ||
+        draw.getOptions().lab?.layoutWorker),
       curIndex: startIndex,
       isSubmitHistory: false
     })
   } else {
     rangeManager.setRange(curIndex, curIndex)
     draw.render({
+      isDeferredPaint: !!(draw.getOptions().lab?.deferredPaint ||
+        draw.getOptions().lab?.layoutWorker),
       curIndex
     })
   }

@@ -237,3 +237,42 @@ describe('editable missing glyph geometry', () => {
     }
   )
 })
+
+
+describe('incremental coverage contributions', () => {
+  it('matches full reports while contributions move, change and disappear', async () => {
+    const fonts = await manager()
+    const incremental = new FontCoverageTracker()
+    const contributions = [
+      { id: 'p1', revision: '1', base: 0, inputs: [input('汉汉👩‍👩')] },
+      { id: 'p2', revision: '1', base: 10, inputs: [input('汉ممم')] }
+    ]
+    const verify = () => {
+      incremental.updateContributions(incremental.begin(), contributions, fonts)
+      const full = new FontCoverageTracker()
+      full.update(full.begin(), contributions.flatMap(entry => entry.inputs.map(value => ({
+        ...value, positions: value.positions.map(position => ({ ...position,
+          start: position.start + entry.base, end: position.end + entry.base }))
+      }))), fonts)
+      expect(incremental.getReport().issues).toEqual(full.getReport().issues)
+      full.destroy()
+    }
+    verify()
+    const resolve = vi.spyOn(fonts, 'resolve')
+    contributions[1].base = 20
+    incremental.updateContributions(incremental.begin(), contributions, fonts)
+    expect(resolve).not.toHaveBeenCalled()
+    verify()
+    contributions.splice(0, 1)
+    verify()
+    contributions[0].inputs = [input('مرحبا')]
+    contributions[0].revision = '2'
+    verify()
+    await fonts.registerFace({ family: 'Primary', data })
+    verify()
+    contributions.length = 0
+    verify()
+    expect(incremental.getReport().issues).toEqual([])
+    incremental.destroy()
+  })
+})

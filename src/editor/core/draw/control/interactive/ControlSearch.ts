@@ -1,3 +1,4 @@
+import type { ParagraphRecord } from '../../../layout/ParagraphIndex'
 import { ZERO } from '../../../../dataset/constant/Common'
 import { ControlComponent } from '../../../../dataset/enum/Control'
 import { ElementType } from '../../../../dataset/enum/Element'
@@ -23,6 +24,9 @@ export class ControlSearch {
   private options: DeepRequired<IEditorOption>
   private highlightList: IControlHighlight[]
   private highlightMatchResult: IHighlightMatchResult
+  private cached = new WeakMap<ParagraphRecord, WeakMap<IElement, {
+    key: string; matches: IHighlightMatchResult
+  }>>()
 
   constructor(control: Control) {
     this.draw = control.getDraw()
@@ -119,6 +123,10 @@ export class ControlSearch {
     ) => {
       let i = 0
       while (i < elementList.length) {
+        const indexed = this.options.lab?.incrementalEditing && this.options.lab?.incrementalCoverage
+          ? this.draw.getLayoutHostAdapter().paragraphs.get(elementList).locate(i)
+          : undefined
+        if (indexed?.record.plain) { i = indexed.end; continue }
         const element = elementList[i]
         i++
         // 表格下钻处理
@@ -178,21 +186,25 @@ export class ControlSearch {
           )
         const highlight = this.highlightList[highlightIndex]
         const { ruleList } = highlight
-        for (let r = 0; r < ruleList.length; r++) {
-          const rule = ruleList[r]
-          const searchResult = search.getMatchList(
-            rule.keyword,
-            controlElementList
-          )
-          this.highlightMatchResult.push(
-            ...searchResult.map(result => ({
-              ...result,
-              ...rule,
-              ...restArgs,
-              index: result.index + startIndex // 实际索引
-            }))
-          )
+        const cacheKey = JSON.stringify([this.highlightList, search.getDependencyKey?.(),
+          indexed?.record.content, indexed?.record.metrics, indexed?.record.paint])
+        const records = indexed && (this.cached.get(indexed.record) || new WeakMap())
+        let cached = records?.get(element)
+        if (cached?.key !== cacheKey) {
+          const matches: IHighlightMatchResult = []
+          for (const rule of ruleList) {
+            const result = search.getMatchList(rule.keyword, controlElementList)
+            matches.push(...result.map(match => ({ ...match, ...rule })))
+          }
+          cached = { key: cacheKey, matches }
+          if (indexed && records) {
+            records.set(element, cached)
+            this.cached.set(indexed.record, records)
+          }
         }
+        this.highlightMatchResult.push(...cached!.matches.map(result => ({
+          ...result, ...restArgs, index: result.index + startIndex
+        })))
       }
     }
     this.highlightMatchResult = []

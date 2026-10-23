@@ -1,3 +1,8 @@
+import { LayoutKernel } from '../text-engine/layout/LayoutKernel'
+import { freezeLayout, mapView } from '../layout/relativeLayout'
+import type { ParagraphRecord } from '../layout/ParagraphIndex'
+import type { FontCoverageContribution } from '../text-engine/font/FontCoverageTracker'
+import { ParagraphDirectory } from '../layout/ParagraphIndex'
 import type { LayoutRow } from '../../interface/LayoutRow'
 import type { IEditorFontFace } from '../../interface/TextEngine'
 import { isElementLayoutHidden } from '../../utils/element'
@@ -26,10 +31,8 @@ import { IEditorOption } from '../../interface/Editor'
 import { IElement } from '../../interface/Element'
 import { DeepRequired } from '../../interface/Common'
 import {
-  BidiResolver,
   FontManager,
   GlyphRenderer,
-  HarfBuzzTextShaper,
   LayoutCache,
   TextLayoutEngine,
   resolveDirection
@@ -100,6 +103,30 @@ export interface LayoutHideContext {
 }
 
 export class LayoutHostAdapter {
+  getParagraphEpoch() { return this.paragraphEpoch }
+
+  readonly paragraphs = new ParagraphDirectory()
+  private paragraphEpoch = 0
+  private coverageCache = new WeakMap<ParagraphRecord, {
+    revision: string; inputs: FontCoverageInput[]
+  }>()
+  private coverageCollections = new WeakMap<FontCoverageInput[], {
+    entries: FontCoverageContribution[]; length: number
+  }>()
+  private markersCache = new WeakMap<IElement[], {
+    epoch: number; revision: number; markers: ReturnType<typeof collectListMarkers>
+  }>()
+  private plainCoverageCache = new Map<string, { inputs: FontCoverageInput[]; bytes: number }>()
+  private plainCoverageBytes = 0
+  readonly coverageStats = { updated: 0, reused: 0 }
+
+  getCoverageContributions(inputs: FontCoverageInput[]) {
+    const collected = this.coverageCollections.get(inputs)
+    if (!collected) return undefined
+    const auxiliary = inputs.slice(collected.length)
+    return [...collected.entries, { id: 'auxiliary',
+      revision: JSON.stringify(auxiliary), base: 0, inputs: auxiliary }]
+  }
   private sourceIds = new WeakMap<object, string>()
   private sourceSequence = 0
 
@@ -120,10 +147,14 @@ export class LayoutHostAdapter {
   private bridge = new ElementBridge()
   private hitTest = new HitTestAdapter()
   private cache = new LayoutCache()
-  private glyphRenderer = new GlyphRenderer(this.fontManager)
+  private glyphRenderer = new GlyphRenderer(
+    this.fontManager, () => !!this.getOptions().lab?.glyphPathCache
+  )
   private engine: TextLayoutEngine | null = null
   private nativeCache = new IncrementalParagraphComputer()
   private service: TextLayoutService | null = null
+  private kernel: LayoutKernel | null = null
+  getRunStats() { return this.kernel?.runs.stats }
   private initPromise: Promise<void> | null = null
   private lastLayouts = new Map<string, LayoutResult>()
   private revision = 0
@@ -132,7 +163,9 @@ export class LayoutHostAdapter {
   constructor(
     private getOptions: () => DeepRequired<IEditorOption>,
     private getHideContext?: () => LayoutHideContext
-  ) {}
+  ) {
+    this.nativeCache.setByteBudget(this.getOptions().lab?.paragraphCacheByteBudget || 64 * 1024 * 1024)
+  }
 
   private sourcePositions(
     paragraph: ParagraphSpan,
@@ -171,6 +204,15 @@ export class LayoutHostAdapter {
     },
     source: import('../../interface/Layout').LayoutSource
   ): FontCoverageInput[] {
+    const enabled = this.getOptions().lab?.incrementalCoverage
+    const key = enabled
+      ? JSON.stringify([params, source, this.fontManager.getRevision(), this.paragraphEpoch]) : ''
+    const cached = enabled && this.plainCoverageCache.get(key)
+    if (cached) {
+      this.plainCoverageCache.delete(key)
+      this.plainCoverageCache.set(key, cached)
+      return cached.inputs
+    }
     const spans = this.buildPlainTextSpans(
       params.text,
       params.fontFamily,
@@ -186,90 +228,105 @@ export class LayoutHostAdapter {
         textEnd: index + 1
       })
     )
-    return (this.engine?.getShapingRuns(spans, direction) || []).map(run => ({
+    const inputs = (this.engine?.getShapingRuns(spans, direction) || []).map(run => ({
       text: run.text,
       style: run.style,
       direction: run.direction,
       positions: positions.slice(run.textStart, run.textEnd)
     }))
+    if (enabled && params.text.length <= 8192) {
+      const bytes = 256 + params.text.length * 130
+      this.plainCoverageCache.set(key, { inputs: freezeLayout(inputs), bytes })
+      this.plainCoverageBytes += bytes
+      while (this.plainCoverageBytes > 2 * 1024 * 1024 || this.plainCoverageCache.size > 4096) {
+        const oldest = this.plainCoverageCache.keys().next().value!
+        this.plainCoverageBytes -= this.plainCoverageCache.get(oldest)!.bytes
+        this.plainCoverageCache.delete(oldest)
+      }
+    }
+    return inputs
   }
 
   collectFontCoverage(
     roots: { scope: string; elements: IElement[] }[],
-    auxiliary?: (
-      element: IElement
-    ) => { text: string; fontFamily: string; fontSize: number; color: string }[]
+    auxiliary?: (element: IElement) => {
+      text: string; fontFamily: string; fontSize: number; color: string
+    }[]
   ): FontCoverageInput[] {
     const inputs: FontCoverageInput[] = []
+    const entries: FontCoverageContribution[] = []
+    const incremental = this.getOptions().lab?.incrementalEditing &&
+      this.getOptions().lab?.incrementalCoverage
+    const fontKey = this.paragraphEpoch + ':' + this.fontManager.getRevision()
     const hide = this.getHideContext?.()
+    const emit = (entry: FontCoverageContribution) => {
+      if (incremental) {
+        entries.push(entry)
+        for (const input of entry.inputs) inputs.push({ ...input,
+          positions: mapView(input.positions, position => ({ ...position,
+            start: position.start + entry.base, end: position.end + entry.base })) })
+      } else inputs.push(...entry.inputs)
+    }
     const visit = (elements: IElement[], scope: string) => {
-      for (const marker of collectListMarkers(elements)) {
-        if (!marker.text || isElementLayoutHidden(marker.anchor, hide || {}))
-          continue
-        const native = this.layoutListMarker(
-          elements,
-          marker.anchor,
-          marker.text,
-          'ltr'
-        )
+      for (const marker of this.getListMarkers(elements)) {
+        if (!marker.text || isElementLayoutHidden(marker.anchor, hide || {})) continue
+        const native = this.layoutListMarker(elements, marker.anchor, marker.text, 'ltr')
         const style = native.shaped.lines[0]?.glyphs[0]?.style
-        if (style)
-          inputs.push({
-            text: marker.text,
-            style,
-            direction: 'ltr',
+        if (style) emit({ id: `${scope}:marker:${this.sourceId(marker.anchor)}`,
+          revision: incremental ? JSON.stringify([fontKey, marker.text, style]) : '',
+          base: incremental ? marker.sourceIndex : 0,
+          inputs: [{ text: marker.text, style, direction: 'ltr',
             positions: Array.from({ length: marker.text.length }, () => ({
-              scope,
-              nodeId: this.sourceId(marker.anchor),
-              start: marker.sourceIndex,
-              end: marker.sourceIndex + 1,
-              textStart: 0,
-              textEnd: 0
-            }))
-          })
+              scope, nodeId: this.sourceId(marker.anchor),
+              start: incremental ? 0 : marker.sourceIndex,
+              end: incremental ? 1 : marker.sourceIndex + 1,
+              textStart: 0, textEnd: 0 })) }] })
       }
+      const index = incremental ? this.paragraphs.get(elements) : undefined
       for (const paragraph of this.scanParagraphs(elements)) {
-        const positions = this.sourcePositions(paragraph, elements, scope)
-        const runs =
-          this.engine?.getShapingRuns(paragraph.spans, paragraph.direction) ||
-          []
-        for (const run of runs) {
-          if (run.style.objectWidth != null) continue
-          inputs.push({
-            text: run.text,
-            style: run.style,
-            direction: run.direction,
-            positions: positions.slice(run.textStart, run.textEnd)
-          })
-        }
+        const record = index?.locate(paragraph.startIndex)?.record
+        const revision = [fontKey, scope, record?.content, record?.metrics,
+          record?.paint, record?.scanned?.key].join(':')
+        let cached = record?.plain ? this.coverageCache.get(record) : undefined
+        if (!incremental || cached?.revision !== revision) {
+          const positions = this.sourcePositions(paragraph, elements, scope)
+          const runs = this.engine?.getShapingRuns(paragraph.spans, paragraph.direction) || []
+          cached = { revision, inputs: runs.filter(run => run.style.objectWidth == null)
+            .map(run => ({ text: run.text, style: run.style, direction: run.direction,
+              positions: incremental
+                ? positions.slice(run.textStart, run.textEnd).map(position => ({
+                    ...position, start: position.start - paragraph.startIndex,
+                    end: position.end - paragraph.startIndex }))
+                : positions.slice(run.textStart, run.textEnd) })) }
+          if (record?.plain && incremental) this.coverageCache.set(record, cached)
+          this.coverageStats.updated++
+        } else this.coverageStats.reused++
+        emit({ id: `${scope}:${record?.id || paragraph.startIndex}`,
+          revision, base: incremental ? paragraph.startIndex : 0, inputs: cached!.inputs })
       }
-      for (const [index, element] of elements.entries()) {
-        if (
-          isElementLayoutHidden(element, {
-            isDesignMode: hide?.isDesignMode,
-            isAreaHideDisabled: hide?.isAreaHideDisabled,
-            isTraceHidden: hide?.isTraceHidden
-          })
-        )
-          continue
-        for (const text of auxiliary?.(element) || []) {
-          inputs.push(
-            ...this.collectPlainTextCoverage(text, {
-              scope,
-              nodeId: this.sourceId(element),
-              start: index,
-              end: index + 1
-            })
-          )
+      // Plain records cannot own generated chrome or nested cells.
+      const auxiliaryElements: Iterable<[number, IElement]> = index
+        ? index.entries().filter(entry => !entry.record.plain)
+          .flatMap(entry => entry.record.elements.map((element, offset): [number, IElement] =>
+            [entry.start + offset, element]))
+        : elements.entries()
+      for (const [index, element] of auxiliaryElements) {
+        if (isElementLayoutHidden(element, hide || {})) continue
+        for (const [ordinal, text] of (auxiliary?.(element) || []).entries()) {
+          const values = this.collectPlainTextCoverage(text, {
+            scope, nodeId: this.sourceId(element),
+            start: incremental ? 0 : index, end: incremental ? 1 : index + 1 })
+          emit({ id: `${scope}:chrome:${this.sourceId(element)}:${ordinal}`,
+            revision: incremental ? JSON.stringify([fontKey, text]) : '',
+            base: incremental ? index : 0, inputs: values })
         }
-        for (const row of element.trList || []) {
-          for (const cell of row.tdList) {
+        for (const row of element.trList || [])
+          for (const cell of row.tdList)
             visit(cell.value, `td:${cell.id || this.sourceId(cell)}`)
-          }
-        }
       }
     }
     for (const root of roots) visit(root.elements, root.scope)
+    if (incremental) this.coverageCollections.set(inputs, { entries, length: inputs.length })
     return inputs
   }
 
@@ -367,9 +424,10 @@ export class LayoutHostAdapter {
       const options = this.getOptions()
       await this.fontManager.init(options.fonts || [], options.defaultFont)
       if (this.destroyed) throw new EditorRuntimeError('EDITOR_DESTROYED')
-      const shaper = new HarfBuzzTextShaper(this.fontManager)
-      this.engine = new TextLayoutEngine(new BidiResolver(), shaper)
-      this.service = new TextLayoutService(this.engine, this.fontManager)
+      this.kernel = new LayoutKernel(this.fontManager,
+        () => !!this.getOptions().lab?.shapingRunCache)
+      this.engine = this.kernel.engine
+      this.service = this.kernel.service
       this.invalidate()
     })()
     return this.initPromise
@@ -503,8 +561,58 @@ export class LayoutHostAdapter {
     }).shaped
   }
 
+  private markerContexts = new WeakMap<
+    IElement[],
+    Map<number, ReturnType<typeof collectListMarkers>[number]>
+  >()
+
+  getListMarkers(elements: IElement[]) {
+    const markers = this.markerContexts.get(elements)
+    if (markers) return [...markers.values()]
+    if (!this.getOptions().lab?.incrementalEditing) return collectListMarkers(elements)
+    const index = this.paragraphs.get(elements)
+    let cached = this.markersCache.get(elements)
+    if (cached?.revision !== index.revision || cached.epoch !== this.paragraphEpoch) {
+      cached = { epoch: this.paragraphEpoch, revision: index.revision,
+        markers: collectListMarkers(elements) }
+      this.markersCache.set(elements, cached)
+    }
+    return cached.markers
+  }
+
+  /** A synchronous scope pass; nested cell scopes own independent tables. */
+  withListMarkers<T>(elements: IElement[], layout: () => T): T {
+    const previous = this.markerContexts.get(elements)
+    this.markerContexts.set(elements, new Map(
+      this.getListMarkers(elements).map(marker => [marker.sourceIndex, marker])
+    ))
+    try {
+      return layout()
+    } finally {
+      if (previous) this.markerContexts.set(elements, previous)
+      else this.markerContexts.delete(elements)
+    }
+  }
+
   /** Native entry: no LayoutRow construction and no legacy row mapper. */
-  layoutParagraph(
+  private workerLayouts = new Map<string, NativeParagraphLayout>()
+
+  workerKey(input: import('../text-engine/layout/TextLayoutService').NativeParagraphInput) {
+    return JSON.stringify(input, (_, value) =>
+      typeof value === 'number' && !Number.isFinite(value) ? String(value) : value)
+  }
+
+  installWorkerLayouts(inputs: import('../text-engine/layout/TextLayoutService').NativeParagraphInput[],
+    layouts: NativeParagraphLayout[]) {
+    this.workerLayouts.clear()
+    inputs.forEach((input, index) => {
+      this.workerLayouts.set(this.workerKey(input), layouts[index])
+    })
+  }
+
+  clearWorkerLayouts() { this.workerLayouts.clear() }
+
+  prepareParagraphInput(
     paragraph: ParagraphSpan,
     elementList: IElement[],
     availableWidth: number,
@@ -512,8 +620,10 @@ export class LayoutHostAdapter {
     defaultAlign?: 'left' | 'right',
     markerGutter?: number,
     constraints?: { widths: number[]; offsets: number[] }
-  ): NativeParagraphLayout {
+  ): import('../text-engine/layout/TextLayoutService').NativeParagraphInput {
+    void markerGutter
     const options = this.getOptions()
+    this.nativeCache.setByteBudget(options.lab?.paragraphCacheByteBudget || 64 * 1024 * 1024)
     const scale = options.scale || 1
     const first = elementList[paragraph.startIndex]
     const last = elementList[paragraph.endIndex]
@@ -598,14 +708,40 @@ export class LayoutHostAdapter {
             ? resolveSpacingAfter(last, 1)
             : 0
       }
-    let result = options.lab?.incrementalCompute
+    return input
+  }
+
+  layoutParagraph(
+    paragraph: ParagraphSpan,
+    elementList: IElement[],
+    availableWidth: number,
+    layoutScope: string = DEFAULT_LAYOUT_SCOPE,
+    defaultAlign?: 'left' | 'right',
+    markerGutter?: number,
+    constraints?: { widths: number[]; offsets: number[] }
+  ): NativeParagraphLayout {
+    const options = this.getOptions()
+    const scale = options.scale || 1
+    const input = this.prepareParagraphInput(paragraph, elementList,
+      availableWidth, layoutScope, defaultAlign, markerGutter, constraints)
+    const record = options.lab?.incrementalEditing
+      ? this.paragraphs.get(elementList).locate(paragraph.startIndex)?.record
+      : undefined
+    const identity = record?.plain ? [record.id, record.content, record.metrics,
+      record.paint, this.revision].join(':') : undefined
+    const background = this.workerLayouts.size
+      ? this.workerLayouts.get(this.workerKey(input)) : undefined
+    let result = background || (options.lab?.incrementalCompute
       ? this.nativeCache.compute(input, value =>
-          this.getTextLayoutService().layoutParagraph(value)
+          this.kernel!.layout({ schemaVersion: 1, input: value }).layout, identity
         )
-      : this.getTextLayoutService().layoutParagraph(input)
-    const marker = collectListMarkers(elementList).find(
-      item => item.sourceIndex === paragraph.startIndex
-    )
+      : this.kernel!.layout({ schemaVersion: 1, input }).layout)
+    const markers = this.markerContexts.get(elementList)
+    const marker = markers
+      ? markers.get(paragraph.startIndex)
+      : collectListMarkers(elementList).find(
+          item => item.sourceIndex === paragraph.startIndex
+        )
     if (marker?.text && !result.lines[0].hidden) {
       const markerLayout = this.layoutListMarker(
         elementList,
@@ -719,9 +855,7 @@ export class LayoutHostAdapter {
   ): ParagraphSpan[] {
     const options = this.getOptions()
     const hide = this.getHideContext?.()
-    return this.bridge.scanParagraphs(
-      elementList,
-      {
+    const scanOptions = {
         defaultDirection: defaultDirection || options.defaultDirection,
         defaultFont: options.defaultFont,
         defaultSize: options.defaultSize,
@@ -741,10 +875,15 @@ export class LayoutHostAdapter {
         isDesignMode: hide?.isDesignMode,
         isAreaHideDisabled: hide?.isAreaHideDisabled,
         isTraceHidden: hide?.isTraceHidden
-      },
-      startIndex,
-      endIndex
-    )
+      }
+    if (options.lab?.incrementalEditing && startIndex === 0 &&
+      endIndex === elementList.length) {
+      const key = JSON.stringify({ ...scanOptions, fonts: undefined,
+        epoch: this.revision })
+      return this.paragraphs.get(elementList).scan(key,
+        elements => this.bridge.scanParagraphs(elements, scanOptions))
+    }
+    return this.bridge.scanParagraphs(elementList, scanOptions, startIndex, endIndex)
   }
 
   /**
@@ -859,22 +998,38 @@ export class LayoutHostAdapter {
   }
 
   destroy() {
+    this.glyphRenderer.destroy()
+    this.kernel?.destroy()
+    this.kernel = null
     if (this.destroyed) return
     this.destroyed = true
     this.fontManager.destroy()
     this.engine = null
     this.service = null
     this.invalidate()
+    this.paragraphs.clear()
   }
 
   clearParagraphCache() {
+    this.paragraphEpoch++
+    this.plainCoverageCache.clear()
+    this.plainCoverageBytes = 0
+    this.coverageCache = new WeakMap()
+    this.markersCache = new WeakMap()
+    this.paragraphs.invalidate()
     this.nativeCache.reset()
   }
 
   invalidate() {
+    this.paragraphEpoch++
+    this.plainCoverageCache.clear()
+    this.plainCoverageBytes = 0
+    this.coverageCache = new WeakMap()
+    this.markersCache = new WeakMap()
     this.revision++
     this.cache.invalidate()
     this.nativeCache.reset()
+    this.paragraphs.invalidate()
     this.lastLayouts.clear()
   }
 }

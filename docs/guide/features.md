@@ -23,3 +23,5 @@
 ## 暂缓与不提供的能力
 
 SVG 页面后端与独立 SVG 导出暂缓，仅保留[设计评估](./harfbuzz-svg-assessment.md)。没有引擎切换配置或 legacy 回退。安装包本身不提供业务服务器、协同 CRDT、原生 Word/PDF 排版引擎，也不自动安装上游插件。文档中的未来设计与历史迁移步骤不代表当前公开 API。
+
+最新输入性能优化使用独立的 `lab.performanceProfile`；配置与边界见[实验特性](lab.md)，实测前后对比见 [Benchmark](benchmark.md)。

@@ -23,3 +23,5 @@ This independent fork retains the document capabilities described below. Consult
 ## Deferred or unavailable
 
 SVG pages and standalone SVG export remain deferred; the [assessment](../../guide/harfbuzz-svg-assessment.md) is a future design. There is no engine selector or legacy fallback. The package does not provide a backend server, collaborative CRDT or native Word/PDF layout engine, and it does not automatically install upstream plugins. Historical plans and future designs are not current public APIs.
+
+Current input optimizations use the separate `lab.performanceProfile`; see [configuration](lab.md) and [measured benchmark](benchmark.md).

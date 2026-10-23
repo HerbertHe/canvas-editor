@@ -18,6 +18,7 @@ function sidebar(prefix = '', english = false) {
           english ? 'Fonts, readiness and migration' : '字体、初始化与迁移',
           'font-and-esm-migration'
         ),
+        item(english ? 'Benchmark' : '性能基准', 'benchmark'),
         item(english ? 'Supported features' : '能力与支持边界', 'features'),
         item(english ? 'Troubleshooting' : '常见问题', 'faq')
       ]
@@ -97,9 +98,11 @@ function sidebar(prefix = '', english = false) {
           'docs-deployment'
         ),
         item(
-          english ? 'Engineering records' : '验收与历史记录',
+          english ? 'Testing and acceptance' : '测试与验收',
           'engineering-records'
-        )
+        ),
+        { text: 'DeepWiki', link: 'https://deepwiki.com/HerbertHe/canvas-editor' },
+        { text: 'Zread', link: 'https://zread.ai/HerbertHe/canvas-editor' }
       ]
     }
   ]
@@ -133,6 +136,7 @@ export default defineConfig({
       { text: '在线体验', link: '/guide/playground' },
       { text: '快速上手', link: '/guide/start' },
       { text: '渲染管线', link: '/guide/rendering-pipeline' },
+      { text: '性能基准', link: '/guide/benchmark' },
       { text: '项目关系', link: '/guide/fork-and-differences' },
       { text: '文档部署', link: '/guide/docs-deployment' }
     ],
@@ -163,6 +167,7 @@ export default defineConfig({
           { text: 'Playground', link: '/en/guide/playground' },
           { text: 'Get started', link: '/en/guide/start' },
           { text: 'Rendering pipeline', link: '/en/guide/rendering-pipeline' },
+          { text: 'Benchmark', link: '/en/guide/benchmark' },
           { text: 'Project origin', link: '/en/guide/fork-and-differences' },
           { text: 'Deploy docs', link: '/en/guide/docs-deployment' }
         ],

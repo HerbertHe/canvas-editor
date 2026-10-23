@@ -7,7 +7,10 @@ export class DirtyRangeTracker {
   private epoch = 0
   private consumedEpoch = new WeakMap<object, number>()
 
-  constructor(private onFullDirty?: () => void) {}
+  constructor(
+    private onFullDirty?: () => void,
+    private onRangeDirty?: (scope: object) => void
+  ) {}
 
   markRangeDirty(
     scope: object,
@@ -15,6 +18,7 @@ export class DirtyRangeTracker {
     deleteCount: number,
     insertCount: number
   ) {
+    this.onRangeDirty?.(scope)
     const previous = this.ranges.get(scope)
     const delta = insertCount - deleteCount
     // Map both old interval endpoints through this splice. A deletion may

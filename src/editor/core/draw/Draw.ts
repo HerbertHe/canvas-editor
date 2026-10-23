@@ -1,3 +1,9 @@
+import { DerivedState } from './DerivedState'
+import type { EditorPerformanceDiagnostics, WorkerFallbackReason } from '../../interface/Performance'
+import { EditJournal, applyOperation, inverseOperation,
+  type EditOperation, type EditDocument } from '../history/EditTransaction'
+import type { IRange } from '../../interface/Range'
+import type { IPositionContext } from '../../interface/Position'
 import { defaultPlaceholderOption } from '../../dataset/constant/Placeholder'
 import type {
   FontCoverageLocation,
@@ -9,9 +15,12 @@ import type { IEditorFontFace } from '../../interface/TextEngine'
 import { mergeOption } from '../../utils/option'
 import { EditorLifecycle } from '../EditorLifecycle'
 import { DocumentFlow } from '../layout/DocumentFlow'
+import { LayoutWorkerClient } from '../worker/layout/LayoutWorkerClient'
+import { IncrementalFlow, changedLayoutPages } from '../layout/IncrementalFlow'
+import type { LayoutChangeSet } from '../layout/IncrementalFlow'
 import { getHostRowsHeight } from '../layout/hostRowGeometry'
 import { isFloatingImage } from '../layout/InlineObjectMeasure'
-import { textRangeRects } from '../layout/InteractionGeometry'
+import { textRangeRects, type NativeCaret } from '../layout/InteractionGeometry'
 import {
   resolveListOffset,
   resolveRowMargin
@@ -153,6 +162,29 @@ import { Badge } from './frame/Badge'
 import { Graffiti } from './graffiti/Graffiti'
 import { Magnifier } from './interactive/Magnifier'
 import { Accessibility } from '../accessibility/Accessibility'
+
+interface EditSelection {
+  cursorIndex: number
+  hint: NativeCaret | null
+  range: IRange
+  context: IPositionContext
+  pageNo: number
+  zone: EditorZone
+}
+interface PendingEdit {
+  kind: string
+  before: EditSelection
+  publishedState: EditSelection
+  operations: EditOperation[]
+  published: number
+  publishedModel: boolean
+  trusted: boolean
+  history: boolean
+  groupable: boolean
+  started: number
+  depth: number
+  snapshot?: EditDocument
+}
 
 export class Draw {
   private container: HTMLDivElement
@@ -340,9 +372,31 @@ export class Draw {
     this.tablePaging = new TablePaging(this)
     this.rawRowList = []
     this.isElementListTruncated = false
-    this.dirtyRangeTracker = new DirtyRangeTracker(() =>
+    this.dirtyRangeTracker = new DirtyRangeTracker(() => {
+      this.promoteSnapshotEdit()
+      this.opaqueEditPending = true
       this.layoutHostAdapter?.clearParagraphCache()
-    )
+    }, () => {
+      if (this.options.lab?.incrementalEditing && !this.trackedMutationDepth) {
+        this.promoteSnapshotEdit()
+        this.opaqueEditPending = true
+        this.layoutHostAdapter?.clearParagraphCache()
+      }
+    })
+    this.editJournal.subscribe(transaction => {
+      if (this.layoutChange && !this.pendingWorkerRender &&
+        this.geometryRevision === this.modelRevision)
+        this.layoutChange.documentRevision = transaction.targetRevision
+      this.derivedState.invalidateFor(transaction.operations)
+      const client = this.layoutWorkerClient
+      if (client?.ready) {
+        const session = client.getSession()
+        void client.edit(transaction).catch(() => {
+          if (this.layoutWorkerClient === client && client.getSession() === session)
+            this.scheduleWorkerRecovery()
+        })
+      } else if (this.layoutWorkerClient) this.scheduleWorkerRecovery()
+    })
     this.tableTool = new TableTool(this)
     this.tableOperate = new TableOperate(this)
     this.pageNumber = new PageNumber(this)
@@ -428,6 +482,7 @@ export class Draw {
         if (this.lifecycle.state !== 'destroyed') {
           this.container.setAttribute('aria-busy', 'false')
           this.updateFontCoverage()
+          this.ensureLayoutWorker()
         }
       },
       () => {
@@ -706,12 +761,13 @@ export class Draw {
     }
     this.auxiliaryCoverageSignature = this.getAuxiliaryCoverageSignature()
     const token = this.fontCoverageTracker.begin()
-    this.fontCoverageTracker.update(
-      token,
-      inputs,
-      this.layoutHostAdapter.getFontManager(),
-      this.options.autoDownloadFonts
-    )
+    const contributions = this.options.lab?.incrementalCoverage
+      ? this.layoutHostAdapter.getCoverageContributions(inputs) : undefined
+    if (contributions) this.fontCoverageTracker.updateContributions(
+      token, contributions, this.layoutHostAdapter.getFontManager(),
+      this.options.autoDownloadFonts)
+    else this.fontCoverageTracker.update(token, inputs,
+      this.layoutHostAdapter.getFontManager(), this.options.autoDownloadFonts)
     const currentReport = this.fontCoverageTracker.getReport()
     this.fontDownloadManager.sync(
       currentReport,
@@ -929,6 +985,7 @@ export class Draw {
   ) {
     if (!this.options.trace.disabled) {
       // 留痕删除不移除元素但改变可见性，同样影响布局
+      this.modelRevision++
       this.dirtyRangeTracker.markRangeDirty(elementList, index, count, 0)
       return this.traceParticle.markElementListDeleted(
         elementList.slice(index, index + count),
@@ -1516,8 +1573,7 @@ export class Draw {
       for (const key of keys) {
         const value = properties[key]
         if (element[key] !== value) {
-          element[key] = value as never
-          this.dirtyRangeTracker.markFullDirty()
+          this.changeAttribute(element, key, true, value)
         }
       }
     }
@@ -1532,8 +1588,7 @@ export class Draw {
     for (const element of list) {
       for (const key of keys) {
         if (key in element) {
-          delete element[key]
-          this.dirtyRangeTracker.markFullDirty()
+          this.changeAttribute(element, key, false)
         }
       }
     }
@@ -1546,7 +1601,15 @@ export class Draw {
     items?: IElement[],
     options?: ISpliceElementListOption
   ) {
-    this.dirtyRangeTracker.markRangeDirty(
+    if (start < 0) {
+      this.promoteSnapshotEdit()
+      this.layoutHostAdapter.clearParagraphCache()
+    }
+    const finishParagraphs = this.options.lab?.incrementalEditing && start >= 0
+      ? this.layoutHostAdapter.paragraphs.get(elementList).capture(start, deleteCount)
+      : undefined
+    this.modelRevision++
+    this.markTrackedRange(
       elementList,
       start,
       deleteCount,
@@ -1574,9 +1637,7 @@ export class Draw {
           }
           // 此处的清理区间已由下方 markRangeDirty 精确覆盖，
           // 不走访问器（避免退化为整页全量计算）
-          delete curElement.listId
-          delete curElement.listType
-          delete curElement.listStyle
+          this.deleteElementProperty(curElement, ['listId', 'listType', 'listStyle'])
           startIndex++
         }
         // 列表信息清理改写了主删除区间之外的元素，扩展脏区间覆盖，
@@ -1623,7 +1684,7 @@ export class Draw {
               (deleteElement?.area?.deletable !== false ||
                 deleteElement?.areaIndex !== 0))
           ) {
-            elementList.splice(deleteIndex, 1)
+            this.performElementSplice(elementList, deleteIndex, 1)
           }
           deleteIndex--
         }
@@ -1637,7 +1698,7 @@ export class Draw {
             deleteElement.trace[deleteElement.trace.length - 1].type !==
               TraceType.DELETED
           ) {
-            elementList.splice(deleteIndex, 1)
+            this.performElementSplice(elementList, deleteIndex, 1)
           }
           deleteIndex--
         }
@@ -1645,10 +1706,9 @@ export class Draw {
     }
     // 循环添加，避免使用解构影响性能
     if (items?.length) {
-      for (let i = 0; i < items.length; i++) {
-        elementList.splice(start + i, 0, items[i])
-      }
+      this.performElementInsert(elementList, start, items)
     }
+    finishParagraphs?.()
   }
 
   public getCanvasEvent(): CanvasEvent {
@@ -2809,11 +2869,61 @@ export class Draw {
     // always run against current constraints, including pages and floats.
     this.layoutHostAdapter.replaceParagraphLayouts(layoutScope, [])
     if (!isMainLayout) this.dirtyRangeTracker.consumeDirtyRange(elementList)
-    const rows = computeEngineRows()
-    return rows
+    const flow = createFlow()
+    const entries = isMainLayout && this.options.lab?.incrementalEditing &&
+      this.options.lab?.incrementalFlow && flow && !surroundElementList.length &&
+      this.textFrameDependencies() !== null &&
+      !this.options.pageNumber.maxPageNo
+      ? this.layoutHostAdapter.paragraphs.get(elementList).entries() : null
+    if (entries && entries.length <= 2048 && entries.every(e => e.record.editable)) {
+      this.usedIncrementalFlow = true
+      const dependencies = JSON.stringify([
+        this.options, this.layoutHostAdapter.getFontManager().getRevision(),
+        this.layoutHostAdapter.getParagraphEpoch(), engineWidth,
+        defaultDirection, defaultAlign, this.textFrameDependencies()
+      ])
+      this.incrementalFlow.begin()
+      const rows: LayoutRow[] = []
+      const compatibility: { startIndex: number; endIndex: number;
+        layout: import('../text-engine/types').LayoutResult }[] = []
+      for (const entry of entries) {
+        const result = this.incrementalFlow.paragraph(
+          entry.record, entry.start, rows.length, flow!, dependencies, () => {
+            const nodes: LayoutNode[] = []
+            const paragraphRows = this._computeRowListByTextEngine(
+              elementList, engineWidth, layoutScope, defaultDirection,
+              defaultAlign, entry.start, entry.end, rows.length, nodes,
+              payload.inheritedAreaId, flow!
+            )
+            return { rows: paragraphRows, nodes, compatibility:
+              this.layoutHostAdapter.findLayoutByElementIndex(entry.start, layoutScope)?.layout }
+          },
+          !!payload.dirtyRange && entry.end > payload.dirtyRange.startIndex &&
+            entry.start < payload.dirtyRange.endIndex
+        )
+        rows.push(...result.rows)
+        if (result.compatibility) compatibility.push({
+          startIndex: entry.start, endIndex: entry.end - 1,
+          layout: result.compatibility
+        })
+        payload.nativeNodes?.push(...result.nodes)
+      }
+      this.incrementalFlow.end()
+      this.layoutHostAdapter.replaceParagraphLayouts(layoutScope, compatibility)
+      return rows
+    }
+    if (isMainLayout) {
+      this.usedIncrementalFlow = false
+      this.incrementalFlow.clear()
+    }
+    return this.layoutHostAdapter.withListMarkers(elementList, () => computeEngineRows())
   }
 
   private truncateFlowRow(row: LayoutRow) {
+    // Page limits mutate the authoritative model: publish a snapshot barrier.
+    this.promoteSnapshotEdit()
+    this.opaqueEditPending = true
+    this.dirtyRangeTracker.markFullDirty()
     const table = this.elementList[row.startIndex]
     const keepTable =
       row.tableFragment &&
@@ -3658,9 +3768,59 @@ export class Draw {
 
   private _disconnectLazyRender() {
     this.lazyRenderIntersectionObserver?.disconnect()
+    this.lazyRenderIntersectionObserver = null
+    this.observedPages.clear()
+    this.visiblePages.clear()
+  }
+
+  private observedPages = new Set<HTMLCanvasElement>()
+  private visiblePages = new Set<HTMLCanvasElement>()
+  private dirtyPages = new Set<number>()
+
+  private paintPage(pageNo: number) {
+    if (!this.pageRowList[pageNo]) return
+    this._drawPage({
+      elementList: this.elementList,
+      positionList: this.position.getOriginalMainPositionList(),
+      rowList: this.pageRowList[pageNo], pageNo
+    })
+    this.dirtyPages.delete(pageNo)
   }
 
   private _lazyRender() {
+    if (this.options.lab?.dirtyPagePaint) {
+      if (!this.lazyRenderIntersectionObserver) {
+        this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
+          for (const entry of entries) {
+            const page = entry.target as HTMLCanvasElement
+            if (entry.isIntersecting) {
+              this.visiblePages.add(page)
+              const index = Number(page.dataset.index)
+              if (this.dirtyPages.has(index)) this.paintPage(index)
+            } else this.visiblePages.delete(page)
+          }
+        }, { rootMargin: '200px 0px' })
+      }
+      for (const page of this.observedPages) {
+        if (!this.pageList.includes(page)) {
+          this.lazyRenderIntersectionObserver.unobserve(page)
+          this.observedPages.delete(page)
+          this.visiblePages.delete(page)
+        }
+      }
+      for (const page of this.pageList) {
+        if (!this.observedPages.has(page)) {
+          this.observedPages.add(page)
+          this.dirtyPages.add(Number(page.dataset.index))
+          this.lazyRenderIntersectionObserver.observe(page)
+        }
+      }
+      for (const page of this.visiblePages) {
+        const index = Number(page.dataset.index)
+        if (this.dirtyPages.has(index)) this.paintPage(index)
+      }
+      return
+    }
     const positionList = this.position.getOriginalMainPositionList()
     const elementList = this.getOriginalMainElementList()
     this._disconnectLazyRender()
@@ -3683,6 +3843,7 @@ export class Draw {
   }
 
   private _immediateRender() {
+    this.dirtyPages.clear()
     const positionList = this.position.getOriginalMainPositionList()
     const elementList = this.getOriginalMainElementList()
     for (let i = 0; i < this.pageRowList.length; i++) {
@@ -3695,100 +3856,374 @@ export class Draw {
     }
   }
 
-  public render(payload?: IDrawOption) {
-    if (
-      this.lifecycle.state === 'destroyed' ||
-      this.lifecycle.state === 'failed'
-    ) {
+  private textFrameDependencies() {
+    const frames = [this.header.getElementList(), this.footer.getElementList()]
+    if (frames.some(elements => elements.some(element =>
+      (element.type && element.type !== ElementType.TEXT) || element.controlId ||
+      element.areaId || element.trList))) return null
+    return frames.map(elements => getSlimCloneElementList(elements))
+  }
+
+  private layoutWorkerClient: LayoutWorkerClient | null = null
+  private workerInitialization: Promise<void> | null = null
+  private workerFontRevision = -1
+  private workerNeedsResync = false
+  private workerFaults = 0
+  private workerGeneration = 0
+  private pendingWorkerRender: IDrawOption | null = null
+  private pendingWorkerHistory: EditSelection | null = null
+  private trackedAsyncCommit = false
+  private workerRenderPromise: Promise<void> = Promise.resolve()
+  private workerGeometryStats = { committed: 0, stale: 0, fallbacks: 0 }
+  private workerCommitTimer: ReturnType<typeof setTimeout> | null = null
+  private workerRecoveryTimer: ReturnType<typeof setTimeout> | null = null
+
+  private scheduleWorkerRecovery() {
+    this.workerNeedsResync = true
+    if (!this.isReady()) return
+    if (this.workerRecoveryTimer !== null) clearTimeout(this.workerRecoveryTimer)
+    // Do not repeatedly restart a snapshot while repeat events are still
+    // changing it. Rebuild the mirror once the input burst becomes idle.
+    this.workerRecoveryTimer = setTimeout(() => {
+      this.workerRecoveryTimer = null
+      this.ensureLayoutWorker()
+    }, 100)
+  }
+  private workerFallbackReasons: Record<WorkerFallbackReason, number> = {
+    dependencies: 0, unavailable: 0, composition: 0, scope: 0,
+    edit: 0, size: 0, error: 0, deadline: 0
+  }
+
+  public getPerformanceDiagnostics(): EditorPerformanceDiagnostics {
+    const { ready, pending, ...counters } = this.getLayoutWorkerStats()
+    return {
+      schemaVersion: 1,
+      state: this.lifecycle.state,
+      options: { ...this.options.lab },
+      worker: { ready, pending, ...this.layoutWorkerClient?.getQueueStats(),
+        requests: this.layoutWorkerClient?.getQueueStats().requests || 0,
+        waiting: this.layoutWorkerClient?.getQueueStats().waiting || false,
+        queuedBytes: this.layoutWorkerClient?.getQueueStats().queuedBytes || 0,
+        bufferedEdits: this.layoutWorkerClient?.getQueueStats().bufferedEdits || 0,
+        faults: this.workerFaults, needsResync: this.workerNeedsResync,
+        counters, fallbackReasons: { ...this.workerFallbackReasons } },
+      flow: { ...this.incrementalFlow.stats },
+      placements: this.position.getPlacementStats(),
+      paths: { ...this.layoutHostAdapter.getGlyphRenderer().stats },
+      runs: { ...this.layoutHostAdapter.getRunStats() },
+      utilityWorkers: { ...this.workerManager.stats },
+      pages: { observed: this.observedPages.size,
+        visible: this.visiblePages.size, dirty: this.dirtyPages.size }
+    }
+  }
+
+  private cancelWorkerCommitTimer() {
+    if (this.workerCommitTimer !== null) clearTimeout(this.workerCommitTimer)
+    this.workerCommitTimer = null
+  }
+
+  private rejectWorkerEdit(reason: WorkerFallbackReason) {
+    this.workerFallbackReasons[reason]++
+    return false
+  }
+
+  public hasPendingWorkerGeometry() { return !!this.pendingWorkerRender }
+
+  public async inspectLayoutWorker() {
+    return this.layoutWorkerClient?.inspect()
+  }
+
+  public getLayoutWorkerStats() {
+    return { ...this.workerGeometryStats, ...this.layoutWorkerClient?.stats,
+      ready: !!this.layoutWorkerClient?.ready, pending: !!this.pendingWorkerRender }
+  }
+
+  public async waitForWorkerLayout() {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (this.workerRecoveryTimer !== null) {
+        clearTimeout(this.workerRecoveryTimer)
+        this.workerRecoveryTimer = null
+      }
+      this.ensureLayoutWorker()
+      const render = this.workerRenderPromise
+      await this.workerInitialization
+      await render
+      try { await this.layoutWorkerClient?.waitForIdle() } catch {
+        this.workerNeedsResync = true
+      }
+      if (!this.workerNeedsResync && !this.workerInitialization &&
+        render === this.workerRenderPromise) return
+    }
+  }
+
+  private ensureLayoutWorker() {
+    if (!this.options.lab?.layoutWorker || !this.options.lab?.incrementalEditing ||
+      !this.options.lab?.incrementalFlow || !this.isReady() || this.workerFaults >= 3)
+      return
+    if (this.workerRecoveryTimer !== null) return
+    const entries = this.layoutHostAdapter.paragraphs.get(this.elementList).entries()
+    if (entries.length > 2048 || entries.some(entry => !entry.record.editable) ||
+      this.textFrameDependencies() === null || !this.getIsPagingMode() ||
+      this.options.pageNumber.maxPageNo || (this.getColumnLayout()?.count || 1) !== 1)
+      return
+    const fonts = this.layoutHostAdapter.getFontManager()
+    if (this.workerInitialization || (this.layoutWorkerClient?.ready &&
+      !this.workerNeedsResync && this.workerFontRevision === fonts.getRevision() &&
+      this.layoutWorkerClient.getRevision() === this.getDocumentRevision())) return
+    this.layoutWorkerClient ||= new LayoutWorkerClient(undefined, 5000,
+      16 * 1024 * 1024, !!this.options.lab?.workerTransfer)
+    const revision = this.getDocumentRevision()
+    this.workerFontRevision = fonts.getRevision()
+    this.workerNeedsResync = false
+    this.workerInitialization = this.layoutWorkerClient.initialize(
+      this.captureEditModel(), fonts.getFontManifest(), this.options.defaultFont,
+      revision, this.workerFontRevision
+    ).then(() => {
+      if (revision !== this.getDocumentRevision()) this.scheduleWorkerRecovery()
+    }).catch(() => {
+      this.workerFaults++
+      this.scheduleWorkerRecovery()
+    }).finally(() => { this.workerInitialization = null })
+  }
+
+  private deferWorkerRender(payload: IDrawOption | undefined) {
+    const edit = this.activeEdit
+    const client = this.layoutWorkerClient
+    if (!payload?.isDeferredPaint || !this.options.lab?.layoutWorker) return false
+    if (!this.options.lab.incrementalEditing || !this.options.lab.incrementalFlow)
+      return this.rejectWorkerEdit('dependencies')
+    if (this.canvasEvent.isComposing) return this.rejectWorkerEdit('composition')
+    if (!edit?.trusted || !edit.groupable) return this.rejectWorkerEdit('edit')
+    // Visual deletion consumes current caret geometry at the next key. Commit
+    // its incremental geometry now and coalesce paint; posting a layout only
+    // to synchronously invalidate it on every repeat wastes both threads.
+    if (edit.kind === 'backspace' || edit.kind === 'delete') return false
+    if (!client?.ready || this.workerNeedsResync ||
+      this.workerFontRevision !== this.layoutHostAdapter.getFontManager().getRevision())
+      return this.rejectWorkerEdit('unavailable')
+    if (!this.zone.isMainActive() || this.position.getPositionContext().isTable ||
+      this.textFrameDependencies() === null ||
+      !this.getIsPagingMode() || this.isPrintMode() ||
+      !!this.options.pageNumber.maxPageNo ||
+      (this.getColumnLayout()?.count || 1) !== 1 ||
+      !['input', 'backspace', 'delete'].includes(edit.kind) ||
+      edit.operations.some(operation => operation.kind !== 'splice' ||
+        operation.scope !== 'main' || [...operation.before, ...operation.after]
+          .some(element => element.value === ZERO)) ||
+      !edit.operations.length) return this.rejectWorkerEdit('scope')
+    const entries = this.layoutHostAdapter.paragraphs.get(this.elementList).entries()
+    if (entries.length > 2048 || entries.some(entry => !entry.record.editable))
+      return this.rejectWorkerEdit('scope')
+    const operations = edit.operations.filter(operation => operation.kind === 'splice')
+    const first = Math.max(0, Math.min(...operations.map(operation => operation.index)) - 1)
+    const last = Math.max(...operations.map(operation => operation.index + operation.after.length)) + 1
+    const dirty = entries.filter(entry => entry.start < last && entry.end > first)
+    if (!dirty.length || dirty.some(entry => entry.record.elements.length > 2048) ||
+      dirty.reduce((sum, entry) => sum + entry.record.elements.reduce(
+        (units, element) => units + element.value.length, 0), 0) > 2048)
+      return this.rejectWorkerEdit('size')
+    edit.history ||= payload.isSubmitHistory !== false
+    // Latest-only requests must not starve geometry under continuous input.
+    // This is a scheduling deadline, not a hard bound on layout/presentation.
+    if (!this.pendingWorkerRender) this.workerCommitTimer = setTimeout(() => {
+      this.workerCommitTimer = null
+      if (!this.isReady() || !this.pendingWorkerRender) return
+      this.workerFallbackReasons.deadline++
+      this.workerGeometryStats.fallbacks++
+      this.flushGeometry()
+    }, 100)
+    this.pendingWorkerRender = { ...payload, isSubmitHistory: false }
+    const generation = ++this.workerGeneration
+    // Commit the journal/history in the input transaction before posting layout.
+    this.workerRenderPromise = Promise.resolve().then(async () => {
+      if (generation !== this.workerGeneration || !this.pendingWorkerRender) return
+      const revision = this.getDocumentRevision()
+      try {
+        const inputs = dirty.flatMap(entry =>
+          this.layoutHostAdapter.scanParagraphs(this.elementList, undefined,
+            entry.start, entry.end).map(paragraph =>
+            this.layoutHostAdapter.prepareParagraphInput(paragraph,
+              this.elementList, this.getInnerWidth(), 'main')))
+        const response = await client.layout(inputs, generation, true)
+        if (!this.isReady() || generation !== this.workerGeneration ||
+          response.documentRevision !== this.getDocumentRevision() ||
+          response.fontRevision !== this.layoutHostAdapter.getFontManager().getRevision()) {
+          this.workerGeometryStats.stale++
+          return
+        }
+        if (revision !== this.getDocumentRevision()) return
+        this.layoutHostAdapter.installWorkerLayouts(response.inputs!, response.layouts!)
+        this.workerGeometryStats.committed++
+        this.flushGeometry()
+      } catch {
+        if (generation === this.workerGeneration && this.isReady()) {
+          this.workerGeometryStats.fallbacks++
+          this.workerFallbackReasons.error++
+          if (client.ready) this.workerFaults++
+          this.scheduleWorkerRecovery()
+          this.flushGeometry()
+        }
+      }
+    })
+    if (payload.isSubmitHistory !== false) nextTick(() => {
+      if (!this.isReady()) return
+      this.listener.contentChange?.()
+      if (this.eventBus.isSubscribe('contentChange')) this.eventBus.emit('contentChange')
+    })
+    return true
+  }
+
+  private incrementalFlow = new IncrementalFlow()
+  private usedIncrementalFlow = false
+  private layoutChange: LayoutChangeSet | null = null
+  public getLayoutChangeSet() { return this.layoutChange }
+  public getFlowStats() { return this.incrementalFlow.stats }
+
+  private modelRevision = 0
+  private geometryRevision = 0
+  private pendingPaint: number | null = null
+
+  /** Synchronous mode coalesces paint; worker mode commits versioned geometry. */
+  public requestPaint() {
+    if (!this.isReady()) return
+    if (!this.getIsPagingMode() || this.isPrintMode()) {
+      this.cancelPaint()
+      this.paintRender(false)
       return
     }
-    if (!this.layoutHostAdapter.isReady()) return
-    this.renderCount++
-    const { header, footer } = this.options
-    const {
-      isSubmitHistory = true,
-      isSetCursor = true,
-      isCompute = true,
-      isLazy = true,
-      isInit = false,
-      isSourceHistory = false,
-      isFirstRender = false
-    } = payload || {}
-    let { curIndex } = payload || {}
-    const innerWidth = this.getInnerWidth()
-    const isPagingMode = this.getIsPagingMode()
-    // 缓存当前页数信息
-    const oldPageSize = this.pageRowList.length
-    const oldPageDirectionList = this.pageDirectionList
-    // 计算文档信息
-    if (isCompute) {
-      // 清空拼写检查错词信息
-      this.spellcheck.setSpellcheckRangeList(null)
-      // 清空浮动元素位置信息
-      this.position.setFloatPositionList([])
-      if (isPagingMode) {
-        // 分栏信息
-        this.columnManager.compute()
-        // 页眉信息
-        if (!header.disabled) {
-          this.header.compute()
-        }
-        // 页脚信息
-        if (!footer.disabled) {
-          this.footer.compute()
-        }
-      }
-      // 行信息
-      const margins = this.getMargins()
-      const pageHeight = this.getHeight()
-      const extraHeight = this.header.getExtraHeight()
-      const startX = margins[3]
-      const startY = margins[0] + extraHeight
-      const surroundElementList = pickSurroundElementList(this.elementList)
-      const rowComputePayload: IComputeRowListPayload = {
-        startX,
-        startY,
-        pageHeight,
-        isPagingMode,
-        innerWidth,
-        surroundElementList,
-        elementList: this.elementList,
-        layoutScope: 'main',
-        dirtyRange: this.dirtyRangeTracker.consumeDirtyRange(this.elementList)
-      }
-      this.rawRowList = this.computeRowList(rowComputePayload)
-      // 分页模式下跨页表格在渲染层拆分为按页片段行
-      if (isPagingMode) {
-        this.rowList = this.tablePaging.splitTableRowAcrossPages(
-          this.rawRowList
-        )
-      } else {
-        this.rowList = this.rawRowList
-      }
-      // 页面信息（maxPageNo 截断会重置该标志）
-      this.isElementListTruncated = false
-      this.pageRowList = this._computePageList()
-      // Rebuild native placements as pages/columns can move after any edit.
-      this.position.computePositionList({})
-      // 区域信息
-      this.area.compute()
-      if (!this.isPrintMode()) {
-        // 搜索信息
-        const searchKeyword = this.search.getSearchKeyword()
-        if (searchKeyword) {
-          this.search.compute(searchKeyword)
-        }
-        // 控件关键词高亮
-        this.control.computeHighlightList()
-      }
-      // 涂鸦信息
-      if (this.isGraffitiMode()) {
-        this.graffiti.compute()
+    if (this.pendingPaint !== null) return
+    this.pendingPaint = requestAnimationFrame(() => {
+      this.pendingPaint = null
+      if (this.isReady()) this.paintRender(true)
+    })
+  }
+
+  private cancelPaint() {
+    if (this.pendingPaint !== null) cancelAnimationFrame(this.pendingPaint)
+    this.pendingPaint = null
+  }
+
+  /** Pixel readers/exporters can force a scheduled paint immediately. */
+  public flushPaint() {
+    this.flushGeometry()
+    if (this.options.lab?.dirtyPagePaint && this.dirtyPages.size) {
+      this.cancelPaint()
+      this._immediateRender()
+      this.dirtyPages.clear()
+      return
+    }
+    if (this.pendingPaint === null) return
+    this.cancelPaint()
+    if (this.isReady()) this.paintRender(false)
+  }
+
+  /** Geometry commands may explicitly assert the current synchronous commit. */
+  public flushGeometry() {
+    if (this.pendingWorkerRender) {
+      this.cancelWorkerCommitTimer()
+      const payload = this.pendingWorkerRender
+      const selection = this.pendingWorkerHistory
+      this.pendingWorkerRender = null
+      this.pendingWorkerHistory = null
+      this.workerGeneration++
+      this.trackedAsyncCommit = true
+      try {
+        this.render({ ...payload, isCompute: true })
+        if (selection) Object.assign(selection, this.captureEditState())
+      } finally {
+        this.trackedAsyncCommit = false
+        this.layoutHostAdapter.clearWorkerLayouts()
       }
     }
-    // 清除光标等副作用
-    this.imageObserver.clearAll()
-    this.cursor.recoveryCursor()
+    if (this.geometryRevision !== this.modelRevision)
+      this.render({ isSubmitHistory: false, isSetCursor: false })
+    return this.geometryRevision
+  }
+
+  private paintRender(isLazy: boolean) {
+    if (isLazy && this.getIsPagingMode()) this._lazyRender()
+    else this._immediateRender()
+  }
+
+  private computeRenderGeometry(innerWidth: number, isPagingMode: boolean) {
+    const { header, footer } = this.options
+    // 清空拼写检查错词信息
+    this.spellcheck.setSpellcheckRangeList(null)
+    // 清空浮动元素位置信息
+    this.position.setFloatPositionList([])
+    if (isPagingMode) {
+      // 分栏信息
+      this.columnManager.compute()
+      // 页眉信息
+      if (!header.disabled) {
+        this.header.compute()
+      }
+      // 页脚信息
+      if (!footer.disabled) {
+        this.footer.compute()
+      }
+    }
+    const previousPages = this.pageRowList
+    // 行信息
+    const margins = this.getMargins()
+    const pageHeight = this.getHeight()
+    const extraHeight = this.header.getExtraHeight()
+    const startX = margins[3]
+    const startY = margins[0] + extraHeight
+    const surroundElementList = pickSurroundElementList(this.elementList)
+    const rowComputePayload: IComputeRowListPayload = {
+      startX,
+      startY,
+      pageHeight,
+      isPagingMode,
+      innerWidth,
+      surroundElementList,
+      elementList: this.elementList,
+      layoutScope: 'main',
+      dirtyRange: this.dirtyRangeTracker.consumeDirtyRange(this.elementList)
+    }
+    this.rawRowList = this.computeRowList(rowComputePayload)
+    // 分页模式下跨页表格在渲染层拆分为按页片段行
+    if (isPagingMode) {
+      this.rowList = this.tablePaging.splitTableRowAcrossPages(
+        this.rawRowList
+      )
+    } else {
+      this.rowList = this.rawRowList
+    }
+    // 页面信息（maxPageNo 截断会重置该标志）
+    this.isElementListTruncated = false
+    this.pageRowList = this._computePageList()
+    this.layoutChange = changedLayoutPages(previousPages, this.pageRowList,
+      this.incrementalFlow.reused, !this.usedIncrementalFlow, {
+        scope: 'main', changedParagraphs: [...this.incrementalFlow.changed],
+        indexShifts: [...this.incrementalFlow.shifts],
+        documentRevision: this.getDocumentRevision(),
+        geometryRevision: this.modelRevision,
+        fontRevision: this.layoutHostAdapter.getFontManager().getRevision(),
+        constraintsRevision: this.workerGeneration
+      })
+    this.position.computePositionList({
+      fromPageNo: this.usedIncrementalFlow ? this.layoutChange.firstPage : 0
+    })
+    // 区域信息
+    this.area.compute()
+    if (!this.isPrintMode()) {
+      // 搜索信息
+      const searchKeyword = this.search.getSearchKeyword()
+      if (searchKeyword) {
+        this.search.compute(searchKeyword)
+      }
+      // 控件关键词高亮
+      this.control.computeHighlightList()
+    }
+    // 涂鸦信息
+    if (this.isGraffitiMode()) {
+      this.graffiti.compute()
+    }
+  }
+
+  private commitRenderPages(oldPageDirectionList: typeof this.pageDirectionList) {
     // 创建纸张
     for (let i = 0; i < this.pageRowList.length; i++) {
       if (!this.pageList[i]) {
@@ -3803,7 +4238,13 @@ export class Draw {
       this.ctxList.splice(curPageCount, deleteCount)
       this.pageList
         .splice(curPageCount, deleteCount)
-        .forEach(page => page.remove())
+        .forEach(page => {
+          this.lazyRenderIntersectionObserver?.unobserve(page)
+          this.observedPages.delete(page)
+          this.visiblePages.delete(page)
+          this.dirtyPages.delete(Number(page.dataset.index))
+          page.remove()
+        })
     }
     const isPageDirectionChanged =
       oldPageDirectionList.length !== this.pageDirectionList.length ||
@@ -3813,20 +4254,13 @@ export class Draw {
     if (isPageDirectionChanged) {
       this._updatePageSizes()
     }
-    // 绘制元素
-    // 连续页因为有高度的变化会导致canvas渲染空白，需立即渲染，否则会出现闪动
-    if (isLazy && isPagingMode) {
-      this._lazyRender()
-    } else {
-      this._immediateRender()
-    }
-    // 光标重绘
-    if (isSetCursor) {
-      curIndex = this.setCursor(curIndex)
-    } else if (this.range.getIsSelection()) {
-      // 存在选区时仅定位避免事件无法捕获
-      this.cursor.focus()
-    }
+  }
+
+  private commitRenderHistory(
+    curIndex: number | undefined,
+    isSubmitHistory: boolean,
+    isFirstRender: boolean
+  ) {
     // 历史记录用于undo、redo（非首次渲染内容变更 || 第一次存在光标时）
     if (
       (isSubmitHistory && !isFirstRender) ||
@@ -3834,27 +4268,14 @@ export class Draw {
     ) {
       this.submitHistory(curIndex)
     }
-    if (isCompute) {
-      this.renderedFontRevision = this.layoutHostAdapter
-        .getFontManager()
-        .getRevision()
-    }
-    if (
-      isCompute ||
-      this.auxiliaryCoverageSignature !== this.getAuxiliaryCoverageSignature()
-    )
-      this.updateFontCoverage()
-    if (isCompute && this.eventBus.isSubscribe('renderChange')) {
-      if (this.lifecycle.state === 'initializing') {
-        // Initial render callbacks may query geometry only after ready settles.
-        nextTick(() => {
-          if (this.isReady()) this.eventBus.emit('renderChange')
-        })
-      } else {
-        this.eventBus.emit('renderChange')
-      }
-    }
-    // 信息变动回调
+  }
+
+  private notifyRender(payload: IDrawOption, oldPageSize: number) {
+    const {
+      isCompute = true, isSubmitHistory = true,
+      isSourceHistory = false, isInit = false
+    } = payload
+    // Each edit retains its own notification, even if its paint is merged.
     nextTick(() => {
       if (!this.isReady()) return
       // 选区样式
@@ -3898,6 +4319,112 @@ export class Draw {
         }
       }
     })
+  }
+
+  public render(payload?: IDrawOption) {
+    if (this.historyReplayDepth) {
+      this.deferredHistoryRender = payload || {}
+      return
+    }
+    if (
+      this.lifecycle.state === 'destroyed' ||
+      this.lifecycle.state === 'failed'
+    ) {
+      return
+    }
+    if (!this.layoutHostAdapter.isReady()) return
+    this.renderCount++
+    const {
+      isSubmitHistory = true,
+      isSetCursor = true,
+      isLazy = true,
+      isFirstRender = false
+    } = payload || {}
+    const isCompute = payload?.isCompute !== false ||
+      this.geometryRevision !== this.modelRevision
+    if (isCompute && !this.trackedAsyncCommit && this.deferWorkerRender(payload)) return
+    const pendingSelection = !this.trackedAsyncCommit ? this.pendingWorkerHistory : null
+    if (!this.trackedAsyncCommit) {
+      this.cancelWorkerCommitTimer()
+      this.pendingWorkerRender = null
+      this.pendingWorkerHistory = null
+      this.workerGeneration++
+    }
+    let { curIndex } = payload || {}
+    const innerWidth = this.getInnerWidth()
+    const isPagingMode = this.getIsPagingMode()
+    // 缓存当前页数信息
+    const oldPageSize = this.pageRowList.length
+    const oldPageDirectionList = this.pageDirectionList
+    // 计算文档信息
+    if (isCompute) {
+      if (this.options.lab?.incrementalEditing && !this.activeEdit?.trusted &&
+        !this.historyFinalizing && !this.trackedAsyncCommit)
+        this.layoutHostAdapter.clearParagraphCache()
+      this.modelRevision++
+      this.computeRenderGeometry(innerWidth, isPagingMode)
+      this.geometryRevision = this.modelRevision
+    }
+    // 清除光标等副作用
+    this.imageObserver.clearAll()
+    this.cursor.recoveryCursor()
+    this.commitRenderPages(oldPageDirectionList)
+    if (this.options.lab?.dirtyPagePaint) {
+      const changed = isCompute && this.layoutChange &&
+        oldPageSize === this.pageRowList.length && this.usedIncrementalFlow
+        ? this.layoutChange.changedPages
+        : this.pageRowList.map((_, index) => index)
+      for (const page of changed) this.dirtyPages.add(page)
+    }
+    if (
+      payload?.isDeferredPaint && isLazy && isPagingMode && !this.isPrintMode()
+    ) {
+      this.requestPaint()
+    } else {
+      this.cancelPaint()
+      this.paintRender(isLazy)
+    }
+    // 光标重绘
+    if (isSetCursor) {
+      curIndex = this.setCursor(curIndex)
+    } else if (this.range.getIsSelection()) {
+      // 存在选区时仅定位避免事件无法捕获
+      this.cursor.focus()
+    }
+    if (pendingSelection) {
+      const state = this.captureEditState()
+      if (this.range.getIsCollapsed()) {
+        state.cursorIndex = state.range.endIndex
+        state.hint = null
+      }
+      Object.assign(pendingSelection, state)
+    }
+    if (isCompute && !this.trackedAsyncCommit) this.publishEditAtRender()
+    if (isCompute && this.layoutChange)
+      this.layoutChange.documentRevision = this.getDocumentRevision()
+    this.commitRenderHistory(curIndex, isSubmitHistory, isFirstRender)
+    if (isCompute) {
+      this.renderedFontRevision = this.layoutHostAdapter
+        .getFontManager()
+        .getRevision()
+    }
+    if (
+      isCompute ||
+      this.auxiliaryCoverageSignature !== this.getAuxiliaryCoverageSignature()
+    )
+      this.updateFontCoverage()
+    if (isCompute && this.eventBus.isSubscribe('renderChange')) {
+      if (this.lifecycle.state === 'initializing') {
+        // Initial render callbacks may query geometry only after ready settles.
+        nextTick(() => {
+          if (this.isReady()) this.eventBus.emit('renderChange')
+        })
+      } else {
+        this.eventBus.emit('renderChange')
+      }
+    }
+    this.notifyRender({ ...payload, isCompute }, oldPageSize)
+    this.ensureLayoutWorker()
   }
 
   public setCursor(curIndex: number | undefined) {
@@ -3956,8 +4483,412 @@ export class Draw {
     return curIndex
   }
 
+  private derivedState = new DerivedState()
+  private editJournal = new EditJournal<EditSelection>()
+  private activeEdit: PendingEdit | null = null
+  private opaqueEditPending = false
+  private trackedMutationDepth = 0
+  private journalModel: EditDocument | null = null
+  private scopeLabels = new WeakMap<IElement[], string>()
+  private resolvedScopes = new WeakMap<EditDocument, Map<string, IElement[]>>()
+  private historyReplayDepth = 0
+  private historyMaintenance = false
+  private historyFinalizing = false
+  private historyBatchOpaque = false
+  private historyBatchOperations: EditOperation[] = []
+  private historyPublication: {
+    operations: EditOperation[]; opaque: boolean; maintenance: boolean
+    before: EditSelection; after: EditSelection; source: 'undo' | 'redo' | 'rollback'
+  } | null = null
+  private deferredHistoryRender: IDrawOption | null = null
+
+  public getDerivedState() { return this.derivedState }
+
+  public getDerivedWordCount() {
+    if (!this.options.lab?.incrementalEditing || !this.options.lab?.incrementalCoverage)
+      return null
+    return this.derivedState.wordCount(this.elementList, this.layoutHostAdapter.paragraphs)
+  }
+
+  public getDerivedCatalogSignature() {
+    if (!this.options.lab?.incrementalEditing || !this.options.lab?.incrementalCoverage)
+      return null
+    return this.derivedState.catalogSignature(this.elementList,
+      this.position.getOriginalMainPositionList(), this.layoutHostAdapter.paragraphs)
+  }
+
+  public getDocumentRevision() { return this.editJournal.getRevision() }
+  public getEditJournal() { return this.editJournal }
+
+  private captureEditState(): EditSelection {
+    return { cursorIndex: this.pendingWorkerRender ? this.range.getRange().endIndex
+      : this.position.getCursorPosition()?.index ?? this.range.getRange().endIndex,
+      hint: this.pendingWorkerRender ? null : deepClone(this.position.getNativeCaretHint()),
+      range: deepClone(this.range.getRange()),
+      context: deepClone(this.position.getPositionContext()),
+      zone: this.zone.getZone(), pageNo: this.pageNo }
+  }
+
+  private restoreEditState(state: EditSelection) {
+    this.zone.setZone(state.zone)
+    this.setPageNo(state.pageNo)
+    this.position.setPositionContext(deepClone(state.context))
+    this.range.replaceRange(deepClone(state.range))
+    this.position.setNativeCaretHint(deepClone(state.hint))
+  }
+
+  private captureEditModel(): EditDocument {
+    return { main: getSlimCloneElementList(this.elementList),
+      header: getSlimCloneElementList(this.header.getElementList()),
+      footer: getSlimCloneElementList(this.footer.getElementList()) }
+  }
+
+  private replaceEditModel(model: EditDocument) {
+    this.elementList = model.main
+    this.header.setElementList(model.header)
+    this.footer.setElementList(model.footer)
+  }
+
+  private resolveEditScope(scope: string, model?: EditDocument): IElement[] {
+    const roots = model || { main: this.elementList,
+      header: this.header.getElementList(), footer: this.footer.getElementList() }
+    if (scope === 'main' || scope === 'header' || scope === 'footer') return roots[scope]
+    const cached = model && this.resolvedScopes.get(model)?.get(scope)
+    if (cached) return cached
+    const find = (elements: IElement[]): IElement[] | undefined => {
+      for (const element of elements)
+        for (const row of element.trList || [])
+          for (const cell of row.tdList) {
+            if (`td:${cell.id}` === scope) return cell.value
+            const nested = find(cell.value)
+            if (nested) return nested
+          }
+      return undefined
+    }
+    for (const elements of Object.values(roots)) {
+      const found = find(elements)
+      if (found) {
+        if (model) {
+          const scopes = this.resolvedScopes.get(model) || new Map<string, IElement[]>()
+          scopes.set(scope, found)
+          this.resolvedScopes.set(model, scopes)
+        }
+        return found
+      }
+    }
+    throw new Error(`Transaction scope not found: ${scope}`)
+  }
+
+  private editScope(elements: IElement[]): string | undefined {
+    if (elements === this.elementList) return 'main'
+    if (elements === this.header.getElementList()) return 'header'
+    if (elements === this.footer.getElementList()) return 'footer'
+    const cached = this.scopeLabels.get(elements)
+    if (cached) return cached
+    const visit = (list: IElement[]): string | undefined => {
+      for (const element of list)
+        for (const row of element.trList || [])
+          for (const cell of row.tdList) {
+            if (cell.value === elements && cell.id) return `td:${cell.id}`
+            const scope = visit(cell.value)
+            if (scope) return scope
+          }
+      return undefined
+    }
+    const scope = visit(this.elementList) || visit(this.header.getElementList()) ||
+      visit(this.footer.getElementList())
+    if (scope) this.scopeLabels.set(elements, scope)
+    return scope
+  }
+
+  private isPlainEdit(kind: string) {
+    if (!['input', 'paste', 'backspace', 'delete', 'composition', 'attributes'].includes(kind) ||
+      !this.options.trace.disabled) return false
+    const range = this.range.getRange()
+    if (range.isCrossRowCol || range.startIndex < 0) return false
+    if (range.endIndex - range.startIndex > 4096) return false
+    const elements = this.getElementList()
+    const index = this.layoutHostAdapter.paragraphs.get(elements)
+    return index.between(Math.max(0, range.startIndex - 1), range.endIndex + 3)
+      .every(record => record.editable)
+  }
+
+  public beginEditTransaction(kind: string, groupable = true) {
+    if (!this.options.lab?.incrementalEditing || this.historyReplayDepth) return
+    if (this.activeEdit) { this.activeEdit.depth++; return }
+    if (this.opaqueEditPending && this.journalModel) this.publishEditAtRender()
+    if (!this.journalModel) this.journalModel = this.captureEditModel()
+    if (this.options.historyMaxRecordCount && this.historyManager.isStackEmpty())
+      this.historyManager.execute(this.createHistorySnapshot())
+    const before = this.captureEditState()
+    const trusted = this.isPlainEdit(kind)
+    this.activeEdit = { kind, before, publishedState: before, operations: [],
+      published: 0, publishedModel: false, trusted, history: false, groupable,
+      started: performance.now(), depth: 1,
+      snapshot: trusted ? undefined : this.captureEditModel() }
+  }
+
+  private promoteSnapshotEdit() {
+    const edit = this.activeEdit
+    if (!edit?.trusted || !this.journalModel) return
+    const original = structuredClone(this.journalModel)
+    for (const operation of edit.operations.slice(0, edit.published).reverse())
+      applyOperation(inverseOperation(operation), scope => this.resolveEditScope(scope, original))
+    edit.snapshot = original
+    edit.trusted = false
+  }
+
+  private changeAttribute(element: IElement, key: keyof IElement,
+    present: boolean, value?: unknown) {
+    const owner = this.options.lab?.incrementalEditing
+      ? this.layoutHostAdapter.paragraphs.owner(element) : undefined
+    const location = owner?.location(element)
+    const scope = owner && this.activeEdit ? this.editScope(owner.elements) : undefined
+    const before = { present: Object.hasOwn(element, key), value: element[key] }
+    if (scope && location) this.recordEdit({ kind: 'attributes', scope,
+      index: location.start + location.record.elements.indexOf(element),
+      before: { [key]: before }, after: { [key]: { present, value } } })
+    if (present) Reflect.set(element, key, value)
+    else Reflect.deleteProperty(element, key)
+    this.modelRevision++
+    if (this.activeEdit?.trusted && owner && location &&
+      !['value', 'type', 'areaId', 'imgDisplay', 'listId', 'controlId',
+        'titleId', 'title', 'area', 'control', 'groupIds', 'listType', 'listStyle',
+        'listWrap', 'listLevel', 'trace', 'hide'].includes(key)) {
+      owner.touch(element, ['color', 'highlight', 'underline', 'strikeout'].includes(key)
+        ? 'paint' : 'metrics')
+      this.markTrackedRange(owner.elements, location.start, 0, 0)
+    } else this.dirtyRangeTracker.markFullDirty()
+  }
+
+  private recordEdit(operation: EditOperation) {
+    if (this.activeEdit?.trusted && !this.historyReplayDepth)
+      this.activeEdit.operations.push(structuredClone(operation))
+  }
+
+  private publishHistoryAtRender() {
+    const pending = this.historyPublication
+    if (!pending) return false
+    this.historyPublication = null
+    if (!this.options.lab?.incrementalEditing || !this.journalModel) return true
+    const after = this.captureEditState()
+    if (pending.maintenance) {
+      this.journalModel = this.captureEditModel()
+      this.derivedState.clear()
+    } else if (pending.opaque) {
+      const current = this.captureEditModel()
+      this.editJournal.publish(pending.source, [{ kind: 'snapshot', scope: 'document',
+        before: this.journalModel, after: current }], pending.before, after, pending.source)
+      this.journalModel = current
+    } else {
+      for (const operation of pending.operations)
+        applyOperation(operation, scope => this.resolveEditScope(scope, this.journalModel!),
+          model => { this.journalModel = model })
+      this.editJournal.publish(pending.source, pending.operations, pending.before, after, pending.source)
+    }
+    this.scopeLabels = new WeakMap()
+    return true
+  }
+
+  private publishEditAtRender() {
+    if (this.publishHistoryAtRender()) return
+    if (!this.options.lab?.incrementalEditing || this.historyReplayDepth ||
+      this.historyFinalizing) return
+    if (this.historyMaintenance) {
+      this.journalModel = this.captureEditModel()
+      this.layoutHostAdapter.clearParagraphCache()
+      return
+    }
+    if (!this.journalModel) this.journalModel = this.captureEditModel()
+    const edit = this.activeEdit
+    const after = this.captureEditState()
+    if (edit?.trusted) {
+      const operations = edit.operations.slice(edit.published)
+      const before = edit.publishedState
+      edit.published = edit.operations.length
+      edit.publishedState = after
+      if (operations.length) edit.publishedModel = true
+      for (const operation of operations)
+        applyOperation(operation, scope => this.resolveEditScope(scope, this.journalModel!),
+          model => { this.journalModel = model })
+      this.editJournal.publish(edit.kind, operations, before, after)
+    } else {
+      const current = this.captureEditModel()
+      if (JSON.stringify(current) !== JSON.stringify(this.journalModel)) {
+        if (edit) edit.publishedModel = true
+        this.editJournal.publish(edit?.kind || 'snapshot', [{ kind: 'snapshot',
+          scope: 'document', before: this.journalModel, after: current }],
+          edit?.publishedState || after, after, 'snapshot')
+        this.journalModel = current
+        this.scopeLabels = new WeakMap()
+      }
+      if (edit) edit.publishedState = after
+      this.opaqueEditPending = false
+    }
+  }
+
+  public commitEditTransaction() {
+    const edit = this.activeEdit
+    if (!edit || --edit.depth > 0) return
+    this.publishEditAtRender()
+    this.activeEdit = null
+    if (!edit.history || !this.options.historyMaxRecordCount) return
+    const after = this.captureEditState()
+    if (this.pendingWorkerRender) this.pendingWorkerHistory = after
+    if (edit.trusted && edit.operations.length && this.options.lab?.transactionHistory) {
+      const operations = edit.operations
+      const scope = operations[0].scope
+      this.historyManager.executeDelta({
+        kind: edit.kind, scope, from: edit.before.range.endIndex,
+        to: after.range.endIndex, time: edit.started,
+        groupable: edit.groupable && edit.before.range.startIndex === edit.before.range.endIndex &&
+          after.range.startIndex === after.range.endIndex &&
+          operations.every(operation => operation.kind === 'splice' &&
+            operation.scope === scope && ![...operation.before, ...operation.after]
+              .some(element => element.value === ZERO)),
+        bytes: JSON.stringify(operations).length * 2,
+        undo: () => this.replayEdit(operations.slice().reverse().map(inverseOperation), edit.before, 'undo'),
+        redo: () => this.replayEdit(operations, after, 'redo')
+      })
+    } else if (!edit.trusted || edit.operations.length)
+      this.historyManager.execute(this.createHistorySnapshot())
+  }
+
+  public rollbackEditTransaction() {
+    const edit = this.activeEdit
+    if (!edit) return
+    this.activeEdit = null
+    let published: EditOperation[]
+    if (edit.snapshot) {
+      this.replaceEditModel(structuredClone(edit.snapshot))
+      published = edit.publishedModel ? [{ kind: 'snapshot', scope: 'document',
+        before: this.journalModel!, after: edit.snapshot }] : []
+    } else {
+      const inverse = edit.operations.slice().reverse().map(inverseOperation)
+      for (const operation of inverse)
+        applyOperation(operation, scope => this.resolveEditScope(scope))
+      published = edit.operations.slice(0, edit.published).reverse().map(inverseOperation)
+    }
+    // Publish at the same atomic geometry commit point as undo/redo, not before it.
+    this.historyPublication = { operations: published, opaque: false,
+      maintenance: false, before: edit.publishedState, after: edit.before,
+      source: 'rollback' }
+    this.restoreEditState(edit.before)
+    this.layoutHostAdapter.clearParagraphCache()
+    this.modelRevision++
+    this.render({ isSubmitHistory: false, curIndex: edit.before.cursorIndex })
+  }
+
+  public runEditTransaction<T>(kind: string, action: () => T, groupable = true): T {
+    this.beginEditTransaction(kind, groupable)
+    try {
+      const result = action()
+      this.commitEditTransaction()
+      return result
+    } catch (error) {
+      this.rollbackEditTransaction()
+      throw error
+    }
+  }
+
+  private replayEdit(operations: EditOperation[], state: EditSelection,
+    source: 'undo' | 'redo' | 'rollback') {
+    const before = this.captureEditState()
+    for (const operation of operations)
+      applyOperation(operation, scope => this.resolveEditScope(scope),
+        model => this.replaceEditModel(model))
+    if (this.historyReplayDepth) this.historyBatchOperations.push(...operations)
+    else {
+      if (!this.historyMaintenance) this.editJournal.publish(source, operations, before, state, source)
+      if (this.journalModel)
+        for (const operation of operations)
+          applyOperation(operation, scope => this.resolveEditScope(scope, this.journalModel!),
+            model => { this.journalModel = model })
+    }
+    this.restoreEditState(state)
+    this.layoutHostAdapter.clearParagraphCache()
+    this.dirtyRangeTracker.markFullDirty()
+    this.modelRevision++
+    this.render({ isSubmitHistory: false, isSourceHistory: source !== 'rollback',
+      curIndex: state.cursorIndex })
+  }
+
+  public replayHistoryBatch(action: () => void, maintenance = false,
+    source: 'undo' | 'redo' = 'undo') {
+    const outer = !this.historyReplayDepth
+    const before = this.captureEditState()
+    if (outer) {
+      this.historyBatchOpaque = false
+      this.historyBatchOperations = []
+    }
+    this.historyReplayDepth++
+    const oldMaintenance = this.historyMaintenance
+    this.historyMaintenance ||= maintenance
+    try { action() } finally {
+      this.historyReplayDepth--
+      if (outer) {
+        this.historyPublication = {
+          operations: this.historyBatchOperations, opaque: this.historyBatchOpaque,
+          before, after: this.captureEditState(), source, maintenance
+        }
+        this.historyBatchOperations = []
+        this.historyFinalizing = true
+        const payload = this.deferredHistoryRender
+        this.deferredHistoryRender = null
+        try {
+          if (payload) this.render({ ...payload, isCompute: true,
+            isSourceHistory: !maintenance })
+          else this.publishHistoryAtRender()
+        } finally {
+          this.historyFinalizing = false
+          this.opaqueEditPending = false
+        }
+      }
+      this.historyMaintenance = oldMaintenance
+    }
+  }
+
+  private markTrackedRange(elements: IElement[], start: number,
+    count: number, inserted: number) {
+    this.trackedMutationDepth++
+    try { this.dirtyRangeTracker.markRangeDirty(elements, start, count, inserted) }
+    finally { this.trackedMutationDepth-- }
+  }
+
+  private performElementInsert(elements: IElement[], start: number, items: IElement[]) {
+    if (items.length > 4096 || items.some(element =>
+      (element.type && element.type !== ElementType.TEXT) || element.controlId ||
+      element.listId || element.titleId || element.areaId || element.trList))
+      this.promoteSnapshotEdit()
+    const scope = this.activeEdit?.trusted ? this.editScope(elements) : undefined
+    const index = Math.min(Math.max(start, 0), elements.length)
+    // Do not spread large pastes into splice's argument list.
+    for (let i = 0; i < items.length; i++) elements.splice(start + i, 0, items[i])
+    if (scope) this.recordEdit({ kind: 'splice', scope, index,
+      before: [], after: getSlimCloneElementList(items) })
+  }
+
+  private performElementSplice(elements: IElement[], index: number,
+    count: number, items: IElement[] = []) {
+    const offset = index < 0 ? Math.max(0, elements.length + index) : Math.min(index, elements.length)
+    const scope = this.activeEdit?.trusted ? this.editScope(elements) : undefined
+    const before = scope ? getSlimCloneElementList(elements.slice(offset, offset + count)) : []
+    if ([...before, ...items].some(element =>
+      (element.type && element.type !== ElementType.TEXT) || element.controlId ||
+      element.listId || element.titleId || element.areaId || element.trList))
+      this.promoteSnapshotEdit()
+    elements.splice(offset, count, ...items)
+    if (scope && (before.length || items.length)) this.recordEdit({ kind: 'splice', scope,
+      index: offset, before, after: getSlimCloneElementList(items) })
+  }
+
   public submitHistory(curIndex: number | undefined) {
     if (this.options.historyMaxRecordCount === 0) return
+    if (this.activeEdit) { this.activeEdit.history = true; return }
+    this.historyManager.execute(this.createHistorySnapshot(curIndex))
+  }
+
+  public createHistorySnapshot(curIndex = this.range.getRange().endIndex) {
     const positionContext = this.position.getPositionContext()
     const oldElementList = getSlimCloneElementList(this.elementList)
     const oldHeaderElementList = getSlimCloneElementList(
@@ -3970,7 +4901,10 @@ export class Draw {
     const pageNo = this.pageNo
     const oldPositionContext = deepClone(positionContext)
     const zone = this.zone.getZone()
-    this.historyManager.execute(() => {
+    const restore = () => {
+      if (this.historyReplayDepth) this.historyBatchOpaque = true
+      this.layoutHostAdapter.clearParagraphCache()
+      this.dirtyRangeTracker.markFullDirty()
       this.zone.setZone(zone)
       this.setPageNo(pageNo)
       this.position.setPositionContext(deepClone(oldPositionContext))
@@ -3983,17 +4917,38 @@ export class Draw {
         isSubmitHistory: false,
         isSourceHistory: true
       })
-    })
+    }
+    return Object.assign(restore, { estimatedBytes: JSON.stringify([
+      oldElementList, oldHeaderElementList, oldFooterElementList
+    ]).length * 2 })
   }
 
   public destroy() {
     if (!this.lifecycle.destroy()) return
     this.pendingFontCoverage = null
     this.coveragePublishedSignature = ''
+    this.workerGeneration++
+    this.layoutWorkerClient?.destroy()
+    this.layoutWorkerClient = null
+    if (this.workerRecoveryTimer !== null) clearTimeout(this.workerRecoveryTimer)
+    this.workerRecoveryTimer = null
+    this.cancelWorkerCommitTimer()
+    this.pendingWorkerRender = null
+    this.pendingWorkerHistory = null
+    this.derivedState.clear()
+    this.incrementalFlow.clear()
+    this.editJournal.destroy()
+    this.activeEdit = null
+    this.journalModel = null
+    this.scopeLabels = new WeakMap()
+    this.resolvedScopes = new WeakMap()
+    this.historyManager.recovery()
     this.fontDiagnostics.destroy()
     this.fontDownloadManager.destroy()
     this.fontCoverageTracker.destroy()
     this.layoutHostAdapter.destroy()
+    this.cancelPaint()
+    this.position.destroy()
     for (const event of this.guardedEvents) {
       this.container.removeEventListener(event, this.interactionGuard, true)
     }
@@ -4006,7 +4961,8 @@ export class Draw {
     this.magnifier.destroy()
     this.accessibility.destroy()
     this.ruler.dispose()
-    this.lazyRenderIntersectionObserver?.disconnect()
+    this._disconnectLazyRender()
+    this.dirtyPages.clear()
   }
 
   public clearSideEffect() {

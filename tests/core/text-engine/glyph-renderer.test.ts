@@ -79,6 +79,21 @@ function guardedContext() {
 }
 
 describe('HB glyph outline painting', () => {
+  it('reuses native Path2D ink across colors and clears its owned cache', () => {
+    const renderer = new GlyphRenderer(fm, () => true)
+    const line = layout(fm, 'AAAA').lines[0]
+    const ctx = guardedContext()
+    const replay = vi.spyOn(ctx, 'moveTo')
+    renderer.drawLine(ctx, line, 0, 30)
+    const builds = renderer.stats.builds
+    renderer.drawLine(ctx, line, 0, 30)
+    expect(renderer.stats.builds).toBe(builds)
+    expect(renderer.stats.hits).toBeGreaterThan(0)
+    expect(replay).not.toHaveBeenCalled()
+    renderer.destroy()
+    renderer.drawLine(ctx, line, 0, 30)
+    expect(renderer.stats.builds).toBeGreaterThan(builds)
+  })
   it.each(samples)(
     'paints %s using its shaped outlines and HB positions',
     (family, text) => {

@@ -186,3 +186,39 @@ export const migrationOptions: IEditorOption = {
   printPixelRatio: 1,
   lab: { incrementalCompute: false }
 }
+
+/** PERF-01 only: generated afresh, before normalization/keyboard measurement. */
+export function interactionPerformanceSamples(): MigrationSample[] {
+  const text = 'Weekend plans مرحبا بالعالم Hello 123 '
+  return [
+    ...migrationSamples(),
+    ...[100, 1000].map(count => ({
+      id: `paragraphs-${count}`,
+      data: {
+        main: Array.from({ length: count }, () =>
+          paragraph(text.repeat(2))
+        ).flat()
+      }
+    })),
+    {
+      id: 'single-long-paragraph',
+      data: { main: [{ value: text.repeat(200) }] }
+    },
+    {
+      id: 'large-table',
+      data: {
+        main: [
+          {
+            type: ElementType.TABLE,
+            value: '',
+            colgroup: [{ width: 180 }, { width: 180 }],
+            trList: Array.from({ length: 20 }, () => ({
+              height: 48,
+              tdList: [cell(paragraph(text)), cell(paragraph(text))]
+            }))
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -6,6 +6,8 @@ import { TextDirection } from '../dataset/enum/TextDirection'
 import { IElement, IElementPosition } from './Element'
 
 export interface IDrawOption {
+  /** Safe input paths only: commit layout/history now, paint next frame. */
+  isDeferredPaint?: boolean
   curIndex?: number
   isSetCursor?: boolean
   isSubmitHistory?: boolean

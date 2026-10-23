@@ -32,9 +32,9 @@ features:
   - title: 能力与边界
     details: 仅 Canvas 页面、仅 ESM 分发，公开增量排版的实际限制。
     link: /guide/features
-  - title: 发布项目文档
-    details: 合并 main 后构建 gh-pages，并通过 Pages Actions 发布同一产物。
-    link: /guide/docs-deployment
+  - title: 性能基准与收益
+    details: 查看优化前后耗时、三轮波动、持续输入与删除结果及复现方法。
+    link: /guide/benchmark
 ---
 
 当前默认且仅支持 Canvas 文档页面，SVG 页面绘制与独立 SVG 导出暂缓。本项目基于 [Hufe921/canvas-editor](https://github.com/Hufe921/canvas-editor) 独立维护，并非上游官方发行。

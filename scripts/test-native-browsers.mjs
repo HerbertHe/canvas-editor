@@ -20,6 +20,8 @@ const browser = await runtimes[browserName].launch({
     : {})
 })
 const results = []
+const errors = []
+let passed = false
 try {
   const context = await browser.newContext({
     viewport: { width: 1366, height: 720 }
@@ -31,8 +33,17 @@ try {
       }
   })
   const page = await context.newPage()
-  const errors = []
-  page.on('pageerror', error => errors.push(error.message))
+  page.on('pageerror', error => errors.push({ message: error.message, url: page.url() }))
+  async function dispose() {
+    await page.evaluate(() => {
+      window.migrationEditor?.destroy()
+      for (const name of ['nativeFlow', 'nativeTable', 'nativeObject',
+        'nativeChrome', 'nativeAuxiliary', 'nativeInteraction']) {
+        window[name]?.draw?.destroy()
+        window[name]?.editor?.destroy()
+      }
+    })
+  }
   const samples = [
     'paragraphs',
     'emr-controls',
@@ -41,10 +52,13 @@ try {
     'mixed-paper',
     'print'
   ]
-  for (const sample of samples) {
-    console.log(`${browserName} baseline: ${sample}`)
+  const profiles = (process.env.PROFILES || 'baseline').split(',')
+  assert.ok(profiles.every(p => ['baseline', 'sync', 'worker'].includes(p)))
+  for (const profile of profiles) for (const sample of samples) {
+    if (results.length) await dispose()
+    console.log(`${browserName} ${profile}: ${sample}`)
     await page.goto(
-      `${base}/canvas-editor/tests/fixtures/migration/index.html?sample=${sample}`
+      `${base}/canvas-editor/tests/fixtures/migration/index.html?sample=${sample}&profile=${profile}`
     )
     await page.waitForFunction(
       () =>
@@ -60,8 +74,8 @@ try {
     assert.ok(report.wordCount > 0)
     await page
       .locator('#editor')
-      .screenshot({ path: `${output}/${sample}.png` })
-    results.push({ sample, ...report })
+      .screenshot({ path: `${output}/${profile}-${sample}.png` })
+    results.push({ sample, profile, ...report })
   }
   for (const name of [
     'native-flow',
@@ -71,6 +85,7 @@ try {
     'native-auxiliary',
     'native-interaction'
   ]) {
+    await dispose()
     console.log(`${browserName} native: ${name}`)
     await page.goto(
       `${base}/canvas-editor/tests/fixtures/migration/${name}.html`
@@ -82,6 +97,7 @@ try {
     )
     results.push({ sample: name, status: 'passed' })
   }
+  await dispose()
   await page.goto(
     `${base}/canvas-editor/tests/fixtures/fonts/font-download-smoke.html`
   )
@@ -156,21 +172,12 @@ try {
     status: 'passed',
     requests
   })
-  await writeFile(
-    `${output}/report.json`,
-    JSON.stringify(
-      {
-        browser: browserName,
-        version: browser.version(),
-        results
-      },
-      null,
-      2
-    )
-  )
+  passed = true
   console.log(
     `${browserName} ${browser.version()}: ${results.length} scenarios passed`
   )
 } finally {
+  await writeFile(`${output}/report.json`, JSON.stringify({ passed,
+    browser: browserName, version: browser.version(), results, errors }, null, 2))
   await browser.close()
 }

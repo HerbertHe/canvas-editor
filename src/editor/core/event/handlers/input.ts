@@ -115,6 +115,8 @@ export function input(data: string, host: CanvasEvent) {
   if (~curIndex) {
     rangeManager.setRange(curIndex, curIndex)
     draw.render({
+      isDeferredPaint: !!(draw.getOptions().lab?.deferredPaint ||
+        draw.getOptions().lab?.layoutWorker),
       curIndex,
       isSubmitHistory: !isComposing
     })
@@ -136,11 +138,9 @@ export function input(data: string, host: CanvasEvent) {
 export function removeComposingInput(host: CanvasEvent) {
   if (!host.compositionInfo) return
   const { elementList, startIndex, endIndex } = host.compositionInfo
-  elementList.splice(startIndex + 1, endIndex - startIndex)
   const draw = host.getDraw()
-  draw
-    .getDirtyRangeTracker()
-    .markRangeDirty(elementList, startIndex + 1, endIndex - startIndex, 0)
+  draw.spliceElementList(elementList, startIndex + 1, endIndex - startIndex,
+    undefined, { isIgnoreDeletedRule: true })
   const rangeManager = draw.getRange()
   rangeManager.setRange(startIndex, startIndex)
   host.compositionInfo = null

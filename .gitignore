@@ -16,3 +16,18 @@ cypress/results/
 
 # Generated online editor bundled into the documentation site
 /docs/public/playground/
+
+# Keep only the initial and latest input performance evidence
+/docs/guide/performance-baselines/*.json
+!/docs/guide/performance-baselines/perf01-2026-10-22.json
+!/docs/guide/performance-baselines/perf01-pressure-2026-10-22.json
+!/docs/guide/performance-baselines/perf21-manifest-2026-10-23.json
+!/docs/guide/performance-baselines/perf21-sync-2026-10-23.json
+!/docs/guide/performance-baselines/perf21-worker-long-pressure-2026-10-23.json
+
+# Final position/query and Worker recovery inputs
+!/docs/guide/performance-baselines/perf-position-worker-sync-2026-10-23.json
+!/docs/guide/performance-baselines/perf-position-worker-long-2026-10-23.json
+!/docs/guide/performance-baselines/perf-position-worker-1000-2026-10-23.json
+!/docs/guide/performance-baselines/perf-position-worker-transfer-2026-10-23.json
+!/docs/guide/performance-baselines/perf-position-worker-uninstrumented-2026-10-23.json

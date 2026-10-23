@@ -1407,8 +1407,15 @@ window.onload = async function () {
     })
   }
 
+  let catalogRequest = 0
+  let lastCatalogSignature = ''
   async function updateCatalog() {
+    const request = ++catalogRequest
     const catalog = await instance.command.getCatalog()
+    if (request !== catalogRequest) return
+    const signature = JSON.stringify(catalog)
+    if (signature === lastCatalogSignature) return
+    lastCatalogSignature = signature
     const catalogMainDom =
       document.querySelector<HTMLDivElement>('.catalog__main')!
     catalogMainDom.innerHTML = ''
@@ -2231,9 +2238,12 @@ window.onload = async function () {
     activeMode.classList.add('active')
   }
 
+  let contentRequest = 0
   const handleContentChange = async function () {
+    const request = ++contentRequest
     // 字数
     const wordCount = await instance.command.getWordCount()
+    if (request !== contentRequest) return
     document.querySelector<HTMLSpanElement>('.word-count')!.innerText = `${
       wordCount || 0
     }`

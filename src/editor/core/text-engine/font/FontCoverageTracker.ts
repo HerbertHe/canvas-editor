@@ -22,6 +22,21 @@ export interface FontCoverageInput {
   positions: FontCoverageLocation[]
 }
 
+export interface FontCoverageContribution {
+  id: string
+  revision: string
+  base: number
+  inputs: FontCoverageInput[]
+}
+interface ContributionState {
+  revision: string
+  base: number
+  tracker: FontCoverageTracker
+  report: FontCoverageReport
+  contexts: Map<string, string[]>
+  unique: Map<string, Set<string>>
+}
+
 export function coverageIssueId(
   family: string,
   style: Pick<TextStyleProps, 'bold' | 'italic'>,
@@ -51,6 +66,13 @@ export class FontCoverageTracker {
   private inputSignature = ''
   private generation = 0
   private destroyed = false
+  private uniqueItems = new Map<string, Set<string>>()
+  private contributions = new Map<string, ContributionState>()
+  private references = new Map<string, {
+    members: number; occurrences: number; unique: Map<string, number>
+  }>()
+  readonly incrementalStats = { updated: 0, reused: 0, removed: 0 }
+
 
   constructor(private onChange?: (report: FontCoverageReport) => void) {}
 
@@ -74,6 +96,11 @@ export class FontCoverageTracker {
     autoDownloadFonts = false
   ): boolean {
     if (this.destroyed || token !== this.generation) return false
+    if (this.contributions.size) {
+      for (const state of this.contributions.values()) state.tracker.destroy()
+      this.contributions.clear()
+      this.references.clear()
+    }
     const inputSignature = JSON.stringify(inputs)
     const failures = manager.getFailures()
     const failuresSignature = JSON.stringify(failures)
@@ -261,7 +288,117 @@ export class FontCoverageTracker {
     this.contexts = new Map(
       [...contexts].map(([id, texts]) => [id, [...texts]])
     )
+    this.uniqueItems = uniqueItems
     this.report = report
+    if (signature === this.signature) return false
+    this.signature = signature
+    this.onChange?.(this.getReport())
+    return true
+  }
+
+  updateContributions(
+    token: number,
+    inputs: FontCoverageContribution[],
+    manager: FontManager,
+    autoDownloadFonts = false
+  ) {
+    if (this.destroyed || token !== this.generation) return false
+    const fontKey = JSON.stringify([manager.getRevision(), manager.getFailures(), autoDownloadFonts])
+    const desired = [...inputs, { id: '__font_failures__', revision: fontKey,
+      base: 0, inputs: [] }]
+    const adjust = (state: ContributionState, delta: 1 | -1) => {
+      for (const issue of state.report.issues) {
+        const ref = this.references.get(issue.id) || {
+          members: 0, occurrences: 0, unique: new Map<string, number>()
+        }
+        ref.members += delta
+        ref.occurrences += delta * issue.occurrenceCount
+        for (const text of state.unique.get(issue.id) || []) {
+          const count = (ref.unique.get(text) || 0) + delta
+          if (count) ref.unique.set(text, count)
+          else ref.unique.delete(text)
+        }
+        if (ref.members) this.references.set(issue.id, ref)
+        else this.references.delete(issue.id)
+      }
+    }
+    const ids = new Set(desired.map(input => input.id))
+    for (const [id, state] of this.contributions)
+      if (!ids.has(id)) {
+        adjust(state, -1)
+        state.tracker.destroy()
+        this.contributions.delete(id)
+        this.incrementalStats.removed++
+      }
+    for (const input of desired) {
+      const revision = input.revision + fontKey
+      let state = this.contributions.get(input.id)
+      if (state?.revision === revision) {
+        state.base = input.base
+        this.incrementalStats.reused++
+        continue
+      }
+      if (state) adjust(state, -1)
+      const tracker = state?.tracker || new FontCoverageTracker()
+      tracker.update(tracker.begin(), input.inputs, manager, autoDownloadFonts)
+      state = { revision, base: input.base, tracker, report: tracker.getReport(),
+        contexts: tracker.contexts, unique: tracker.uniqueItems }
+      this.contributions.set(input.id, state)
+      adjust(state, 1)
+      this.incrementalStats.updated++
+    }
+    const issues = new Map<string, FontCoverageIssue>()
+    const contexts = new Map<string, Set<string>>()
+    for (const input of desired) {
+      const state = this.contributions.get(input.id)!
+      for (const item of state.report.issues) {
+        let issue = issues.get(item.id)
+        if (!issue) {
+          const ref = this.references.get(item.id)!
+          issue = { ...structuredClone(item), occurrenceCount: ref.occurrences,
+            uniqueCount: ref.unique.size, attemptedFaces: [], missingCharacters: [],
+            missingSequences: [], samples: [], codePoints: [], locations: [] }
+          issues.set(item.id, issue)
+        }
+        issue.attemptedFaces.push(...item.attemptedFaces)
+        issue.missingCharacters.push(...item.missingCharacters)
+        issue.missingSequences.push(...item.missingSequences)
+        issue.codePoints.push(...item.codePoints)
+        for (const sample of item.samples)
+          if (issue.samples.length < 16 && !issue.samples.includes(sample)) issue.samples.push(sample)
+        for (const location of item.locations) {
+          const position = { ...location,
+            start: location.start + state.base, end: location.end + state.base }
+          const previous = issue.locations.at(-1)
+          if (previous && previous.nodeId === position.nodeId &&
+            previous.scope === position.scope && previous.textEnd === position.textStart)
+            previous.textEnd = position.textEnd
+          else if (!previous || JSON.stringify(previous) !== JSON.stringify(position))
+            issue.locations.push(position)
+        }
+        const context = contexts.get(item.id) || new Set<string>()
+        for (const text of state.contexts.get(item.id) || []) context.add(text)
+        contexts.set(item.id, context)
+      }
+    }
+    for (const issue of issues.values()) {
+      issue.attemptedFaces = [...new Set(issue.attemptedFaces)].sort()
+      issue.missingCharacters = [...new Set(issue.missingCharacters)].sort()
+      issue.missingSequences = [...new Set(issue.missingSequences)].sort()
+      issue.codePoints = [...new Set(issue.codePoints)].sort()
+    }
+    const inputSignature = JSON.stringify(desired.filter(input => input.inputs.length)
+      .map(input => [input.id, this.contributions.get(input.id)!.report.documentRevision, input.base]))
+    const report: FontCoverageReport = {
+      documentRevision: this.report.documentRevision + (inputSignature !== this.inputSignature ? 1 : 0),
+      fontRevision: manager.getRevision(), autoDownloadFonts,
+      issues: [...issues.values()].sort((a, b) => a.id.localeCompare(b.id))
+    }
+    if (this.destroyed || token !== this.generation) return false
+    this.contexts = new Map([...contexts].map(([id, texts]) => [id, [...texts]]))
+    this.inputSignature = inputSignature
+    this.report = report
+    const signature = JSON.stringify(report)
     if (signature === this.signature) return false
     this.signature = signature
     this.onChange?.(this.getReport())
@@ -273,6 +410,10 @@ export class FontCoverageTracker {
     this.generation++
     this.report.issues = []
     this.contexts.clear()
+    for (const state of this.contributions.values()) state.tracker.destroy()
+    this.contributions.clear()
+    this.references.clear()
+    this.uniqueItems.clear()
     this.signature = ''
     this.inputSignature = ''
     this.failuresSignature = ''

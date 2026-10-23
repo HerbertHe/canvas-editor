@@ -165,6 +165,8 @@ Basic Bunny fonts do not guarantee all Unicode, regional forms, emoji or styles.
 
 These are internal limits, not stable APIs. There is no promise of convergence within 1–3 lines. T23 stress runs measured full/incremental at about 348/383 ms for many paragraphs and 447/803 ms for one long paragraph. Those tests force all pages to paint and do not measure normal visible-page production typing latency. See [acceptance details](../../guide/native-release-acceptance.md).
 
+Current input optimizations are configured separately through `lab.performanceProfile`. The `sync` profile reuses bounded flow and unchanged-line position/query geometry; `worker` adds experimental asynchronous text kernels. Deletion commits synchronous geometry and coalesces paint. Global metadata, complex layouts and dirty long paragraphs retain full costs. See [configuration](lab.md), [current benchmark](benchmark.md) and [architecture](architecture.md). The T23 figures above are historical migration measurements with a different workload.
+
 ## 8. Image export and printing
 
 `command.getImage()` prepares temporary drawing state/pixel ratio, paints target pages, waits for the image observer, returns PNG data URLs, then restores state. Printing creates a temporary editor, awaits ready and uses page images plus an iframe to invoke browser printing.
@@ -176,4 +178,4 @@ This is neither standalone SVG export nor native vector PDF. HTML/iframe blocks,
 - [Architecture](./architecture.md): responsibilities and source locations.
 - [Quick start](./start.md): initialization, fonts, persistence and cleanup.
 - [Final acceptance](../../guide/native-release-acceptance.md): T23/T24 browser/performance evidence.
-- [Engineering records](./engineering-records.md): staged designs and deferred SVG plans.
+- [Testing and acceptance](./engineering-records.md): reproducibility, release gates and retained designs.

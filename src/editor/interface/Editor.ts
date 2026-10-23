@@ -44,8 +44,29 @@ import {
 import { IEditorFontFace } from './TextEngine'
 import { IHintOption } from './Hint'
 import type { ISpellcheckOption } from './Spellcheck'
+import type { PerformanceProfile } from '../utils/performanceProfile'
 
 export interface ILabOption {
+  /** Opt-in constructor preset. Explicit switches override it. Default baseline. */
+  performanceProfile?: PerformanceProfile
+  glyphPathCache?: boolean
+  shapingRunCache?: boolean
+  incrementalFlow?: boolean
+  dirtyPagePaint?: boolean
+  layoutWorker?: boolean
+  workerTransfer?: boolean
+  /** Experimental tracked edits, paragraph identities and local scans. */
+  incrementalEditing?: boolean
+  /** Requires incrementalEditing; reversible, grouped interaction history. */
+  transactionHistory?: boolean
+  /** Requires incrementalEditing; reuse unchanged coverage contributions. */
+  incrementalCoverage?: boolean
+  /** Retained history budget; at least one baseline checkpoint is retained. */
+  historyByteBudget?: number
+  /** Estimated retained paragraph cache bytes, shared by both cache paths. */
+  paragraphCacheByteBudget?: number
+  /** Coalesce safe input paints after synchronous layout. Default: false. */
+  deferredPaint?: boolean
   /**
    * 行级增量行计算：编辑时仅从受影响行断点续算，区间外行复用。
    * 复杂结构（表格/控件/浮动图/分栏/minWidth 控件占位等）自动退化全量。

@@ -61,8 +61,7 @@ editor.retryFontDownloads() // ready 后使用；关闭状态下不会发起自�
 
 关闭时不自动请求 Bunny 资源或从共享缓存注册字体，仍可使用显式 URL 和手动注册；
 已有字体保留。失败、离线、关闭或无适用字体时，内建页面状态区域及去重的控制台
-告警提示缺失类别。自动下载实现与验证记录见[字体下载](./font-download.md)及
-[Bunny 适配](./bunny-font-provider.md)。
+告警提示缺失类别。下载与覆盖的执行顺序见[渲染管线](rendering-pipeline.md#_6-缺字与自动下载的闭环)，回归入口见[测试与验收](engineering-records.md)。
 
 ## 手动补齐字体
 

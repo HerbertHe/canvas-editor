@@ -39,3 +39,5 @@ Serve the full output over HTTP(S). Check chunk, worker, WASM and font paths, CO
 ## Where should I report issues?
 
 Use [HerbertHe/canvas-editor issues](https://github.com/HerbertHe/canvas-editor/issues) with browser, fonts, configuration, a minimal document and reproduction steps. Coverage reports can contain document characters/locations; review them before sharing. Verify upstream plugins individually, and do not assume upstream maintainers support this fork.
+
+Current input optimizations use the separate `lab.performanceProfile`; see [configuration](lab.md) and [measured benchmark](benchmark.md).

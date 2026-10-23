@@ -39,3 +39,5 @@ HarfBuzz 需要可读取的字体字节。只设置 `font`、CSS 或系统字体
 ## 上游插件和问题应该去哪里反馈？
 
 本 fork 的问题反馈到 [HerbertHe/canvas-editor](https://github.com/HerbertHe/canvas-editor/issues)，附浏览器、字体来源、开关、最小文档和复现步骤。提交诊断报告前检查其中的文档字符与位置信息。上游插件需单独验证兼容，不应将本 fork 的问题默认交给上游维护者。
+
+最新输入性能优化使用独立的 `lab.performanceProfile`；配置与边界见[实验特性](lab.md)，实测前后对比见 [Benchmark](benchmark.md)。

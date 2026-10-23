@@ -185,6 +185,8 @@ export class CanvasEvent {
   }
 
   public mousedown(evt: MouseEvent) {
+    if (this.draw.getOptions?.().lab?.layoutWorker) this.draw.flushGeometry()
+    this.draw.getHistoryManager?.()?.closeGroup?.()
     mousedown(evt, this)
   }
 
@@ -204,7 +206,18 @@ export class CanvasEvent {
   }
 
   public keydown(evt: KeyboardEvent) {
-    keydown(evt, this)
+    const plainTyping = /^[\x20-\x7e]$/.test(evt.key) &&
+      !evt.ctrlKey && !evt.metaKey && !evt.altKey && !this.isComposing
+    if (this.draw.getOptions?.().lab?.layoutWorker &&
+      (!plainTyping || !this.draw.hasPendingWorkerGeometry())) this.draw.flushGeometry()
+    const kind = evt.key === 'Backspace' ? 'backspace'
+      : evt.key === 'Delete' ? 'delete' : null
+    if (kind && this.draw.runEditTransaction)
+      this.draw.runEditTransaction(kind, () => keydown(evt, this))
+    else {
+      if (!plainTyping) this.draw.getHistoryManager?.()?.closeGroup?.()
+      keydown(evt, this)
+    }
   }
 
   public dblclick(evt: MouseEvent) {
@@ -216,7 +229,13 @@ export class CanvasEvent {
   }
 
   public input(data: string) {
-    input(data, this)
+    if (this.draw.getOptions?.().lab?.layoutWorker &&
+      (!/^[\x20-\x7e]$/.test(data) || this.isComposing ||
+        !this.draw.hasPendingWorkerGeometry())) this.draw.flushGeometry()
+    if (this.draw.runEditTransaction)
+      this.draw.runEditTransaction(Array.from(data).length === 1 ? 'input' : 'paste',
+        () => input(data, this), !this.isComposing && Array.from(data).length === 1)
+    else input(data, this)
   }
 
   public async cut() {
@@ -228,11 +247,21 @@ export class CanvasEvent {
   }
 
   public compositionstart() {
+    if (this.draw.getOptions?.().lab?.layoutWorker) this.draw.flushGeometry()
+    this.draw.getHistoryManager?.()?.closeGroup?.()
+    this.draw.beginEditTransaction?.('composition', false)
     composition.compositionstart(this)
   }
 
   public compositionend(evt: CompositionEvent) {
-    composition.compositionend(this, evt)
+    try {
+      composition.compositionend(this, evt)
+      if (!evt.data) this.draw.rollbackEditTransaction?.()
+      else this.draw.commitEditTransaction?.()
+    } catch (error) {
+      this.draw.rollbackEditTransaction?.()
+      throw error
+    }
   }
 
   public drop(evt: DragEvent) {

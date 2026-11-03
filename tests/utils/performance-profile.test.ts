@@ -10,16 +10,24 @@ describe('performance rollout profiles', () => {
       expect(options.workerTransfer).toBe(false)
       expect(options.layoutWorker).toBe(profile === 'worker')
       expect(options.incrementalEditing).toBe(profile !== 'baseline')
+      expect(options.incrementalCommit).toBe(profile !== 'baseline')
+      expect(options.imeWindowPreview).toBe(profile !== 'baseline')
+      expect(options.imeTableLayout).toBe(profile !== 'baseline')
+      expect(options.imeWorkerPreview).toBe(false)
+      expect(options.imePreview).toBe(false)
       expect(options.glyphPathCache).toBe(profile !== 'baseline')
     }
   })
 
   it('honors explicit rollback switches and rejects unknown profiles', () => {
     const lab = mergeOption({ lab: { performanceProfile: 'worker',
-      layoutWorker: false, glyphPathCache: false } }).lab
+      layoutWorker: false, glyphPathCache: false, incrementalCommit: false,
+      imeWindowPreview: false } }).lab
     expect(lab.layoutWorker).toBe(false)
     expect(lab.glyphPathCache).toBe(false)
     expect(lab.incrementalFlow).toBe(true)
+    expect(lab.incrementalCommit).toBe(false)
+    expect(lab.imeWindowPreview).toBe(false)
     expect(() => mergeOption({ lab: { performanceProfile: 'typo' as any } }))
       .toThrow('Unknown lab.performanceProfile')
   })

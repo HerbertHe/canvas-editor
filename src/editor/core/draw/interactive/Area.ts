@@ -183,7 +183,7 @@ export class Area {
   public compute() {
     this.areaInfoMap.clear()
     const elementList = this.draw.getOriginalMainElementList()
-    const positionList = this.position.getOriginalMainPositionList()
+    const positionList = this.position.getOriginalMainPositionList(true)
     this.computeAreaInfo(elementList, positionList, elementList)
   }
 
@@ -197,7 +197,8 @@ export class Area {
     for (let e = 0; e < elementList.length; e++) {
       const element = elementList[e]
       const areaId = element.areaId
-      const position = positionList[e]
+      const position = (areaId && areaId !== inheritedAreaId) ||
+        element.type === ElementType.TABLE ? positionList[e] : undefined
       if (areaId && areaId !== inheritedAreaId) {
         const areaInfo = this.areaInfoMap.get(areaId)
         if (!areaInfo) {
@@ -294,7 +295,7 @@ export class Area {
         // 区域内部最前
         if (element.areaId !== areaId) continue
       }
-      const positionList = this.position.getOriginalMainPositionList()
+      const positionList = this.position.getOriginalMainPositionList(true)
       return {
         range: {
           startIndex: e,

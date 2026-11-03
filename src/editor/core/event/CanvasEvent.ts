@@ -12,7 +12,7 @@ import { mouseup } from './handlers/mouseup'
 import { mouseleave } from './handlers/mouseleave'
 import { mousemove } from './handlers/mousemove'
 import { keydown } from './handlers/keydown'
-import { input } from './handlers/input'
+import { input, removeComposingInput } from './handlers/input'
 import { cut } from './handlers/cut'
 import { copy } from './handlers/copy'
 import { drop } from './handlers/drop'
@@ -21,6 +21,7 @@ import composition from './handlers/composition'
 import drag from './handlers/drag'
 import { isIOS } from '../../utils/ua'
 import { ICopyOption } from '../../interface/Event'
+import { CompositionSession } from './CompositionSession'
 
 export interface ICompositionInfo {
   elementList: IElement[]
@@ -48,6 +49,24 @@ export class CanvasEvent {
   private pageList: HTMLCanvasElement[]
   private range: RangeManager
   private position: Position
+  private destroyed = false
+  private compositionSession: CompositionSession | null = null
+  private compositionOriginal: { range: IRange;
+    defaultStyle: IRangeElementStyle | null } | null = null
+  private compositionRollback: (() => void) | null = null
+  private compositionGeneration = 0
+  private discardCompositionTail = false
+  private finalInput: { data: string; generation: number } | null = null
+  private finalInputTimer: ReturnType<typeof setTimeout> | null = null
+
+  public getCompositionDiagnostics() {
+    const session = this.compositionSession
+    return { active: this.isComposing, generation: this.compositionGeneration,
+      sequence: session?.sequence || 0, local: !!session?.local,
+      previewWork: this.draw.getCompositionPreviewWork(),
+      previewWorker: this.draw.getCompositionWorkerStats(),
+      ...session?.stats }
+  }
 
   constructor(draw: Draw) {
     this.draw = draw
@@ -166,6 +185,7 @@ export class CanvasEvent {
   }
 
   public selectAll() {
+    this.finishComposition()
     // 光标在表格内时选择整个表格
     if (this.position.getPositionContext().isTable) {
       this.draw.getTableOperate().tableSelectAll()
@@ -185,6 +205,7 @@ export class CanvasEvent {
   }
 
   public mousedown(evt: MouseEvent) {
+    this.finishComposition()
     if (this.draw.getOptions?.().lab?.layoutWorker) this.draw.flushGeometry()
     this.draw.getHistoryManager?.()?.closeGroup?.()
     mousedown(evt, this)
@@ -206,6 +227,10 @@ export class CanvasEvent {
   }
 
   public keydown(evt: KeyboardEvent) {
+    if (this.destroyed) return
+    if (this.isComposing || evt.isComposing || evt.keyCode === 229) return
+    this.clearFinalInput()
+    this.discardCompositionTail = false
     const plainTyping = /^[\x20-\x7e]$/.test(evt.key) &&
       !evt.ctrlKey && !evt.metaKey && !evt.altKey && !this.isComposing
     if (this.draw.getOptions?.().lab?.layoutWorker &&
@@ -228,7 +253,20 @@ export class CanvasEvent {
     click.threeClick(this)
   }
 
-  public input(data: string) {
+  public input(data: string, event?: InputEvent) {
+    if (this.destroyed || (event?.isComposing && !this.isComposing)) return
+    if (event && this.discardCompositionTail) return
+    if (event && this.finalInput && !this.isComposing &&
+      this.finalInput.generation === this.compositionGeneration &&
+      this.finalInput.data === data) {
+      this.finalInput = null
+      return
+    }
+    if (this.isComposing && this.compositionSession) {
+      this.compositionSession.update(data, !!this.draw.getOptions().lab.imePreview)
+      return
+    }
+    if (!data) return
     if (this.draw.getOptions?.().lab?.layoutWorker &&
       (!/^[\x20-\x7e]$/.test(data) || this.isComposing ||
         !this.draw.hasPendingWorkerGeometry())) this.draw.flushGeometry()
@@ -239,32 +277,168 @@ export class CanvasEvent {
   }
 
   public async cut() {
+    this.finishComposition()
     await cut(this)
   }
 
   public async copy(options?: ICopyOption) {
+    this.finishComposition()
     await copy(this, options)
   }
 
   public compositionstart() {
+    if (this.destroyed) return
+    if (this.draw.isReadonly() || this.draw.isDisabled()) return
+    this.finishComposition()
+    this.discardCompositionTail = false
+    this.clearFinalInput()
     if (this.draw.getOptions?.().lab?.layoutWorker) this.draw.flushGeometry()
     this.draw.getHistoryManager?.()?.closeGroup?.()
     this.draw.beginEditTransaction?.('composition', false)
     composition.compositionstart(this)
+    this.compositionGeneration++
+    this.compositionRollback = null
+    const range = structuredClone(this.range.getRange())
+    this.compositionOriginal = { range,
+      defaultStyle: structuredClone(this.range.getDefaultStyle()) }
+    this.compositionSession = new CompositionSession((value, local) => {
+      const session = this.compositionSession!
+      const preview = local && this.draw.getOptions().lab.imePreview &&
+        this.draw.previewComposition(value, range.startIndex, range.endIndex,
+          { generation: this.compositionGeneration, sequence: session.sequence })
+      if (preview === 'pending') return
+      if (preview) {
+        this.draw.updateCompositionCoverage(value)
+        this.draw.getAccessibility().input(value)
+        session.stats.previews++
+        return
+      }
+      session.local = false
+      session.stats.fallbacks++
+      this.draw.clearCompositionPreview()
+      this.compositionRollback ||= this.draw.createCompositionRollback()
+      if (value) {
+        input(value, this)
+      }
+      else {
+        removeComposingInput(this)
+        this.draw.render({ isSubmitHistory: false, curIndex: this.range.getRange().endIndex })
+      }
+      if (this.compositionSession === session)
+        this.draw.updateCompositionCoverage(value)
+    })
   }
 
-  public compositionend(evt: CompositionEvent) {
-    try {
-      composition.compositionend(this, evt)
-      if (!evt.data) this.draw.rollbackEditTransaction?.()
-      else this.draw.commitEditTransaction?.()
-    } catch (error) {
-      this.draw.rollbackEditTransaction?.()
-      throw error
+  public acceptWorkerComposition(generation: number, sequence: number,
+    value: string, apply: () => boolean) {
+    const session = this.compositionSession
+    if (!this.isComposing || generation !== this.compositionGeneration ||
+      !session?.local || session.sequence !== sequence || session.value !== value)
+      return 'stale' as const
+    if (!apply()) return 'fallback' as const
+    session.stats.previews++
+    this.draw.updateCompositionCoverage(value)
+    this.draw.getAccessibility().input(value)
+    return 'committed' as const
+  }
+
+  public compositionupdate(_evt: CompositionEvent) {
+    void _evt
+    // compositionupdate can precede textarea/input updates. Input is authoritative.
+  }
+
+  public flushComposition(materialize = true) {
+    this.compositionSession?.flush(materialize)
+  }
+
+  public finishComposition() {
+    if (this.isComposing) {
+      this.discardCompositionTail = true
+      this.compositionend(new CompositionEvent('compositionend', {
+        data: this.compositionSession?.value || ''
+      }))
     }
   }
 
+  public compositionend(evt: CompositionEvent) {
+    if (this.destroyed) return
+    if (!this.isComposing) {
+      if (this.discardCompositionTail) {
+        this.discardCompositionTail = false
+        this.rememberFinalInput(evt.data)
+      }
+      return
+    }
+    const original = this.compositionOriginal
+    this.compositionSession?.close()
+    this.compositionSession = null
+    this.draw.clearCompositionPreview()
+    this.isComposing = false
+    this.draw.finalizeComposition(() => {
+      const rollback = () => {
+        this.compositionInfo = null
+        let restored = false
+        if (this.compositionRollback) {
+          this.compositionRollback()
+          restored = true
+        } else restored = this.draw.rollbackEditTransaction()
+        if (!restored) {
+          if (original) this.range.replaceRange(original.range)
+          this.draw.render({ isSubmitHistory: false,
+            curIndex: this.range.getRange().endIndex })
+        }
+        this.range.setDefaultStyle(null)
+        if (original?.defaultStyle) this.range.setDefaultStyle(original.defaultStyle)
+      }
+      try {
+        if (!evt.data) rollback()
+        else {
+          this.compositionRollback ||= this.draw.createCompositionRollback()
+          input(evt.data, this)
+          this.draw.commitEditTransaction?.()
+        }
+      } catch (error) {
+        rollback()
+        throw error
+      } finally {
+        this.compositionOriginal = null
+        this.compositionRollback = null
+        this.draw.getCursor().clearAgentDomValue()
+        this.rememberFinalInput(evt.data)
+      }
+    })
+  }
+
+  private clearFinalInput() {
+    if (this.finalInputTimer !== null) clearTimeout(this.finalInputTimer)
+    this.finalInputTimer = null
+    this.finalInput = null
+  }
+
+  private rememberFinalInput(data: string) {
+    this.clearFinalInput()
+    this.finalInput = { data, generation: this.compositionGeneration }
+    this.finalInputTimer = setTimeout(() => {
+      this.clearFinalInput()
+      // A forced end still belongs to the old native session. Only a native
+      // end, a new compositionstart or a new keydown can release its tail.
+    }, 50)
+  }
+
+  public destroy() {
+    if (this.destroyed) return
+    this.destroyed = true
+    this.compositionSession?.close()
+    this.compositionSession = null
+    this.compositionOriginal = null
+    this.compositionRollback = null
+    this.isComposing = false
+    this.compositionInfo = null
+    this.clearFinalInput()
+  }
+
   public drop(evt: DragEvent) {
+    this.finishComposition()
     drop(evt, this)
   }
 

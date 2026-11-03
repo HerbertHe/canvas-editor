@@ -49,9 +49,19 @@ import type { PerformanceProfile } from '../utils/performanceProfile'
 export interface ILabOption {
   /** Opt-in constructor preset. Explicit switches override it. Default baseline. */
   performanceProfile?: PerformanceProfile
+  /** Experimental frame-coalesced IME with conservative local preview. */
+  imePreview?: boolean
+  /** Validate a bounded row window for long-paragraph IME previews. */
+  imeWindowPreview?: boolean
+  /** Reuse unchanged text cells and unchanged-height table geometry. */
+  imeTableLayout?: boolean
+  /** Explicit experimental asynchronous IME preview; never enabled by presets. */
+  imeWorkerPreview?: boolean
   glyphPathCache?: boolean
   shapingRunCache?: boolean
   incrementalFlow?: boolean
+  /** Batch converged flow and lazily project position blocks. */
+  incrementalCommit?: boolean
   dirtyPagePaint?: boolean
   layoutWorker?: boolean
   workerTransfer?: boolean

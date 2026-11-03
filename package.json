@@ -58,6 +58,15 @@
     "test:migration:audit": "node scripts/audit-native-release.mjs",
     "test:migration:baseline": "node scripts/serve-native-baseline.mjs",
     "test:performance:acceptance": "node scripts/test-performance-acceptance.mjs",
+    "test:performance:ime": "node scripts/test-ime-performance.mjs",
+    "test:performance:ime:pixels": "node scripts/test-ime-preview.mjs",
+    "test:performance:ime:anchors": "node scripts/test-ime-anchor.mjs",
+    "test:performance:ime:commit": "node scripts/test-ime-commit.mjs",
+    "test:performance:ime:flow": "node scripts/test-ime-flow.mjs",
+    "test:performance:ime:long": "node scripts/test-ime-long.mjs",
+    "test:performance:ime:table-worker": "node scripts/test-ime-table-worker.mjs",
+    "test:performance:ime:table-worker:anchors": "node scripts/test-ime-table-worker-anchors.mjs",
+    "test:performance:ime:release": "node scripts/test-ime-release.mjs",
     "docs:check": "node scripts/check-docs-diagrams.mjs"
   },
   "devDependencies": {

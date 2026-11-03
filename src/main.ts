@@ -27,6 +27,7 @@ import { Dialog } from './components/dialog/Dialog'
 import { formatPrismToken } from './utils/prism'
 import { Signature } from './components/signature/Signature'
 import { debounce, nextTick, scrollIntoView } from './utils'
+import { demoPerformance } from './utils/demoPerformance'
 
 window.onload = async function () {
   const isApple =
@@ -47,7 +48,7 @@ window.onload = async function () {
         main: <IElement[]>data,
         footer: <IElement[]>footer
       },
-      options
+      { ...options, lab: demoPerformance(location.search, options.lab) }
     )
   } catch (error) {
     startupStatus.textContent = '编辑器初始化失败，请刷新页面重试。'

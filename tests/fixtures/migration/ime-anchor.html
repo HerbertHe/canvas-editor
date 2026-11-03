@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="UTF-8" />
+  <title>IME anchor QA</title>
+  <style>
+    body { margin: 24px; background: #eee }
+    #outer { margin: 30px 0 0 70px; width: 440px; height: 300px; overflow: auto; border: 3px solid #888 }
+    #inner { margin: 40px 0 0 60px; width: 700px; height: 500px; overflow: auto; border: 2px solid #aaa }
+    #editor { margin-left: 45px; position: relative }
+  </style>
+  <p>手工验收：点击正文，用系统输入法连续输入；滚动、缩放后观察候选窗。
+    控制台 window.imeAnchorQA 提供 setup、preedit、scale、snapshot、dispose。
+    自动回放仅验证 DOM 几何，不能证明系统候选窗位置正确。</p>
+  <button id="outside">外部焦点目标</button>
+  <div id="outer"><div id="inner"><div id="editor"></div></div></div>
+  <script type="module" src="./ime-anchor.ts"></script>
+</html>

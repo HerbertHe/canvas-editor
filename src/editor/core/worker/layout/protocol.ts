@@ -10,6 +10,7 @@ export interface LayoutVersion {
   fontRevision: number
   constraintsRevision: number
 }
+export interface CompositionVersion { generation: number; sequence: number }
 export type LayoutRequest = LayoutVersion & ({
   type: 'init'
   model: EditDocument
@@ -26,10 +27,15 @@ export type LayoutRequest = LayoutVersion & ({
   inputs: NativeParagraphInput[]
   simpleFlow?: boolean
   transferResults?: boolean
+} | {
+  type: 'preview'
+  input: NativeParagraphInput
+  composition: CompositionVersion
 } | { type: 'recycle'; buffers: ArrayBuffer[] } | { type: 'inspect' | 'dispose' })
 
 export interface LayoutResponse extends LayoutVersion {
-  type: 'ack' | 'layout' | 'mirror' | 'error'
+  type: 'ack' | 'layout' | 'preview' | 'mirror' | 'error'
+  composition?: CompositionVersion
   layouts?: NativeParagraphLayout[]
   inputs?: NativeParagraphInput[]
   packed?: PackedLayout[]

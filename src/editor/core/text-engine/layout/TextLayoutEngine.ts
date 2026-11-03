@@ -3,6 +3,7 @@ import { BidiResolver } from '../bidi/BidiResolver'
 import { ITextShaper } from '../shape/ITextShaper'
 import { TextScript } from '../../../dataset/enum/TextScript'
 import { containsShapingScript, detectScript } from '../utils/scriptFont'
+import type { LayoutWork } from './LayoutWork'
 import {
   LayoutLine,
   LayoutParagraphInput,
@@ -27,10 +28,10 @@ export class TextLayoutEngine {
    * Layout a paragraph. For justified Arabic lines with leftover space, insert
    * kashida (TATWEEL) and re-layout once so the strokes are part of the text.
    */
-  layoutParagraph(input: LayoutParagraphInput): LayoutResult {
-    const natural = this.layoutPass(input)
+  layoutParagraph(input: LayoutParagraphInput, work?: LayoutWork): LayoutResult {
+    const natural = this.layoutPass(input, work)
     const kashidaInput = this.buildKashidaInput(input, natural)
-    const result = kashidaInput ? this.layoutPass(kashidaInput) : natural
+    const result = kashidaInput ? this.layoutPass(kashidaInput, work) : natural
     this.applyAlignment(
       result.lines,
       input.align,
@@ -69,7 +70,8 @@ export class TextLayoutEngine {
     ).flatMap(run => this.itemizeScript(run))
   }
 
-  private layoutPass(input: LayoutParagraphInput): LayoutResult {
+  private layoutPass(input: LayoutParagraphInput, work?: LayoutWork): LayoutResult {
+    const scanStart = work ? performance.now() : 0
     const {
       spans,
       availableWidth,
@@ -86,13 +88,22 @@ export class TextLayoutEngine {
       (refFontSize > 0 ? lineHeight / refFontSize : 1.5)
 
     const shapeRuns = this.getShapingRuns(spans, direction)
+    if (work) {
+      work.scanMs += performance.now() - scanStart
+      work.scanUnits += paragraphText.length
+    }
 
     const shapeRange = (start: number, end: number) => {
+      const before = work ? performance.now() : 0
       const glyphs = shapeRuns
         .flatMap(run => {
           const from = Math.max(start, run.textStart)
           const to = Math.min(end, run.textEnd)
           if (from >= to) return []
+          if (work) {
+            work.shapeCalls++
+            work.shapeUnits += to - from
+          }
           const slice = {
             ...run,
             text: paragraphText.slice(from, to),
@@ -146,11 +157,13 @@ export class TextLayoutEngine {
       }
       this.applySpanPaintStyles(glyphs, spans)
       this.applyScriptShifts(glyphs)
+      if (work) work.shapeAndStylesMs += performance.now() - before
       return glyphs
     }
     const controlOrigins = new Map<string, { start: number; inset: number }>()
-    const split = (glyphs: ShapedGlyph[], startLine = 0) =>
-      this.breakLines(
+    const split = (glyphs: ShapedGlyph[], startLine = 0) => {
+      const before = work ? performance.now() : 0
+      const result = this.breakLines(
         glyphs,
         availableWidth,
         direction,
@@ -161,8 +174,15 @@ export class TextLayoutEngine {
         wordBreak,
         controlOrigins,
         input.lineWidths,
-        startLine
+        startLine,
+        work
       )
+      if (work) {
+        work.breakMs += performance.now() - before
+        work.breakGlyphs += glyphs.length
+      }
+      return result
+    }
     const initial = shapeRange(0, paragraphText.length)
     const candidates = split(initial)
     const lines: LayoutLine[] = []
@@ -613,7 +633,8 @@ export class TextLayoutEngine {
     wordBreak: 'break-word' | 'break-all',
     origins: Map<string, { start: number; inset: number }>,
     widths?: number[],
-    startLine = 0
+    startLine = 0,
+    work?: LayoutWork
   ): LayoutLine[] {
     const lines: LayoutLine[] = []
     if (!glyphs.length) {
@@ -688,6 +709,7 @@ export class TextLayoutEngine {
         do {
           const glyph = items[i++]
           cluster.push({ ...glyph })
+          if (work) work.breakGlyphCopies++
           advance += Math.max(glyph.ax, 0)
         } while (
           i < items.length &&
@@ -729,6 +751,7 @@ export class TextLayoutEngine {
       for (const g of unit.glyphs) {
         remember(g)
         lineGlyphs.push({ ...g })
+        if (work) work.breakGlyphCopies++
       }
       lineWidth += unit.width
     }

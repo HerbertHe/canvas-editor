@@ -1,0 +1,7422 @@
+{
+  "date": "2026-11-02",
+  "passed": true,
+  "browser": "156.0.8078.76",
+  "node": "v24.22.1",
+  "machine": {
+    "platform": "darwin",
+    "release": "25.4.0",
+    "arch": "arm64",
+    "cpu": "Apple M1 Pro",
+    "memoryGiB": 16
+  },
+  "settings": {
+    "trials": 3,
+    "iterations": 5,
+    "values": [
+      "n",
+      "ni",
+      "nih",
+      "niha",
+      "nihao",
+      "ni",
+      ""
+    ],
+    "viewport": [
+      1366,
+      720
+    ],
+    "chromiumArgs": [
+      "--disable-gpu"
+    ],
+    "incrementalCompute": false,
+    "imePreview": true
+  },
+  "semantics": "Synthetic Vite development fixture, not OS IME or actual presentation FPS. Table modes use sync profile; body modes use worker profile and switch only imeWorkerPreview. handlerMs ends at input + flushComposition(false) return. geometryMs waits for local preview completion or synchronous fallback. nextRafMs waits for the following rAF, not presentation. Later scheduled paint/notifications may not be included in handlerMs. Longtasks are observer entries starting within measured update intervals; setup/reset/cancel outside those intervals is excluded. Drain starts after session cancellation and waits for worker synchronization. Table inputElements sums cell inputs presented to layout/cache checks, not actual unique traversal or allocation counts. computedCells counts child layout callbacks, not HarfBuzz calls. No heap-byte claims.",
+  "sources": {
+    "src/editor/core/layout/TableLayoutCache.ts": "1c9cdc335761833ad1983c76a6aed924fdf914f811177b9ae058c1e37a3350e8",
+    "src/editor/core/text-engine-host/TableLayoutHost.ts": "14e67875df181f61a78a5fc3f69c21c592dc29097ecdc7a11ba149843824c76e",
+    "src/editor/core/layout/TableLayout.ts": "28a0cf6e68e0885c81f9d8f815028e34ea8fbe9f59b2285ae6c94b67e14a3681",
+    "src/editor/core/layout/relativeLayout.ts": "b86c7836d1f42b826e39d46a73a1b436310692908f0d9c64ea563ef7873be1c7",
+    "src/editor/core/draw/CompositionPreview.ts": "5cd88279aa775c326da545bf6b90b8ebfa744c8d98b76d158f2e1144fed4151c",
+    "src/editor/core/draw/Draw.ts": "71d8c1bbe69251181668210fdd6c74d56117c61d3b6e4b97a249094c7d167037",
+    "src/editor/core/event/CanvasEvent.ts": "b19143ab20baff6f4ad88bcf326eb5fb65aa50de9330c35af6b6044e413e20ab",
+    "src/editor/core/event/CompositionSession.ts": "e87c90396fa403a5afd3476e4a9205e947c17f7f866b944eb1180305e0eb83bf",
+    "src/editor/core/worker/layout/protocol.ts": "732c622e1b8290bdefd111b2875382fcc938d57139fcd2c71ecae434c700578f",
+    "src/editor/core/worker/layout/LayoutWorkerClient.ts": "c9f6d98325073fda58e63e12de16425f99c488e7c8ef180af3aed8d5d6a10de5",
+    "src/editor/core/worker/layout/LayoutWorkerServer.ts": "51c67d7b491e6ee296dffc5ae44a68a7bc0807e96b0d196e5ef1755cd75a426a",
+    "src/editor/utils/option.ts": "4ca520f8c25ed9be3873dd7503f750d5ae162da43ff66e85c54fc0bca3b33384",
+    "src/editor/utils/performanceProfile.ts": "192be7ce3d3dc3a8956819adc422c04d82d4742e091b0a80e1a1cdf0daf6b79c",
+    "tests/fixtures/migration/ime-table-worker.ts": "928b16326423ca3299a1d7efd338bc2755f71f7f089911738ee0d54f493c3d9d",
+    "scripts/test-ime-table-worker.mjs": "0d4f58779fcf86b49f186d6cb8e70fe501ff98f8f9b13537affde5c2432a7d37"
+  },
+  "fonts": {
+    "tests/fixtures/fonts/NotoSans-Latin-Regular.woff2": "09aee8065d25508f23a4c3d92cd777ac869c52d93fd868a88f025d888a7937d6",
+    "tests/fixtures/fonts/NotoSansSC-Regular.woff2": "95e3633b6a98f764ba3adfb54504a0cd4799328c009adf9081d6c1850f9c4c78",
+    "public/fonts/NotoNaskhArabic-Regular.ttf": "67b5a525a661b607971fbd3f96a81b89d3a768e74534fca84f18ac97e6fab72f"
+  },
+  "checks": [
+    {
+      "kind": "table",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 385,
+        "bytes": 540888
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 0,
+        "fallbacks": 1
+      }
+    },
+    {
+      "kind": "table",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 2
+      }
+    },
+    {
+      "kind": "table",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 387,
+        "bytes": 543624
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 0,
+        "fallbacks": 3
+      }
+    },
+    {
+      "kind": "table",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 388,
+        "bytes": 544992
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 0,
+        "fallbacks": 4
+      }
+    },
+    {
+      "kind": "table",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 389,
+        "bytes": 546360
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 0,
+        "fallbacks": 5
+      }
+    },
+    {
+      "kind": "table",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 0,
+        "fallbacks": 6
+      }
+    },
+    {
+      "kind": "table",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 384,
+        "bytes": 539520
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 0,
+        "fallbacks": 7
+      }
+    },
+    {
+      "kind": "table",
+      "update": 7,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 459,
+        "bytes": 646216
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 8,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 8,
+        "merged": 0,
+        "flushed": 8,
+        "previews": 0,
+        "fallbacks": 8
+      }
+    },
+    {
+      "kind": "table",
+      "update": 8,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 9,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 9,
+        "merged": 0,
+        "flushed": 9,
+        "previews": 0,
+        "fallbacks": 9
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 377,
+        "bytes": 529648
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 0,
+        "fallbacks": 1
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 378,
+        "bytes": 531016
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 2
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 379,
+        "bytes": 532384
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 0,
+        "fallbacks": 3
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 380,
+        "bytes": 533752
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 0,
+        "fallbacks": 4
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 381,
+        "bytes": 535120
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 0,
+        "fallbacks": 5
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 378,
+        "bytes": 531016
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 0,
+        "fallbacks": 6
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 376,
+        "bytes": 528280
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 0,
+        "fallbacks": 7
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 7,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 451,
+        "bytes": 634976
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 8,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 8,
+        "merged": 0,
+        "flushed": 8,
+        "previews": 0,
+        "fallbacks": 8
+      }
+    },
+    {
+      "kind": "merged",
+      "update": 8,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 94,
+        "computedCells": 1,
+        "reusedCells": 93,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 378,
+        "bytes": 531016
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 9,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 9,
+        "merged": 0,
+        "flushed": 9,
+        "previews": 0,
+        "fallbacks": 9
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 0,
+        "reusedRows": 30,
+        "inputElements": 431,
+        "bytes": 602684
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 0,
+        "fallbacks": 1
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 30,
+        "reusedRows": 0,
+        "inputElements": 432,
+        "bytes": 604564
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 2
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 0,
+        "reusedRows": 30,
+        "inputElements": 433,
+        "bytes": 605932
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 0,
+        "fallbacks": 3
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 0,
+        "reusedRows": 30,
+        "inputElements": 434,
+        "bytes": 607300
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 0,
+        "fallbacks": 4
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 0,
+        "reusedRows": 30,
+        "inputElements": 435,
+        "bytes": 608668
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 0,
+        "fallbacks": 5
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 0,
+        "reusedRows": 30,
+        "inputElements": 432,
+        "bytes": 604564
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 0,
+        "fallbacks": 6
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 30,
+        "reusedRows": 0,
+        "inputElements": 430,
+        "bytes": 601316
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 0,
+        "fallbacks": 7
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 7,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 30,
+        "reusedRows": 0,
+        "inputElements": 439,
+        "bytes": 615164
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 8,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 8,
+        "merged": 0,
+        "flushed": 8,
+        "previews": 0,
+        "fallbacks": 8
+      }
+    },
+    {
+      "kind": "nested",
+      "update": 8,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 108,
+        "computedCells": 2,
+        "reusedCells": 106,
+        "computedRows": 30,
+        "reusedRows": 0,
+        "inputElements": 432,
+        "bytes": 604564
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 9,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 9,
+        "merged": 0,
+        "flushed": 9,
+        "previews": 0,
+        "fallbacks": 9
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 385,
+        "bytes": 540888
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 0,
+        "fallbacks": 1
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 2
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 387,
+        "bytes": 543624
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 0,
+        "fallbacks": 3
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 388,
+        "bytes": 544992
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 0,
+        "fallbacks": 4
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 389,
+        "bytes": 546360
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 0,
+        "fallbacks": 5
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 0,
+        "fallbacks": 6
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 384,
+        "bytes": 539520
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 0,
+        "fallbacks": 7
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 7,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 459,
+        "bytes": 646216
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 8,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 8,
+        "merged": 0,
+        "flushed": 8,
+        "previews": 0,
+        "fallbacks": 8
+      }
+    },
+    {
+      "kind": "repeated",
+      "update": 8,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 386,
+        "bytes": 542256
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 9,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 9,
+        "merged": 0,
+        "flushed": 9,
+        "previews": 0,
+        "fallbacks": 9
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 961,
+        "bytes": 1358424
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 0,
+        "fallbacks": 1
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 962,
+        "bytes": 1359792
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 2
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 963,
+        "bytes": 1361160
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 0,
+        "fallbacks": 3
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 964,
+        "bytes": 1362528
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 0,
+        "fallbacks": 4
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 965,
+        "bytes": 1363896
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 0,
+        "fallbacks": 5
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 962,
+        "bytes": 1359792
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 0,
+        "fallbacks": 6
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 0,
+        "reusedRows": 24,
+        "inputElements": 960,
+        "bytes": 1357056
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 0,
+        "fallbacks": 7
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 7,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 1035,
+        "bytes": 1463752
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 8,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 8,
+        "merged": 0,
+        "flushed": 8,
+        "previews": 0,
+        "fallbacks": 8
+      }
+    },
+    {
+      "kind": "rtl",
+      "update": 8,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 96,
+        "computedCells": 1,
+        "reusedCells": 95,
+        "computedRows": 24,
+        "reusedRows": 0,
+        "inputElements": 962,
+        "bytes": 1359792
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 9,
+        "local": false,
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 9,
+        "merged": 0,
+        "flushed": 9,
+        "previews": 0,
+        "fallbacks": 9
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 11,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 1,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 12,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 2,
+          "committed": 2,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 2,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 13,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 3,
+          "committed": 3,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 3,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 14,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 4,
+          "committed": 4,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 4,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 15,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 5,
+          "committed": 5,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 5,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 12,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 6,
+          "committed": 6,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 6,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "plain",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 10,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 7,
+          "committed": 7,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 7,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 0,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 722,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 1,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 1,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 2,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 723,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 2,
+          "committed": 2,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 2,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 2,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 2,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 3,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 724,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 3,
+          "committed": 3,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 3,
+        "merged": 0,
+        "flushed": 3,
+        "previews": 3,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 3,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 4,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 725,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 4,
+          "committed": 4,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 4,
+        "merged": 0,
+        "flushed": 4,
+        "previews": 4,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 4,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 5,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 726,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 5,
+          "committed": 5,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 5,
+        "merged": 0,
+        "flushed": 5,
+        "previews": 5,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 5,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 6,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 723,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 6,
+          "committed": 6,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 6,
+        "merged": 0,
+        "flushed": 6,
+        "previews": 6,
+        "fallbacks": 0
+      }
+    },
+    {
+      "kind": "wide",
+      "update": 6,
+      "geometry": true,
+      "pixels": true,
+      "caret": true,
+      "tables": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "composition": {
+        "active": true,
+        "generation": 1,
+        "sequence": 7,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 721,
+          "windowElements": 721,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 7,
+          "committed": 7,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 7,
+        "merged": 0,
+        "flushed": 7,
+        "previews": 7,
+        "fallbacks": 0
+      }
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "stale",
+      "beforeEnd": "​中你hao文 abcdef",
+      "final": "​中你好文 abcdef",
+      "diagnostics": {
+        "active": true,
+        "generation": 2,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 2,
+          "committed": 0,
+          "stale": 2,
+          "fallbacks": 1,
+          "deadlines": 1,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 1
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 6,
+          "received": 6,
+          "rejected": 0,
+          "postMs": 1,
+          "prepareMs": 0,
+          "roundTripMs": 149.20000004768372,
+          "layoutMs": 9.200000286102295,
+          "workerComputeMs": 8.599999904632568,
+          "maxPending": 2,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 3598,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 3,
+          "batchedEdits": 4,
+          "maxBufferedEdits": 2
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 2,
+          "scope": 0,
+          "edit": 2,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "pending": false
+    },
+    {
+      "kind": "deadline",
+      "beforeEnd": "​中ni文 abcdef",
+      "final": "​中你文 abcdef",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 1,
+          "committed": 0,
+          "stale": 1,
+          "fallbacks": 1,
+          "deadlines": 1,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 1
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 4,
+          "received": 4,
+          "rejected": 0,
+          "postMs": 0.9000000953674316,
+          "prepareMs": 0,
+          "roundTripMs": 146.5,
+          "layoutMs": 8.5,
+          "workerComputeMs": 8.100000143051147,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 2,
+          "batchedEdits": 2,
+          "maxBufferedEdits": 1
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 1,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "pending": false
+    },
+    {
+      "kind": "fault",
+      "beforeEnd": "​中ni文 abcdef",
+      "final": "​中你文 abcdef",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 1,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 1,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 1
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 1,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 3,
+          "received": 2,
+          "rejected": 1,
+          "postMs": 1.3999998569488525,
+          "prepareMs": 0.09999990463256836,
+          "roundTripMs": 265.7000000476837,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2871666,
+          "maxWaitingBytes": 0,
+          "restarts": 2,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 1,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "pending": false
+    },
+    {
+      "kind": "oversize",
+      "beforeEnd": "​中ni文 abcdef",
+      "final": "​中你文 abcdef",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": false,
+        "previewWorker": {
+          "submitted": 1,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 1,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 2,
+        "previews": 0,
+        "fallbacks": 1
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 1,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 2,
+          "received": 2,
+          "rejected": 0,
+          "postMs": 1.6000001430511475,
+          "prepareMs": 0,
+          "roundTripMs": 266.90000009536743,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2871666,
+          "maxWaitingBytes": 0,
+          "restarts": 2,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 1,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "pending": false
+    },
+    {
+      "kind": "denied",
+      "beforeEnd": "​中文 abcdef",
+      "final": "​中你文 abcdef",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 1,
+        "local": true,
+        "previewWork": {
+          "paragraphElements": 10,
+          "windowElements": 12,
+          "laidOutLines": 1,
+          "checkedLines": 0,
+          "reusedLines": 0,
+          "skippedLines": 0
+        },
+        "previewWorker": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 1,
+        "merged": 0,
+        "flushed": 1,
+        "previews": 1,
+        "fallbacks": 0
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 3,
+        "needsResync": true,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 0,
+          "received": 0,
+          "rejected": 0,
+          "postMs": 0,
+          "prepareMs": 0,
+          "roundTripMs": 0,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 0,
+          "maxBytes": 0,
+          "maxWaitingBytes": 0,
+          "restarts": 3,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "pending": false
+    }
+  ],
+  "bursts": [
+    {
+      "kind": "plain",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 20,
+        "local": false,
+        "previewWorker": {
+          "submitted": 20,
+          "committed": 19,
+          "stale": 1,
+          "fallbacks": 0,
+          "deadlines": 0,
+          "pending": false
+        },
+        "received": 20,
+        "merged": 0,
+        "flushed": 21,
+        "previews": 19,
+        "fallbacks": 1
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 22,
+          "received": 22,
+          "rejected": 0,
+          "postMs": 1.5999999046325684,
+          "prepareMs": 0.10000014305114746,
+          "roundTripMs": 151.69999980926514,
+          "layoutMs": 17.899999618530273,
+          "workerComputeMs": 13.499999284744263,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 3198,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 1,
+          "batchedEdits": 2,
+          "maxBufferedEdits": 2
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 1,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "drainMs": 42.80000019073486,
+      "totalMs": 142.20000004768372
+    },
+    {
+      "kind": "wide",
+      "diagnostics": {
+        "active": true,
+        "generation": 1,
+        "sequence": 20,
+        "local": false,
+        "previewWorker": {
+          "submitted": 8,
+          "committed": 0,
+          "stale": 8,
+          "fallbacks": 1,
+          "deadlines": 1,
+          "pending": false
+        },
+        "received": 20,
+        "merged": 0,
+        "flushed": 21,
+        "previews": 0,
+        "fallbacks": 13
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 17,
+          "received": 17,
+          "rejected": 0,
+          "postMs": 44.700000286102295,
+          "prepareMs": 1.1999998092651367,
+          "roundTripMs": 1807.5,
+          "layoutMs": 83.29999995231628,
+          "workerComputeMs": 57.799999952316284,
+          "maxPending": 2,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 165262,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 14,
+          "batchedEdits": 14,
+          "maxBufferedEdits": 1
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 13,
+          "scope": 0,
+          "edit": 1,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      },
+      "drainMs": 84.5,
+      "totalMs": 427.2000000476837
+    }
+  ],
+  "results": [
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": false,
+      "trial": 0,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 5.299999952316284,
+        "p95": 6.799999952316284,
+        "p99": 6.799999952316284,
+        "max": 6.799999952316284
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 5.400000095367432,
+        "p95": 6.8999998569488525,
+        "p99": 7,
+        "max": 7
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.09999990463257,
+        "p99": 17.09999990463257,
+        "max": 17.09999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 96.00000000000003,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000007,
+        "reusedRows": 0,
+        "inputElements": 386.4285714285714,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 6.799999952316284,
+        "geometryMs": 7,
+        "nextRafMs": 9.700000047683716,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 96,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 385,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": true,
+      "trial": 0,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 3.3999998569488525,
+        "p95": 7,
+        "p99": 9.200000047683716,
+        "max": 9.200000047683716
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 3.5999999046325684,
+        "p95": 7.099999904632568,
+        "p99": 9.299999952316284,
+        "max": 9.299999952316284
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 17.200000047683716,
+        "p99": 17.600000143051147,
+        "max": 17.600000143051147
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 1.0000000000000002,
+        "reusedCells": 94.99999999999994,
+        "computedRows": 0,
+        "reusedRows": 24.000000000000007,
+        "inputElements": 386.4285714285714,
+        "bytes": 543034.2857142858
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.200000047683716,
+        "geometryMs": 9.299999952316284,
+        "nextRafMs": 11.900000095367432,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 1,
+          "reusedCells": 95,
+          "computedRows": 0,
+          "reusedRows": 24,
+          "inputElements": 385,
+          "bytes": 541080
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": false,
+      "trial": 0,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 7.200000047683716,
+        "p95": 9.800000190734863,
+        "p99": 9.800000190734863,
+        "max": 9.800000190734863
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 7.5,
+        "p95": 10.200000047683716,
+        "p99": 10.200000047683716,
+        "max": 10.200000047683716
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 15.300000190734863,
+        "p95": 16.899999856948853,
+        "p99": 16.899999856948853,
+        "max": 16.899999856948853
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 94,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000004,
+        "reusedRows": 0,
+        "inputElements": 427.6666666666666,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.799999952316284,
+        "geometryMs": 10.200000047683716,
+        "nextRafMs": 12.599999904632568,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 94,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 6,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": true,
+      "trial": 0,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 4.8999998569488525,
+        "p95": 8.400000095367432,
+        "p99": 8.400000095367432,
+        "max": 8.400000095367432
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 5.200000047683716,
+        "p95": 8.900000095367432,
+        "p99": 8.900000095367432,
+        "max": 8.900000095367432
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 14.5,
+        "p95": 17.09999990463257,
+        "p99": 17.09999990463257,
+        "max": 17.09999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 0.9999999999999999,
+        "reusedCells": 93.00000000000003,
+        "computedRows": 15.999999999999998,
+        "reusedRows": 8,
+        "inputElements": 427.6666666666666,
+        "bytes": 601878.6666666665
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 8.400000095367432,
+        "geometryMs": 8.900000095367432,
+        "nextRafMs": 11.700000047683716,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 1,
+          "reusedCells": 93,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 635164
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": false,
+      "trial": 0,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.6000001430511475,
+        "p95": 1.2999999523162842,
+        "p99": 1.7000000476837158,
+        "max": 1.7000000476837158
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 0.7000000476837158,
+        "p95": 1.5,
+        "p99": 1.8000001907348633,
+        "max": 1.8000001907348633
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.199999809265137,
+        "p99": 17.299999952316284,
+        "max": 17.299999952316284
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 1.7000000476837158,
+        "geometryMs": 1.8000001907348633,
+        "nextRafMs": 16.200000047683716,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 6,
+          "sequence": 6,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 12,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 6,
+          "merged": 0,
+          "flushed": 6,
+          "previews": 6,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 0.7000000476837158,
+          "prepareMs": 0,
+          "roundTripMs": 160.40000009536743,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": true,
+      "trial": 0,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.2999999523162842,
+        "p95": 0.5999999046325684,
+        "p99": 0.7000000476837158,
+        "max": 0.7000000476837158
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 1.3999998569488525,
+        "p95": 4.3999998569488525,
+        "p99": 5.799999952316284,
+        "max": 5.799999952316284
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 18.199999809265137,
+        "p99": 18.600000143051147,
+        "max": 18.600000143051147
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 0.10000014305114746,
+        "geometryMs": 5.799999952316284,
+        "nextRafMs": 15.900000095367432,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 6,
+          "sequence": 4,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 14,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 39,
+            "committed": 39,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 4,
+          "merged": 0,
+          "flushed": 4,
+          "previews": 4,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 2.1000001430511475,
+          "prepareMs": 0.2999997138977051,
+          "roundTripMs": 213.60000014305115,
+          "layoutMs": 54.00000023841858,
+          "workerComputeMs": 31.90000057220459,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": false,
+      "trial": 0,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 7,
+        "p95": 9.600000143051147,
+        "p99": 9.699999809265137,
+        "max": 9.699999809265137
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 7.099999904632568,
+        "p95": 9.700000047683716,
+        "p99": 9.799999952316284,
+        "max": 9.799999952316284
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.200000047683716,
+        "p95": 17.399999856948853,
+        "p99": 17.699999809265137,
+        "max": 17.699999809265137
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.699999809265137,
+        "geometryMs": 9.799999952316284,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 726,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 1.0999999046325684,
+          "prepareMs": 0.20000004768371582,
+          "roundTripMs": 168.79999995231628,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": true,
+      "trial": 0,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 1.3999998569488525,
+        "p95": 1.6999998092651367,
+        "p99": 1.7000000476837158,
+        "max": 1.7000000476837158
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 11.400000095367432,
+        "p95": 13.199999809265137,
+        "p99": 13.899999856948853,
+        "max": 13.899999856948853
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.600000143051147,
+        "p95": 23.699999809265137,
+        "p99": 23.899999856948853,
+        "max": 23.899999856948853
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 1.6999998092651367,
+        "geometryMs": 13.899999856948853,
+        "nextRafMs": 15.699999809265137,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 8,
+            "committed": 8,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 8.000000238418579,
+          "prepareMs": 4.800000190734863,
+          "roundTripMs": 501.300000667572,
+          "layoutMs": 334.70000076293945,
+          "workerComputeMs": 156.70000076293945,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": true,
+      "trial": 1,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 3.4000000953674316,
+        "p95": 4.299999952316284,
+        "p99": 10.200000047683716,
+        "max": 10.200000047683716
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 3.5999999046325684,
+        "p95": 4.3999998569488525,
+        "p99": 10.300000190734863,
+        "max": 10.300000190734863
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.399999856948853,
+        "p95": 17.799999952316284,
+        "p99": 19.300000190734863,
+        "max": 19.300000190734863
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 1.0000000000000002,
+        "reusedCells": 94.99999999999994,
+        "computedRows": 0,
+        "reusedRows": 24.000000000000007,
+        "inputElements": 386.4285714285714,
+        "bytes": 543034.2857142858
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.200000047683716,
+        "geometryMs": 10.300000190734863,
+        "nextRafMs": 13.100000143051147,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 1,
+          "reusedCells": 95,
+          "computedRows": 0,
+          "reusedRows": 24,
+          "inputElements": 385,
+          "bytes": 541080
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": false,
+      "trial": 1,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 5.400000095367432,
+        "p95": 13.299999952316284,
+        "p99": 14,
+        "max": 14
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 5.599999904632568,
+        "p95": 13.399999856948853,
+        "p99": 14.299999952316284,
+        "max": 14.299999952316284
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.40000009536743,
+        "p95": 17.700000047683716,
+        "p99": 18.100000143051147,
+        "max": 18.100000143051147
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 96.00000000000003,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000007,
+        "reusedRows": 0,
+        "inputElements": 386.4285714285714,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 14,
+        "geometryMs": 14.299999952316284,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 96,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 385,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": true,
+      "trial": 1,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 5.299999952316284,
+        "p95": 9,
+        "p99": 9,
+        "max": 9
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 5.5,
+        "p95": 9.400000095367432,
+        "p99": 9.400000095367432,
+        "max": 9.400000095367432
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 13,
+        "p95": 17.59999990463257,
+        "p99": 17.59999990463257,
+        "max": 17.59999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 0.9999999999999999,
+        "reusedCells": 93.00000000000003,
+        "computedRows": 15.999999999999998,
+        "reusedRows": 8,
+        "inputElements": 427.6666666666666,
+        "bytes": 601878.6666666665
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9,
+        "geometryMs": 9.400000095367432,
+        "nextRafMs": 12,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 1,
+          "reusedCells": 93,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 635164
+        },
+        "composition": {
+          "active": true,
+          "generation": 5,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": false,
+      "trial": 1,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 6.199999809265137,
+        "p95": 10.100000143051147,
+        "p99": 10.100000143051147,
+        "max": 10.100000143051147
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 6.699999809265137,
+        "p95": 10.299999952316284,
+        "p99": 10.299999952316284,
+        "max": 10.299999952316284
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 12.799999952316284,
+        "p95": 16.90000009536743,
+        "p99": 16.90000009536743,
+        "max": 16.90000009536743
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 94,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000004,
+        "reusedRows": 0,
+        "inputElements": 427.6666666666666,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.899999856948853,
+        "geometryMs": 10.299999952316284,
+        "nextRafMs": 12.799999952316284,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 94,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": true,
+      "trial": 1,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.20000004768371582,
+        "p95": 0.39999985694885254,
+        "p99": 0.40000009536743164,
+        "max": 0.40000009536743164
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 1.2999999523162842,
+        "p95": 2.5,
+        "p99": 2.5999999046325684,
+        "max": 2.5999999046325684
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.799999952316284,
+        "p99": 18.200000047683716,
+        "max": 18.200000047683716
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 0.2999999523162842,
+        "geometryMs": 2.5999999046325684,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 15,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 19,
+            "committed": 19,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 2.1000001430511475,
+          "prepareMs": 0.10000014305114746,
+          "roundTripMs": 175.2999997138977,
+          "layoutMs": 40.799999713897705,
+          "workerComputeMs": 26.200000286102295,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": false,
+      "trial": 1,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.6000001430511475,
+        "p95": 1.7000000476837158,
+        "p99": 2,
+        "max": 2
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 0.7000000476837158,
+        "p95": 1.7999999523162842,
+        "p99": 2.1000001430511475,
+        "max": 2.1000001430511475
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.59999990463257,
+        "p99": 18.09999990463257,
+        "max": 18.09999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 2,
+        "geometryMs": 2.1000001430511475,
+        "nextRafMs": 15.299999952316284,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 4,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 15,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 1,
+          "prepareMs": 0,
+          "roundTripMs": 133.30000019073486,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": true,
+      "trial": 1,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 1.4000000953674316,
+        "p95": 1.7999999523162842,
+        "p99": 1.8999998569488525,
+        "max": 1.8999998569488525
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 11.799999952316284,
+        "p95": 15.099999904632568,
+        "p99": 16,
+        "max": 16
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.700000047683716,
+        "p95": 23,
+        "p99": 23.799999952316284,
+        "max": 23.799999952316284
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 1.8999998569488525,
+        "geometryMs": 16,
+        "nextRafMs": 21.799999952316284,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 8,
+            "committed": 8,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 7.999999284744263,
+          "prepareMs": 5.600000381469727,
+          "roundTripMs": 503.3999993801117,
+          "layoutMs": 351.49999952316284,
+          "workerComputeMs": 165.70000004768372,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": false,
+      "trial": 1,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 6.8999998569488525,
+        "p95": 9,
+        "p99": 9.899999856948853,
+        "max": 9.899999856948853
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 7,
+        "p95": 9.099999904632568,
+        "p99": 10,
+        "max": 10
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 17.399999856948853,
+        "p99": 17.59999990463257,
+        "max": 17.59999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.899999856948853,
+        "geometryMs": 10,
+        "nextRafMs": 12.099999904632568,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 4,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 0.9000000953674316,
+          "prepareMs": 0.09999990463256836,
+          "roundTripMs": 159.79999995231628,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": false,
+      "trial": 2,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 5,
+        "p95": 5.900000095367432,
+        "p99": 6.099999904632568,
+        "max": 6.099999904632568
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 5.200000047683716,
+        "p95": 6.099999904632568,
+        "p99": 6.200000047683716,
+        "max": 6.200000047683716
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 17.5,
+        "p99": 17.59999990463257,
+        "max": 17.59999990463257
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 96.00000000000003,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000007,
+        "reusedRows": 0,
+        "inputElements": 386.4285714285714,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 6.099999904632568,
+        "geometryMs": 6.200000047683716,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 96,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 387,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 3,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 3,
+          "merged": 0,
+          "flushed": 3,
+          "previews": 0,
+          "fallbacks": 3
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "grow": false,
+      "enabled": true,
+      "trial": 2,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 3.200000047683716,
+        "p95": 6.099999904632568,
+        "p99": 9.899999856948853,
+        "max": 9.899999856948853
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 3.3999998569488525,
+        "p95": 6.299999952316284,
+        "p99": 10.099999904632568,
+        "max": 10.099999904632568
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 17.100000143051147,
+        "p99": 17.299999952316284,
+        "max": 17.299999952316284
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 96.00000000000003,
+        "computedCells": 1.0000000000000002,
+        "reusedCells": 94.99999999999994,
+        "computedRows": 0,
+        "reusedRows": 24.000000000000007,
+        "inputElements": 386.4285714285714,
+        "bytes": 543034.2857142858
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.899999856948853,
+        "geometryMs": 10.099999904632568,
+        "nextRafMs": 12.799999952316284,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 1,
+          "reusedCells": 95,
+          "computedRows": 0,
+          "reusedRows": 24,
+          "inputElements": 385,
+          "bytes": 541080
+        },
+        "composition": {
+          "active": true,
+          "generation": 6,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": false,
+      "trial": 2,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": false,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 6.400000095367432,
+        "p95": 9.199999809265137,
+        "p99": 9.199999809265137,
+        "max": 9.199999809265137
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 6.5,
+        "p95": 9.5,
+        "p99": 9.5,
+        "max": 9.5
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 15.200000047683716,
+        "p95": 17.5,
+        "p99": 17.5,
+        "max": 17.5
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 94,
+        "reusedCells": 0,
+        "computedRows": 24.000000000000004,
+        "reusedRows": 0,
+        "inputElements": 427.6666666666666,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.199999809265137,
+        "geometryMs": 9.5,
+        "nextRafMs": 15.799999952316284,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 94,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 454,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 2,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 2,
+          "merged": 0,
+          "flushed": 2,
+          "previews": 0,
+          "fallbacks": 2
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "grow": true,
+      "enabled": true,
+      "trial": 2,
+      "fixture": {
+        "pages": 3,
+        "elements": 4,
+        "worker": false,
+        "options": {
+          "performanceProfile": "sync",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": false,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 15,
+        "p50": 5.200000047683716,
+        "p95": 10.200000047683716,
+        "p99": 10.200000047683716,
+        "max": 10.200000047683716
+      },
+      "geometryMs": {
+        "count": 15,
+        "p50": 5.299999952316284,
+        "p95": 10.600000143051147,
+        "p99": 10.600000143051147,
+        "max": 10.600000143051147
+      },
+      "nextRafMs": {
+        "count": 15,
+        "p50": 13.600000143051147,
+        "p95": 17.799999952316284,
+        "p99": 17.799999952316284,
+        "max": 17.799999952316284
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 0.9999999999999999,
+        "reusedCells": 93.00000000000003,
+        "computedRows": 15.999999999999998,
+        "reusedRows": 8,
+        "inputElements": 427.6666666666666,
+        "bytes": 601878.6666666665
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.200000047683716,
+        "geometryMs": 10.600000143051147,
+        "nextRafMs": 12.900000095367432,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 1,
+          "reusedCells": 93,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 635164
+        },
+        "composition": {
+          "active": true,
+          "generation": 4,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      },
+      "worker": {
+        "ready": false,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": false,
+      "trial": 2,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.6999998092651367,
+        "p95": 1.4000000953674316,
+        "p99": 2.200000047683716,
+        "max": 2.200000047683716
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 0.7000000476837158,
+        "p95": 1.5,
+        "p99": 2.3999998569488525,
+        "max": 2.3999998569488525
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.600000143051147,
+        "p95": 18.5,
+        "p99": 19.199999809265137,
+        "max": 19.199999809265137
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 2.200000047683716,
+        "geometryMs": 2.3999998569488525,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 5,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 15,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 0.5999999046325684,
+          "prepareMs": 0,
+          "roundTripMs": 138.19999980926514,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "grow": false,
+      "enabled": true,
+      "trial": 2,
+      "fixture": {
+        "pages": 1,
+        "elements": 10,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 0.2999999523162842,
+        "p95": 0.7000000476837158,
+        "p99": 0.7000000476837158,
+        "max": 0.7000000476837158
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 1.5999999046325684,
+        "p95": 4.400000095367432,
+        "p99": 5.700000047683716,
+        "max": 5.700000047683716
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.199999809265137,
+        "p99": 17.300000190734863,
+        "max": 17.300000190734863
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 0.2999999523162842,
+        "geometryMs": 5.700000047683716,
+        "nextRafMs": 13.600000143051147,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 4,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 11,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 22,
+            "committed": 22,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 1.9999995231628418,
+          "prepareMs": 0.5999996662139893,
+          "roundTripMs": 183.400000333786,
+          "layoutMs": 52.40000033378601,
+          "workerComputeMs": 29.90000009536743,
+          "maxPending": 1,
+          "maxBytes": 2871638,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": false,
+      "trial": 2,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": false,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 7,
+        "p95": 9.799999952316284,
+        "p99": 10.099999904632568,
+        "max": 10.099999904632568
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 7,
+        "p95": 9.899999856948853,
+        "p99": 10.299999952316284,
+        "max": 10.299999952316284
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.5,
+        "p95": 17.09999990463257,
+        "p99": 17.200000047683716,
+        "max": 17.200000047683716
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.099999904632568,
+        "geometryMs": 10.299999952316284,
+        "nextRafMs": 12.5,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 1,
+          "received": 1,
+          "rejected": 0,
+          "postMs": 0.6999998092651367,
+          "prepareMs": 0.09999990463256836,
+          "roundTripMs": 175.5,
+          "layoutMs": 0,
+          "workerComputeMs": 0,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "grow": false,
+      "enabled": true,
+      "trial": 2,
+      "fixture": {
+        "pages": 1,
+        "elements": 721,
+        "worker": true,
+        "options": {
+          "performanceProfile": "worker",
+          "imePreview": true,
+          "imeWindowPreview": true,
+          "imeTableLayout": true,
+          "imeWorkerPreview": true,
+          "incrementalCompute": false,
+          "deferredPaint": true,
+          "glyphPathCache": true,
+          "shapingRunCache": true,
+          "incrementalFlow": true,
+          "incrementalCommit": true,
+          "dirtyPagePaint": true,
+          "layoutWorker": true,
+          "workerTransfer": false,
+          "incrementalEditing": true,
+          "transactionHistory": true,
+          "incrementalCoverage": true,
+          "historyByteBudget": 16777216,
+          "paragraphCacheByteBudget": 67108864
+        }
+      },
+      "handlerMs": {
+        "count": 35,
+        "p50": 1.3999998569488525,
+        "p95": 1.7000000476837158,
+        "p99": 1.7000000476837158,
+        "max": 1.7000000476837158
+      },
+      "geometryMs": {
+        "count": 35,
+        "p50": 11.5,
+        "p95": 12.799999952316284,
+        "p99": 13,
+        "max": 13
+      },
+      "nextRafMs": {
+        "count": 35,
+        "p50": 16.59999990463257,
+        "p95": 17.299999952316284,
+        "p99": 23,
+        "max": 23
+      },
+      "drainMs": {
+        "count": 5,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 35,
+        "committed": 35,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 35,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 1.4000000953674316,
+        "geometryMs": 13,
+        "nextRafMs": 15.900000095367432,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 5,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 726,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 33,
+            "committed": 33,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      },
+      "worker": {
+        "ready": true,
+        "pending": false,
+        "requests": 0,
+        "waiting": false,
+        "queuedBytes": 0,
+        "bufferedEdits": 0,
+        "faults": 0,
+        "needsResync": false,
+        "counters": {
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "sent": 43,
+          "received": 43,
+          "rejected": 0,
+          "postMs": 7.799999952316284,
+          "prepareMs": 4.400000333786011,
+          "roundTripMs": 487.9000005722046,
+          "layoutMs": 335.6000006198883,
+          "workerComputeMs": 155.7999997138977,
+          "maxPending": 1,
+          "maxBytes": 2891666,
+          "maxWaitingBytes": 0,
+          "restarts": 1,
+          "decodeMs": 0,
+          "maxPoolBytes": 0,
+          "transferredBytes": 0,
+          "recycledBuffers": 0,
+          "packedResponses": 0,
+          "editBatches": 0,
+          "batchedEdits": 0,
+          "maxBufferedEdits": 0
+        },
+        "fallbackReasons": {
+          "dependencies": 0,
+          "unavailable": 0,
+          "composition": 0,
+          "scope": 0,
+          "edit": 0,
+          "size": 0,
+          "error": 0,
+          "deadline": 0
+        }
+      }
+    }
+  ],
+  "aggregate": [
+    {
+      "kind": "table",
+      "enabled": false,
+      "handlerMs": {
+        "count": 105,
+        "p50": 5.200000047683716,
+        "p95": 6.599999904632568,
+        "p99": 13.299999952316284,
+        "max": 14
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 5.400000095367432,
+        "p95": 6.799999952316284,
+        "p99": 13.399999856948853,
+        "max": 14.299999952316284
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.5,
+        "p95": 17.399999856948853,
+        "p99": 17.700000047683716,
+        "max": 18.100000143051147
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 95.99999999999979,
+        "computedCells": 95.99999999999979,
+        "reusedCells": 0,
+        "computedRows": 23.999999999999947,
+        "reusedRows": 0,
+        "inputElements": 386.4285714285713,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 14,
+        "geometryMs": 14.299999952316284,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 96,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 385,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      }
+    },
+    {
+      "kind": "table",
+      "enabled": true,
+      "handlerMs": {
+        "count": 105,
+        "p50": 3.3000001907348633,
+        "p95": 4.5,
+        "p99": 9.899999856948853,
+        "max": 10.200000047683716
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 3.5,
+        "p95": 4.700000047683716,
+        "p99": 10.099999904632568,
+        "max": 10.300000190734863
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.5,
+        "p95": 17.200000047683716,
+        "p99": 17.799999952316284,
+        "max": 19.300000190734863
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 95.99999999999979,
+        "computedCells": 0.9999999999999987,
+        "reusedCells": 94.99999999999979,
+        "computedRows": 0,
+        "reusedRows": 23.999999999999947,
+        "inputElements": 386.4285714285713,
+        "bytes": 543034.2857142861
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.200000047683716,
+        "geometryMs": 10.300000190734863,
+        "nextRafMs": 13.100000143051147,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 96,
+          "computedCells": 1,
+          "reusedCells": 95,
+          "computedRows": 0,
+          "reusedRows": 24,
+          "inputElements": 385,
+          "bytes": 541080
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "enabled": false,
+      "handlerMs": {
+        "count": 45,
+        "p50": 6.700000047683716,
+        "p95": 9.800000190734863,
+        "p99": 10.100000143051147,
+        "max": 10.100000143051147
+      },
+      "geometryMs": {
+        "count": 45,
+        "p50": 6.900000095367432,
+        "p95": 10.200000047683716,
+        "p99": 10.299999952316284,
+        "max": 10.299999952316284
+      },
+      "nextRafMs": {
+        "count": 45,
+        "p50": 15.200000047683716,
+        "p95": 16.899999856948853,
+        "p99": 17.5,
+        "max": 17.5
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 94,
+        "reusedCells": 0,
+        "computedRows": 24.00000000000002,
+        "reusedRows": 0,
+        "inputElements": 427.66666666666674,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 9.899999856948853,
+        "geometryMs": 10.299999952316284,
+        "nextRafMs": 12.799999952316284,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 94,
+          "reusedCells": 0,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 3,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      }
+    },
+    {
+      "kind": "merged",
+      "enabled": true,
+      "handlerMs": {
+        "count": 45,
+        "p50": 5.099999904632568,
+        "p95": 8.400000095367432,
+        "p99": 10.200000047683716,
+        "max": 10.200000047683716
+      },
+      "geometryMs": {
+        "count": 45,
+        "p50": 5.299999952316284,
+        "p95": 8.900000095367432,
+        "p99": 10.600000143051147,
+        "max": 10.600000143051147
+      },
+      "nextRafMs": {
+        "count": 45,
+        "p50": 13.600000143051147,
+        "p95": 17.09999990463257,
+        "p99": 17.799999952316284,
+        "max": 17.799999952316284
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 94,
+        "computedCells": 1.0000000000000004,
+        "reusedCells": 93,
+        "computedRows": 15.999999999999998,
+        "reusedRows": 7.999999999999999,
+        "inputElements": 427.66666666666674,
+        "bytes": 601878.6666666665
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 0,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.200000047683716,
+        "geometryMs": 10.600000143051147,
+        "nextRafMs": 12.900000095367432,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 94,
+          "computedCells": 1,
+          "reusedCells": 93,
+          "computedRows": 24,
+          "reusedRows": 0,
+          "inputElements": 451,
+          "bytes": 635164
+        },
+        "composition": {
+          "active": true,
+          "generation": 4,
+          "sequence": 1,
+          "local": false,
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 0,
+          "fallbacks": 1
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "enabled": false,
+      "handlerMs": {
+        "count": 105,
+        "p50": 0.6000001430511475,
+        "p95": 1.2999999523162842,
+        "p99": 2,
+        "max": 2.200000047683716
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 0.7000000476837158,
+        "p95": 1.5,
+        "p99": 2.1000001430511475,
+        "max": 2.3999998569488525
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.600000143051147,
+        "p95": 17.299999952316284,
+        "p99": 18.5,
+        "max": 19.199999809265137
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.09999990463256836,
+        "p99": 0.09999990463256836,
+        "max": 0.09999990463256836
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 105,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 2.200000047683716,
+        "geometryMs": 2.3999998569488525,
+        "nextRafMs": 16.59999990463257,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 5,
+          "sequence": 5,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 15,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 5,
+          "merged": 0,
+          "flushed": 5,
+          "previews": 5,
+          "fallbacks": 0
+        }
+      }
+    },
+    {
+      "kind": "plain",
+      "enabled": true,
+      "handlerMs": {
+        "count": 105,
+        "p50": 0.2999999523162842,
+        "p95": 0.5999999046325684,
+        "p99": 0.7000000476837158,
+        "max": 0.7000000476837158
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 1.3999998569488525,
+        "p95": 4.099999904632568,
+        "p99": 5.700000047683716,
+        "max": 5.799999952316284
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.59999990463257,
+        "p95": 17.799999952316284,
+        "p99": 18.200000047683716,
+        "max": 18.600000143051147
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 105,
+        "committed": 105,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 105,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 0.10000014305114746,
+        "geometryMs": 5.799999952316284,
+        "nextRafMs": 15.900000095367432,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 6,
+          "sequence": 4,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 10,
+            "windowElements": 14,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 39,
+            "committed": 39,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 4,
+          "merged": 0,
+          "flushed": 4,
+          "previews": 4,
+          "fallbacks": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "enabled": false,
+      "handlerMs": {
+        "count": 105,
+        "p50": 6.900000095367432,
+        "p95": 9.099999904632568,
+        "p99": 9.899999856948853,
+        "max": 10.099999904632568
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 7,
+        "p95": 9.100000143051147,
+        "p99": 10,
+        "max": 10.299999952316284
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.40000009536743,
+        "p95": 17.200000047683716,
+        "p99": 17.59999990463257,
+        "max": 17.699999809265137
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0.10000014305114746,
+        "p99": 0.10000014305114746,
+        "max": 0.10000014305114746
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 0,
+        "committed": 0,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 105,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 10.099999904632568,
+        "geometryMs": 10.299999952316284,
+        "nextRafMs": 12.5,
+        "workerWork": {
+          "submitted": 0,
+          "committed": 0,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 0,
+            "committed": 0,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      }
+    },
+    {
+      "kind": "wide",
+      "enabled": true,
+      "handlerMs": {
+        "count": 105,
+        "p50": 1.4000000953674316,
+        "p95": 1.7000000476837158,
+        "p99": 1.7999999523162842,
+        "max": 1.8999998569488525
+      },
+      "geometryMs": {
+        "count": 105,
+        "p50": 11.5,
+        "p95": 13.899999856948853,
+        "p99": 15.099999904632568,
+        "max": 16
+      },
+      "nextRafMs": {
+        "count": 105,
+        "p50": 16.59999990463257,
+        "p95": 23,
+        "p99": 23.799999952316284,
+        "max": 23.899999856948853
+      },
+      "drainMs": {
+        "count": 15,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "tableMeans": {
+        "checkedCells": 0,
+        "computedCells": 0,
+        "reusedCells": 0,
+        "computedRows": 0,
+        "reusedRows": 0,
+        "inputElements": 0,
+        "bytes": 0
+      },
+      "workerTotals": {
+        "submitted": 105,
+        "committed": 105,
+        "stale": 0,
+        "fallbacks": 0,
+        "deadlines": 0
+      },
+      "local": 105,
+      "workerPending": 0,
+      "longtasks": {
+        "count": 0,
+        "ms": 0,
+        "max": 0
+      },
+      "slowest": {
+        "handlerMs": 1.8999998569488525,
+        "geometryMs": 16,
+        "nextRafMs": 21.799999952316284,
+        "workerWork": {
+          "submitted": 1,
+          "committed": 1,
+          "stale": 0,
+          "fallbacks": 0,
+          "deadlines": 0
+        },
+        "tables": {
+          "checkedCells": 0,
+          "computedCells": 0,
+          "reusedCells": 0,
+          "computedRows": 0,
+          "reusedRows": 0,
+          "inputElements": 0,
+          "bytes": 0
+        },
+        "composition": {
+          "active": true,
+          "generation": 2,
+          "sequence": 1,
+          "local": true,
+          "previewWork": {
+            "paragraphElements": 721,
+            "windowElements": 722,
+            "laidOutLines": 1,
+            "checkedLines": 0,
+            "reusedLines": 0,
+            "skippedLines": 0
+          },
+          "previewWorker": {
+            "submitted": 8,
+            "committed": 8,
+            "stale": 0,
+            "fallbacks": 0,
+            "deadlines": 0,
+            "pending": false
+          },
+          "received": 1,
+          "merged": 0,
+          "flushed": 1,
+          "previews": 1,
+          "fallbacks": 0
+        }
+      }
+    }
+  ],
+  "errors": []
+}

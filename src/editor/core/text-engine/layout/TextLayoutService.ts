@@ -14,6 +14,7 @@ import type {
 } from '../types'
 import { prepareControlLayout } from './ControlLayout'
 import { TextLayoutEngine } from './TextLayoutEngine'
+import type { LayoutWork } from './LayoutWork'
 
 export interface ParagraphSourcePosition {
   nodeId?: string
@@ -141,7 +142,7 @@ export class TextLayoutService {
       : { ascent, descent, height: ascent + descent, hidden }
   }
 
-  layoutParagraph(input: NativeParagraphInput): NativeParagraphLayout {
+  layoutParagraph(input: NativeParagraphInput, work?: LayoutWork): NativeParagraphLayout {
     input = prepareControlLayout(
       input,
       spans =>
@@ -179,14 +180,20 @@ export class TextLayoutService {
         return 0
       }
     )
-    const shaped = this.engine.layoutParagraph(input)
+    const shaped = this.engine.layoutParagraph(input, work)
+    const geometryStart = work ? performance.now() : 0
     let y = 0
     const lines = shaped.lines.map((line, lineIndex): TextLine => {
       if (!line.glyphs.length) {
         line.logicalStart = input.source.start
         line.logicalEnd = input.source.start
       }
+      const measureStart = work ? performance.now() : 0
       const box = this.lineBox(line.glyphs, input.emptyStyle)
+      if (work) {
+        work.measureMs += performance.now() - measureStart
+        work.measuredGlyphs += line.glyphs.length
+      }
       // Compatibility data uses the very same authoritative line box.
       Object.assign(line, {
         height: box.height,
@@ -461,6 +468,12 @@ export class TextLayoutService {
       y += box.height + spacingAfter
       return node
     })
+    if (work) {
+      work.geometryMs += performance.now() - geometryStart
+      work.geometryItems += lines.reduce((sum, line) => sum + 1 +
+        line.glyphs.length + line.clusters.length + line.carets.length +
+        line.inlines.length + (line.labels?.length || 0), 0)
+    }
     return { lines, shaped }
   }
 

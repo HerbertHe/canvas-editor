@@ -24,7 +24,8 @@ export function serializeValue(payload: IGetValueWorkerOption) {
     footer: zipElementList(data.footer, {
       extraPickAttrs,
       isClone: false
-    })
+    }),
+    ...(data.graffiti === undefined ? {} : { graffiti: data.graffiti })
   }
 
   return editorData

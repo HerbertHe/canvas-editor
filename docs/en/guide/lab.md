@@ -1,5 +1,8 @@
 # Lab
 
+See [performance principles](performance-principles.md) for mechanisms/limits and
+[Benchmark](benchmark.md) for baseline comparisons and the latest measurements.
+
 Experimental options live under `lab` and are disabled by default. All text uses
 HarfBuzz; enabling an experimental option never selects a different engine.
 
@@ -17,7 +20,7 @@ editor with `baseline` and remove explicit opt-ins to return to the control path
 | Profile | Behavior | Rollout |
 | --- | --- | --- |
 | `baseline` | Existing synchronous behavior, experimental optimizations off | Default |
-| `sync` | Path/run caches, tracked edits/history/coverage, incremental flow, prefix and unchanged-line position/query reuse, dirty pages and deferred painting | Application opt-in after validation |
+| `sync` | Path/run caches, tracked edits/history/coverage, range flow commits, cached-break re-placement, row-block position/query reuse, dirty pages and deferred painting | Application opt-in after validation |
 | `worker` | `sync` plus asynchronous simple-body text layout | Experimental |
 
 No preset enables `workerTransfer` or `incrementalCompute`. The 8ms main-thread
@@ -91,3 +94,90 @@ Internal contributors should mutate through spliceElementList/deleteElementList
 and setElementProperty/deleteElementProperty so dirty ranges and invalidation
 remain accurate. External integrations should use public commands rather than
 internal Draw objects or snapshot structures.
+
+
+## Experimental IME preview
+
+Opt in with `lab: { performanceProfile: 'sync', imePreview: true }`.
+`imePreview` defaults to false and is independent of profiles and paragraph caching.
+It consumes the latest preedit state once per frame. Supported simple LTR body
+paragraphs use a temporary HarfBuzz line when line count, height and baseline remain
+unchanged; final text is committed when composition ends. The sync/worker presets
+also enable `imeWindowPreview`: long paragraphs re-layout at most three rows and
+2048 elements, accepting a replacement only when surrounding breaks and native
+paint/caret geometry converge. Set it explicitly to false for rollback; baseline
+leaves it off. Existing pages may be reused, but changes to wrapping/pagination,
+controls, complex directions and decorations retain a
+frame-coalesced synchronous fallback.
+Tables keep synchronous model updates with the cell cache described below.
+
+The window requires a uniform metric style, safe word/grapheme boundaries and
+LTR flow. Arabic, BiDi, font changes and justification retain full layout.
+Window creation scans the paragraph; final commits still use formal layout.
+`composition.previewWork.skippedLines` counts lines not laid out in the temporary
+window. `reusedLines` also includes validated neighbour rows whose temporary
+geometry is discarded. These are distinct from shaping-cache hits.
+
+Public content/geometry queries materialize the current preedit and switch the
+remaining session to the conservative path. Public commands finish composition.
+Cancellation restores the original content; final edits support undo.
+Native candidate-window blur without a DOM focus destination does not force a
+commit. Real OS IME, candidate placement and presentation validation remain pending.
+
+The demo accepts `?performance=sync&paragraphCache=off&imePreview=on` on reload.
+See the [Chinese implementation tasks and QA instructions](../../guide/ime-performance-tasks.md).
+
+
+`lab.incrementalCommit` is enabled by the sync/worker presets and disabled by
+baseline. It needs incremental editing/flow. Set it explicitly to false for the
+previous per-paragraph/per-element commit path while retaining earlier caches.
+Exact flow ranges are validated before reuse. Unchanged text can re-place cached
+breaks only while every line interval keeps its width. Changed widths, fonts,
+styles and unsupported objects retain layout fallbacks. Small geometry changes
+use lazy row-position blocks; broad changes use ordinary arrays and safe metric
+reuse. Diagnostic position snapshots remain ordinary arrays. Directory, object
+classification and coverage work may still be global; editing is not constant time.
+See the [IME-10 measurements](../../guide/benchmark.md).
+
+## Table composition and experimental Worker previews
+
+With `imePreview` enabled, sync/worker presets enable `imeTableLayout`; baseline
+leaves it off. Unchanged safe text cells reuse canonical rows, and unchanged
+content heights reuse grid geometry. Changed heights re-solve table row heights
+and propagate through spans/pagination while reusing other cell contents.
+Nested containers still recurse into their leaves. Width/font/style dependencies
+invalidate the cache, bounded to 512 entries and an estimated 16 MiB.
+Set `imeTableLayout: false` to roll back independently. Table signatures, position
+commits and page assembly may still scan the whole table. Existing extreme nested
+overflow/caret limitations are not extended by this optimization.
+Over-capacity scans protect current/previous-pass hot cells and skip admission
+instead of evicting cells needed later in the same scan. Idle entries can be
+reclaimed after a complete pass without access. `tables.entries`, `admissionSkips`
+and `evictions` expose the bounded-cache behavior.
+
+`tables.computedCells` counts child-layout callbacks, not HarfBuzz calls.
+`computedRows`/`reusedRows` distinguish grid solving from reuse; `inputElements`
+counts inputs presented to checks, not actual allocations or unique visits.
+
+`imeWorkerPreview` defaults to **false in every preset**. Explicit experiments use
+`lab: { performanceProfile: 'worker', imePreview: true, imeWorkerPreview: true }`.
+Only supported body previews move to the Worker; tables remain synchronous.
+Transient text never enters its formal mirror. One active and one latest waiting
+layout are bounded; session/sequence, model/font/constraint and geometry versions
+are checked before painting or moving the candidate anchor. Queries and final
+commits remain synchronous barriers. Failure or the 50ms scheduling deadline
+materializes the latest input and switches the session to synchronous layout.
+Active Worker computation drains separately; this is not a hard real-time bound.
+Transfer is not enabled automatically.
+
+`composition.previewWorker.submitted` counts client calls; `stale` also includes
+waiting updates merged before posting. Current measurements show shorter handlers
+but slower geometry completion, with no measured long-task reduction. Keep the
+default synchronous preview. See [the measurements and limits](../../guide/benchmark.md).
+
+IME-14 adds `npm run test:performance:ime:release`: browser correctness, three-trial
+timing, build/package checks and native IME evidence are separate gates. Changed
+sources, unmet budgets or missing evidence produce hold (exit 2), never automatic
+feature enablement. Native macOS/Windows/mobile evidence is currently unavailable;
+OS candidate windows and actual visible refresh remain pending. See
+[the implementation and evidence format](../../guide/ime-performance-tasks.md).

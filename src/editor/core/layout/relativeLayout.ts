@@ -102,6 +102,29 @@ export function projectLayout(layout: NativeParagraphLayout, delta: number,
     shaped: projectShaped(layout.shaped, delta) }
 }
 
-export function projectTextLine(value: TextLine, delta: number): TextLine {
-  return projectLine(value, delta, value.revision)
+export function projectTextLine(value: TextLine, delta: number,
+  revision = value.revision): TextLine {
+  return projectLine(value, delta, revision)
+}
+
+/** Spatial view for re-placed plain text. Logical data stays canonical/lazy. */
+export function translateTextLineView(line: TextLine, x: number, y: number): TextLine {
+  const rect = (value: TextLine['rect']) => ({ ...value,
+    x: value.x + x, y: value.y + y })
+  const caret = (value: LayoutCaret) => ({ ...value,
+    x: value.x + x, y: value.y + y })
+  return { ...line, rect: rect(line.rect),
+    marker: line.marker && translateTextLineView(line.marker, x, y),
+    carets: mapView(line.carets, caret),
+    clusters: mapView(line.clusters, cluster => ({ ...cluster,
+      rect: rect(cluster.rect), carets: mapView(cluster.carets, caret) })),
+    labels: line.labels && mapView(line.labels, label => ({ ...label,
+      rect: rect(label.rect) })),
+    inlines: mapView(line.inlines, inline => ({ ...inline,
+      rect: rect(inline.rect),
+      ...(inline.kind === 'missingGlyph'
+        ? { carets: mapView(inline.carets, caret) }
+        : { anchor: caret(inline.anchor) })
+    }))
+  }
 }

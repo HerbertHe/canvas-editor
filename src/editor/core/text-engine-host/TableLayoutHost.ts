@@ -11,7 +11,9 @@ import type { LayoutRow } from '../../interface/LayoutRow'
 import { isTableMirrored } from '../../utils/direction'
 import { cellLayoutState } from '../layout/CellLayoutState'
 import { layoutTable } from '../layout/TableLayout'
+import type { TableCellInput } from '../layout/TableLayout'
 import { getHostRowsHeight } from '../layout/hostRowGeometry'
+import type { TableLayoutCache } from '../layout/TableLayoutCache'
 
 /** Native table layout with sidecars for host container tools. */
 export function layoutHostTable(
@@ -25,6 +27,9 @@ export function layoutHostTable(
     rowIndex: number
     nextIsTable: boolean
     hidden: boolean
+    cache?: TableLayoutCache
+    stats?: TableLayoutCache['stats']
+    dependencies?: string
   },
   layoutCell: (
     elements: IElement[],
@@ -100,17 +105,29 @@ export function layoutHostTable(
       .flatMap(row => row.cells)
       .map((cell, i) => [cell.id, hostCells[i]])
   )
-  const result = layoutTable(input, (cell, width) => {
-    const child = layoutCell(
-      byId.get(cell.id)!.value,
+  const computeCell = (cell: TableCellInput, width: number) => {
+    const elements = byId.get(cell.id)!.value
+    const compute = () => layoutCell(
+      elements,
       width * scale,
       cell.scope,
       element.direction || TextDirection.AUTO,
       mirrored ? 'right' : 'left'
     )
+    if (!payload.cache && payload.stats) {
+      payload.stats.checkedCells++
+      payload.stats.computedCells++
+      payload.stats.inputElements += elements.length
+    }
+    const child = payload.cache ? payload.cache.cell(elements,
+      JSON.stringify([payload.dependencies, width, cell.scope, element.direction,
+        mirrored, scale]), payload.revision, compute) : compute()
     cellRows.set(cell.id, child.rows)
     return { nodes: child.nodes, height: getHostRowsHeight(child.rows) / scale }
-  })
+  }
+  if (!payload.cache && payload.stats) payload.stats.computedRows += input.rows.length
+  const result = payload.cache ? payload.cache.table(payload.element, input, computeCell)
+    : layoutTable(input, computeCell)
   result.columns.forEach((width, index) => {
     element.colgroup![index].width = width
   })

@@ -1,4 +1,6 @@
 import { defineConfig } from 'vitepress'
+import { copyFile, mkdir, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 
 function sidebar(prefix = '', english = false) {
   const item = (text: string, path: string) => ({
@@ -27,6 +29,10 @@ function sidebar(prefix = '', english = false) {
       text: english ? 'Rendering internals' : '渲染原理',
       items: [
         item(english ? 'Architecture' : '架构与模块职责', 'architecture'),
+        item(
+          english ? 'Performance principles' : '性能优化原理',
+          'performance-principles'
+        ),
         item(
           english ? 'Rendering pipeline' : '渲染管线与时序',
           'rendering-pipeline'
@@ -110,6 +116,17 @@ function sidebar(prefix = '', english = false) {
 
 export default defineConfig({
   base: process.env.DOCS_BASE || '/canvas-editor/',
+  async buildEnd(config) {
+    // Markdown links do not emit JSON assets; publish the retained evidence
+    // without maintaining a duplicate copy under docs/public.
+    const source = join(config.srcDir, 'guide/performance-baselines')
+    const target = join(config.outDir, 'guide/performance-baselines')
+    await mkdir(target, { recursive: true })
+    for (const entry of await readdir(source, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith('.json'))
+        await copyFile(join(source, entry.name), join(target, entry.name))
+    }
+  },
   title: '@herberthe/canvas-editor',
   description: 'HarfBuzz-only typography and Canvas document rendering',
   lastUpdated: true,

@@ -4,6 +4,7 @@ import {
   TableLayoutInput
 } from '@/editor/core/layout/TableLayout'
 import { getLayoutFlowHeight } from '@/editor/core/text-engine/layout/layoutProtocol'
+import { TableLayoutCache } from '@/editor/core/layout/TableLayoutCache'
 import { describe, expect, it } from 'vitest'
 
 function input(extra: Partial<TableLayoutInput> = {}): TableLayoutInput {
@@ -48,6 +49,32 @@ function input(extra: Partial<TableLayoutInput> = {}): TableLayoutInput {
 }
 
 describe('T12 native table geometry', () => {
+  it('reuses unchanged-height merged geometry and propagates changed heights exactly', () => {
+    const cache = new TableLayoutCache()
+    const table = { value: '' }
+    const request = input()
+    let height = 150
+    const content = (cell: { id: string }) => ({ nodes: [],
+      height: cell.id === 'a' ? height : 10 })
+    const initial = cache.table(table, request, content)
+    request.columns = initial.columns
+    request.revision.documentRevision++
+    cache.beginPass()
+    const stable = cache.table(table, request, content)
+    expect(stable).toEqual(layoutTable(request, content))
+    expect(cache.stats).toMatchObject({ computedRows: 0, reusedRows: 3 })
+    height = 190
+    cache.beginPass()
+    const grown = cache.table(table, request, content)
+    expect(grown).toEqual(layoutTable(request, content))
+    expect(cache.stats).toMatchObject({ computedRows: 3, reusedRows: 0 })
+    expect(grown.rowHeights[1]).toBe(stable.rowHeights[1] + 40)
+    request.columns = [60, 60]
+    cache.beginPass()
+    expect(cache.table(table, request, content)).toEqual(layoutTable(request, content))
+    expect(cache.stats.computedRows).toBe(3)
+  })
+
   it('constrains cell containers, satisfies all spans and is repeatable without model mutations', () => {
     const request = input()
     const original = structuredClone(request)

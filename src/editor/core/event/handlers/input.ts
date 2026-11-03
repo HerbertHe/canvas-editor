@@ -95,7 +95,9 @@ export function input(data: string, host: CanvasEvent) {
   if (control.getActiveControl() && control.getIsRangeWithinControl()) {
     curIndex = control.setValue(inputData)
     if (!isComposing) {
-      control.emitControlContentChange()
+      draw.afterCompositionCommit('controlContentChange', () => {
+        control.emitControlContentChange()
+      })
     }
   } else {
     const start = startIndex + 1
@@ -112,6 +114,16 @@ export function input(data: string, host: CanvasEvent) {
     draw.spliceElementList(elementList, start, 0, inputData)
     curIndex = startIndex + inputData.length
   }
+  if (isComposing && ~curIndex) {
+    host.compositionInfo = {
+      elementList,
+      value: text,
+      startIndex: curIndex - inputData.length,
+      endIndex: curIndex,
+      defaultStyle
+    }
+  }
+
   if (~curIndex) {
     rangeManager.setRange(curIndex, curIndex)
     draw.render({
@@ -120,17 +132,8 @@ export function input(data: string, host: CanvasEvent) {
       curIndex,
       isSubmitHistory: !isComposing
     })
-    if (data) {
+    if (data && draw.isReady()) {
       draw.getAccessibility().input(data)
-    }
-  }
-  if (isComposing && ~curIndex) {
-    host.compositionInfo = {
-      elementList,
-      value: text,
-      startIndex: curIndex - inputData.length,
-      endIndex: curIndex,
-      defaultStyle
     }
   }
 }

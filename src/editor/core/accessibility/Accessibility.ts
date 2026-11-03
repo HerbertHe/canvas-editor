@@ -84,7 +84,14 @@ export class Accessibility {
     if (!text.trim()) return
     const prefix = this.i18n.t('accessibility.input')
     this.syncLiveDir()
-    this.assertive(`${prefix}${text}`)
+    const message = `${prefix}${text}`
+    if (this.draw.getOptions().lab?.imePreview &&
+      this.draw.getCanvasEvent?.()?.isComposing && this.assertiveDom) {
+      if (this.assertiveDom.textContent !== message)
+        this.assertiveDom.replaceChildren(document.createTextNode(message))
+      return
+    }
+    this.assertive(message)
   }
 
   // assertive 模式播报（立即打断当前朗读）

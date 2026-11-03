@@ -1,3 +1,5 @@
+import { createPositionList, appendPositionList, slicePositionList,
+  setPositionBlock, isPositionList } from './PositionList'
 import { NativeQueryIndex } from '../layout/NativeQueryIndex'
 import { getTextLineOrigin } from '../layout/relativeLayout'
 import type { TextLine } from '../../interface/Layout'
@@ -47,6 +49,9 @@ import { EventBusMap } from '../../interface/EventBus'
 
 // 单页新增位置信息的缓存切片
 interface IPagePositionCache {
+  endIndex?: number
+  blocks?: { start: number; source: IElementPosition[]; shift: number;
+    rowIndex: number; rowNo: number }[]
   nativeLines: PlacedTextLine[]
   positionList: IElementPosition[]
   floatPositionList: IFloatPosition[]
@@ -74,7 +79,9 @@ export class Position {
   private lineGeometry = new LineGeometryCache()
   private nativeQueries = new WeakMap<IElementPosition[], NativeQueryIndex>()
   private nativeCaretHint: NativeCaret | null = null
-  private placementStats = { computedElements: 0, reusedElements: 0 }
+  private positionSnapshots = new WeakMap<IElementPosition[], IElementPosition[]>()
+  private placementStats = { computedElements: 0, reusedElements: 0,
+    visitedElements: 0, reusedBlocks: 0, projectedElements: 0, reusedMetrics: 0 }
   public getPlacementStats() { return { ...this.placementStats } }
   private rowPositions = new WeakMap<TextLine, {
     key: string
@@ -82,6 +89,8 @@ export class Position {
     rowIndex: number
     rowNo: number
     positions: IElementPosition[]
+    contiguous: boolean
+    scale: number
   }>()
 
   public getNativeLines(positions = this.getPositionList()): PlacedTextLine[] {
@@ -510,8 +519,25 @@ export class Position {
     return this.positionList
   }
 
-  public getOriginalMainPositionList(): IElementPosition[] {
-    return this.positionList
+  /** Internal paint/layout callers opt into the lazy view; diagnostics own an array. */
+  public getOriginalMainPositionList(view = false): IElementPosition[] {
+    if (view || !isPositionList(this.positionList)) return this.positionList
+    let snapshot = this.positionSnapshots.get(this.positionList)
+    if (!snapshot) {
+      snapshot = this.positionList.slice()
+      this.positionSnapshots.set(this.positionList, snapshot)
+      this.nativeLines.set(snapshot, this.getNativeLines(this.positionList))
+      const rows = this.nativeRows.get(this.positionList)
+      if (rows) this.nativeRows.set(snapshot, rows)
+    }
+    return snapshot
+  }
+
+  private usePositionBlocks() {
+    const change = this.draw.getLayoutChangeSet?.()
+    return !!this.options.lab?.incrementalCommit && !!this.options.lab.incrementalFlow &&
+      change?.full === false && change.changedParagraphs.length <=
+        Math.max(8, change.reusedParagraphs.length / 4)
   }
 
   public getSelectionPositionList(): IElementPosition[] | null {
@@ -735,7 +761,18 @@ export class Position {
         this.placementStats.reusedElements += cached.positions.length
         const shift = origin!.delta - cached.delta
         const rowIndex = startRowIndex + i
+        if (this.options.lab?.incrementalCommit && cached.contiguous &&
+          setPositionBlock(positionList, cached.positions[0].index + shift,
+            cached.positions, shift, rowIndex, i,
+            () => { this.placementStats.projectedElements++ })) {
+          this.placementStats.reusedBlocks++
+          index = Math.max(index, cached.positions[0].index + shift + cached.positions.length)
+          x = startX
+          y += curRow.height
+          continue
+        }
         for (const position of cached.positions) {
+          this.placementStats.visitedElements++
           const projected = !shift && cached.rowIndex === rowIndex &&
             cached.rowNo === i ? position : { ...position,
               index: position.index + shift, rowIndex, rowNo: i }
@@ -746,6 +783,11 @@ export class Position {
         y += curRow.height
         continue
       }
+      const sourceBase = this.options.lab?.incrementalCommit &&
+        this.draw.getLayoutChangeSet?.()?.full === false && cached?.contiguous &&
+        cached.positions.length === curRow.elementList.length
+        ? cached.positions[0].index + origin!.delta - cached.delta : undefined
+      const reuseMetrics = sourceBase !== undefined && cached!.scale === scale
       const rowPositions: IElementPosition[] = []
       const nativeGeometry = nativePlacement
         ? this.lineGeometry.get(nativePlacement)
@@ -755,6 +797,7 @@ export class Position {
       const tablePreY = y
       for (let j = 0; j < curRow.elementList.length; j++) {
         this.placementStats.computedElements++
+        this.placementStats.visitedElements++
         const model = curRow.elementList[j]
         const element = model
         // 表格跨页片段行：同一数据元素对应多个视觉片段（跨页/跨栏），
@@ -762,12 +805,9 @@ export class Position {
         if (curRow.tableFragment) {
           index = curRow.startIndex + j
         }
-        const metrics = rowElementMetrics(
-          curRow,
-          j,
-          scale,
-          this.options.defaultSize
-        )
+        const metrics = reuseMetrics ? cached!.positions[j].metrics : rowElementMetrics(
+          curRow, j, scale, this.options.defaultSize)
+        if (reuseMetrics) this.placementStats.reusedMetrics++
         const offsetY =
           !element.hide &&
           !traceParticle.isTraceHidden(element) &&
@@ -781,7 +821,7 @@ export class Position {
         if (element.translateX) {
           x += element.translateX * scale
         }
-        const source = rowSourceIndex(curRow, j)
+        const source = sourceBase === undefined ? rowSourceIndex(curRow, j) : sourceBase + j
         const nativeRects = nativeGeometry?.getElementRects(source) || []
         const nativeLeft = nativeRects.length
           ? Math.min(...nativeRects.map(rect => rect.x))
@@ -790,7 +830,7 @@ export class Position {
         const drawX = nativePlacement
           ? (nativeLeft ?? nativeCaret?.x ?? rowContentStartX)
           : x
-        const sourceIndex = curRow.sourceIndices?.[j]
+        const sourceIndex = sourceBase === undefined ? curRow.sourceIndices?.[j] : sourceBase + j
         const elementIndex = sourceIndex ?? index
         const contentHeight = curRow.nativeLine
           ? curRow.nativeLine.contentHeight * scale
@@ -1007,10 +1047,17 @@ export class Position {
           y = tablePreY
         }
       }
-      if (cacheable) this.rowPositions.set(origin.base, {
-        key: positionKey, delta: origin.delta,
-        rowIndex: startRowIndex + i, rowNo: i, positions: rowPositions
-      })
+      if (cacheable) {
+        const contiguous = !!rowPositions.length && rowPositions.every(
+          (position, at) => position.index === rowPositions[0].index + at)
+        this.rowPositions.set(origin.base, {
+          key: positionKey, delta: origin.delta, contiguous, scale,
+          rowIndex: startRowIndex + i, rowNo: i, positions: rowPositions
+        })
+        if (this.options.lab?.incrementalCommit && contiguous)
+          setPositionBlock(positionList, rowPositions[0].index, rowPositions,
+            0, startRowIndex + i, i)
+      }
       x = startX
       y += curRow.height
     }
@@ -1107,7 +1154,23 @@ export class Position {
       pageRowList.length >= fromPageNo
     if (isResume) {
       const keptCache = cache.slice(0, fromPageNo)
-      this.positionList = keptCache.flatMap(c => c.positionList)
+      if (this.usePositionBlocks()) {
+        this.positionList = createPositionList()
+        for (const page of keptCache) {
+          if (!isPositionList(page.positionList) && page.blocks) {
+            for (const block of page.blocks)
+              setPositionBlock(this.positionList, block.start, block.source,
+                block.shift, block.rowIndex, block.rowNo,
+                () => { this.placementStats.projectedElements++ })
+            this.placementStats.reusedBlocks += page.blocks.length
+            this.positionList.length = Math.max(this.positionList.length, page.endIndex || 0)
+          } else this.placementStats.visitedElements +=
+            appendPositionList(this.positionList, page.positionList)
+        }
+      } else {
+        this.positionList = keptCache.flatMap(c => c.positionList)
+        this.placementStats.visitedElements += this.positionList.length
+      }
       const lines = keptCache.flatMap(c => c.nativeLines)
       this.nativeLines.set(this.positionList, lines)
       const rows = new NativeRowIndex()
@@ -1130,7 +1193,7 @@ export class Position {
       this.pagePositionCacheList = keptCache
     } else {
       // 置空原位置信息
-      this.positionList = []
+      this.positionList = this.usePositionBlocks() ? createPositionList() : []
       this.tablePagingPositionList = []
       this.tablePagingPositionMap.clear()
       this.pagePositionCacheList = []
@@ -1150,6 +1213,7 @@ export class Position {
       const startX = margins[3]
       // 每页页眉禁用状态不同，startY 需按页计算
       const startY = margins[0] + header.getExtraHeight(i)
+      const pageRowIndex = startRowIndex
       const markLines = this.getNativeLines(this.positionList).length
       const markPosition = this.positionList.length
       const markFloat = this.floatPositionList.length
@@ -1165,10 +1229,26 @@ export class Position {
         innerWidth
       })
       startRowIndex += rowList.length
+      let blocks: IPagePositionCache['blocks']
+      if (this.options.lab?.incrementalCommit && this.options.lab.incrementalFlow &&
+        this.draw.getLayoutChangeSet?.()?.full === false) {
+        blocks = []
+        for (const [rowNo, row] of rowList.entries()) {
+          const origin = row.nativeLine && getTextLineOrigin(row.nativeLine)
+          const cached = origin && this.rowPositions.get(origin.base)
+          if (!cached?.contiguous) { blocks = undefined; break }
+          const shift = origin!.delta - cached.delta
+          blocks.push({ start: cached.positions[0].index + shift,
+            source: cached.positions, shift, rowIndex: pageRowIndex + rowNo, rowNo })
+        }
+      }
       // 记录本页新增的位置信息，供增量复用
       this.pagePositionCacheList.push({
+        endIndex: this.positionList.length, blocks,
         nativeLines: this.getNativeLines(this.positionList).slice(markLines),
-        positionList: this.positionList.slice(markPosition),
+        positionList: this.options.lab?.incrementalCommit
+          ? slicePositionList(this.positionList, markPosition)
+          : this.positionList.slice(markPosition),
         floatPositionList: this.floatPositionList.slice(markFloat),
         tablePagingPositionList:
           this.tablePagingPositionList.slice(markTablePaging)
@@ -1204,6 +1284,7 @@ export class Position {
     this.nativeLines = new WeakMap()
     this.nativeCaretHint = null
     this.rowPositions = new WeakMap()
+    this.positionSnapshots = new WeakMap()
     this.cursorPosition = null
     this.positionList = []
     this.pagePositionCacheList = []

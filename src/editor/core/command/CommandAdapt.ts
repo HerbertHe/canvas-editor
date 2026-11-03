@@ -2049,7 +2049,7 @@ export class CommandAdapt {
     const rangeList = this.getKeywordRangeList(payload)
     if (!rangeList.length) return null
     const searchResultContextList: ISearchResultContext[] = []
-    const positionList = this.position.getOriginalMainPositionList()
+    const positionList = this.position.getOriginalMainPositionList(true)
     const elementList = this.draw.getOriginalMainElementList()
     for (let r = 0; r < rangeList.length; r++) {
       const range = rangeList[r]
@@ -2629,7 +2629,7 @@ export class CommandAdapt {
     const positionList = isTable
       ? this.position.getTableTdByContext(elementList, context)?.positionList ||
         []
-      : this.position.getOriginalMainPositionList()
+      : this.position.getOriginalMainPositionList(true)
     if (this.position.getNativeLines(positionList).length) {
       const nativeRects = this.position
         .getNativeRangeRects(startIndex, endIndex + 1, positionList)

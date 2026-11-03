@@ -20,6 +20,31 @@ const version = { sessionId: 1, requestId: 1, documentRevision: 0,
   fontRevision: 1, constraintsRevision: 0 }
 
 describe('pure layout kernel and ordered worker mirror', () => {
+  it('keeps preview Unicode geometry equal to sync without changing the mirrored model', async () => {
+    const server = new LayoutWorkerServer()
+    const kernel = new LayoutKernel()
+    const model = { main: [{ value: 'original' }], header: [], footer: [] }
+    try {
+      await kernel.initialize(fonts, 'Test')
+      await server.handle({ ...version, type: 'init', fonts, defaultFont: 'Test', model })
+      for (const text of ['office fi', '中文 e\u0301 👩‍👩‍👧‍👦', 'مرحبا']) {
+        const transient = input(text)
+        transient.source.scope = 'ime-preview'
+        const response = await server.handle({ ...version, type: 'preview',
+          input: transient, composition: { generation: 3, sequence: 1 } })
+        expect(response.type).toBe('preview')
+        expect(response.layouts![0]).toEqual(kernel.layout(
+          { schemaVersion: 1, input: transient }).layout)
+        expect(response.composition).toEqual({ generation: 3, sequence: 1 })
+      }
+      expect((await server.handle({ ...version, type: 'inspect' })).model).toEqual(model)
+      const oversized = input('x'.repeat(4097))
+      oversized.source.scope = 'ime-preview'
+      expect((await server.handle({ ...version, type: 'preview', input: oversized,
+        composition: { generation: 3, sequence: 2 } })).type).toBe('error')
+    } finally { server.destroy(); kernel.destroy() }
+  })
+
   it('applies a deletion batch sequentially and validates its final revision', async () => {
     const server = new LayoutWorkerServer()
     try {

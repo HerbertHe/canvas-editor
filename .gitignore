@@ -31,3 +31,19 @@ cypress/results/
 !/docs/guide/performance-baselines/perf-position-worker-1000-2026-10-23.json
 !/docs/guide/performance-baselines/perf-position-worker-transfer-2026-10-23.json
 !/docs/guide/performance-baselines/perf-position-worker-uninstrumented-2026-10-23.json
+
+# Final opt-in IME comparison and instrumentation control
+!/docs/guide/performance-baselines/ime-2026-10-30.json
+!/docs/guide/performance-baselines/ime-uninstrumented-2026-10-30.json
+
+# IME-10 baseline/optimized aggregates and required slow-case traces
+!/docs/guide/performance-baselines/ime-flow-2026-11-02.json
+
+# IME-11 long-paragraph baseline/optimized summaries
+!/docs/guide/performance-baselines/ime-long-2026-11-02.json
+
+# IME-12/13 table and Worker baseline/optimized summaries
+!/docs/guide/performance-baselines/ime-table-worker-2026-11-02.json
+
+# Final IME-14 automated acceptance and explicit release decision
+!/docs/guide/performance-baselines/ime-release-2026-11-03.json

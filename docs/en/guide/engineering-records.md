@@ -53,3 +53,5 @@ Keep temporary logs, screenshots, traces and intermediate output in ignored `cyp
 Prioritize long-paragraph layout and global flow/metadata traversal. Consider tile caching, OffscreenCanvas workers or WebGL/WebGPU glyph painting only when profiling identifies painting as the limiting cost. These do not eliminate CPU shaping or document flow.
 
 Retained design references: [RTL design](rtl-layout-design.md), [RTL follow-ups](rtl-deferred-todo.md), and [deferred SVG assessment](../../guide/harfbuzz-svg-assessment.md). SVG pages and standalone SVG document export remain unavailable.
+
+The [IME performance tasks](../../guide/ime-performance-tasks.md) track the experimental composition path, automated replay, pixel comparisons and pending real-system acceptance.

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="UTF-8" />
+  <title>IME performance QA</title>
+  <style>body{margin:24px;background:#eee}#editor{position:relative}button{margin:8px}</style>
+  <h1>中文输入法 QA</h1>
+  <p>浏览器控制台可读取 window.imePerformance；下载包含当前输入文本，请仅使用测试内容。</p>
+  <details><summary>人工输入法验收信息</summary><fieldset>
+    <legend>IME-14 人工验收信息</legend>
+    <p>每个场景、每档配置分别记录三轮。选字、Esc 取消后再结束记录。DOM 锚点和 rAF 不能替代真实候选窗与可见刷新检查。</p>
+    <label>系统 <select id="qa-platform"><option value="">请选择</option><option value="macos">macOS</option><option value="windows">Windows</option></select></label>
+    <label>系统版本 <input id="qa-os" /></label>
+    <label>浏览器版本 <input id="qa-browser" /></label>
+    <label>输入法 <input id="qa-ime" /></label>
+    <label>输入法版本 <input id="qa-ime-version" /></label>
+    <p>源码指纹 <input id="qa-source" readonly size="68" /><span id="qa-source-status">未绑定；先运行发布检查生成指纹。</span></p>
+    <label><input type="checkbox" id="qa-candidate" />真实候选窗跟随正确</label>
+    <label><input type="checkbox" id="qa-refresh" />连续拼音可见刷新正常</label>
+    <label><input type="checkbox" id="qa-commit" />选字提交正确</label>
+    <label><input type="checkbox" id="qa-cancel" />取消恢复正确</label>
+    <p><label>观察结论（含场景、缩放、系统与输入法设置）<textarea id="qa-notes" rows="3" cols="80"></textarea></label></p>
+    <p>请另存候选窗/可见刷新录屏。脚本分派的事件不具备原生信任标记，不能用于通过人工门禁。</p>
+  </fieldset></details>
+  <button id="record">开始真实输入法记录</button>
+  <button id="save">结束并下载记录</button>
+  <div id="editor"></div>
+  <script type="module" src="./ime-performance.ts"></script>
+</html>

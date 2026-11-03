@@ -3,7 +3,7 @@ import LayoutWorker from './layout.worker?worker&inline'
 import type { EditDocument, EditTransaction } from '../../history/EditTransaction'
 import type { IEditorFontFace } from '../../../interface/TextEngine'
 import type { NativeParagraphInput } from '../../text-engine/layout/TextLayoutService'
-import type { LayoutRequest, LayoutResponse, LayoutVersion } from './protocol'
+import type { CompositionVersion, LayoutRequest, LayoutResponse, LayoutVersion } from './protocol'
 
 interface Pending {
   version: LayoutVersion
@@ -12,6 +12,7 @@ interface Pending {
   timer: ReturnType<typeof setTimeout>
   bytes: number
   expected: LayoutResponse['type']
+  composition?: CompositionVersion
 }
 type Payload = LayoutRequest extends infer R
   ? R extends LayoutRequest ? Omit<R, keyof LayoutVersion> : never : never
@@ -29,7 +30,8 @@ export class LayoutWorkerClient {
   private destroyed = false
   ready = false
   private busy = false
-  private latest: { run: () => void; reject: (error: Error) => void } | null = null
+  private latest: { run: () => void; reject: (error: Error) => void;
+    composition?: CompositionVersion } | null = null
   private edits: { transaction: EditTransaction; bytes: number;
     resolve: (response: LayoutResponse) => void; reject: (error: Error) => void }[] = []
   private editBytes = 0
@@ -69,7 +71,9 @@ export class LayoutWorkerClient {
       if (!pending) return
       if (response.type !== pending.expected || response.documentRevision !== pending.version.documentRevision ||
         response.fontRevision !== pending.version.fontRevision ||
-        response.constraintsRevision !== pending.version.constraintsRevision) {
+        response.constraintsRevision !== pending.version.constraintsRevision ||
+        (pending.composition && (response.composition?.generation !== pending.composition.generation ||
+          response.composition?.sequence !== pending.composition.sequence))) {
         this.finish(response.requestId, new Error(response.error || 'Layout version mismatch'))
         if (response.needsResync) this.ready = false
       } else {
@@ -172,6 +176,23 @@ export class LayoutWorkerClient {
   }
 
   layout(inputs: NativeParagraphInput[], constraintsRevision: number, simpleFlow = false) {
+    return this.enqueueLayout(inputs, constraintsRevision, simpleFlow)
+  }
+
+  preview(input: NativeParagraphInput, constraintsRevision: number,
+    composition: CompositionVersion) {
+    return this.enqueueLayout([input], constraintsRevision, false, composition)
+  }
+
+  cancelPreview() {
+    if (!this.latest?.composition) return
+    const waiting = this.latest
+    this.latest = null
+    waiting.reject(new Error('Composition preview invalidated'))
+  }
+
+  private enqueueLayout(inputs: NativeParagraphInput[], constraintsRevision: number,
+    simpleFlow: boolean, composition?: CompositionVersion) {
     const waitingBytes = JSON.stringify(inputs).length * 2
     if (waitingBytes > this.byteBudget / 4)
       return Promise.reject(new Error('Layout input exceeds waiting queue budget'))
@@ -188,8 +209,10 @@ export class LayoutWorkerClient {
         const post = () => {
           if (revision !== this.revision || session !== this.sessionId)
             return Promise.reject(new Error('Layout superseded by a newer model'))
-          return this.request({ type: 'layout', inputs, simpleFlow,
-            transferResults: this.transferResults })
+          return this.request(composition
+            ? { type: 'preview', input: inputs[0], composition }
+            : { type: 'layout', inputs, simpleFlow,
+                transferResults: this.transferResults })
         }
         const response = this.editing || this.edits.length
           ? this.waitForEdits().then(post) : post()
@@ -206,7 +229,7 @@ export class LayoutWorkerClient {
       if (!this.busy) run()
       else {
         this.latest?.reject(new Error('Layout superseded by a newer request'))
-        this.latest = { run, reject }
+        this.latest = { run, reject, composition }
         this.stats.maxWaitingBytes = Math.max(this.stats.maxWaitingBytes, waitingBytes)
       }
     })
@@ -231,7 +254,9 @@ export class LayoutWorkerClient {
       const started = performance.now()
       const timer = setTimeout(() => this.reset(new Error('Layout worker timed out')), this.timeoutMs)
       this.pending.set(version.requestId, { version, bytes, timer,
-        expected: payload.type === 'layout' ? 'layout' : payload.type === 'inspect' ? 'mirror' : 'ack',
+        expected: payload.type === 'layout' ? 'layout' : payload.type === 'preview'
+          ? 'preview' : payload.type === 'inspect' ? 'mirror' : 'ack',
+        composition: payload.type === 'preview' ? payload.composition : undefined,
         resolve: response => {
         const elapsed = performance.now() - started
         this.stats.roundTripMs += elapsed
@@ -245,6 +270,10 @@ export class LayoutWorkerClient {
               lineWidths: initial.lines.map(() => input.availableWidth),
               lineOffsets: initial.lines.map(() => 0) }]
           })
+          this.stats.layoutMs += elapsed
+          this.stats.workerComputeMs += response.computeMs || 0
+        }
+        if (payload.type === 'preview') {
           this.stats.layoutMs += elapsed
           this.stats.workerComputeMs += response.computeMs || 0
         }

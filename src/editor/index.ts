@@ -205,6 +205,15 @@ export default class Editor {
           'executeComputeElementListHeightAsync'
         ].includes(name)
       )
+      if (draw.isReady() && !['getLocale', 'getContainer'].includes(name)) {
+        const compositionScale = draw.getOptions().lab?.imePreview &&
+          ['executePageScale', 'executePageScaleRecovery',
+            'executePageScaleMinus', 'executePageScaleAdd'].includes(name)
+        if (name.startsWith('execute') && !compositionScale)
+          draw.getCanvasEvent().finishComposition()
+        else draw.getCanvasEvent().flushComposition()
+        draw.flushCompositionDerivedState()
+      }
       if (draw.isReady() && draw.getOptions().lab?.layoutWorker &&
         !['getValue', 'getValueAsync', 'getWordCount', 'getGroupIds',
           'getRange', 'getRangeText', 'getContainer', 'getLocale'].includes(name))

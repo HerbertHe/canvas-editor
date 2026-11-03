@@ -24,6 +24,7 @@ export class CursorAgent {
     // 代理光标绘制
     const agentCursorDom = document.createElement('textarea')
     agentCursorDom.autocomplete = 'off'
+    if (draw.getOptions().lab?.imePreview) agentCursorDom.wrap = 'off'
     agentCursorDom.classList.add(`${EDITOR_PREFIX}-inputarea`)
     agentCursorDom.innerText = ''
     this.container.append(agentCursorDom)
@@ -44,6 +45,15 @@ export class CursorAgent {
       'compositionend',
       this._compositionend.bind(this)
     )
+    agentCursorDom.addEventListener('compositionupdate', evt => {
+      this.canvasEvent.compositionupdate(evt)
+    })
+    agentCursorDom.addEventListener('blur', event => {
+      // Native candidate windows can take focus without a DOM destination.
+      // Only an explicit DOM focus transfer completes our session here.
+      if ((event as FocusEvent).relatedTarget)
+        this.draw.getCursor().withoutFocus(() => this.canvasEvent.finishComposition())
+    })
   }
 
   public getAgentCursorDom(): HTMLTextAreaElement {
@@ -52,7 +62,13 @@ export class CursorAgent {
 
   /** Sync textarea dir with current paragraph direction (IME / RTL). */
   public syncDirection(dir: 'ltr' | 'rtl' | 'auto') {
-    this.agentCursorDom.dir = dir
+    if (this.agentCursorDom.dir !== dir) this.agentCursorDom.dir = dir
+  }
+
+  public destroy() {
+    if (this.keydownHandledDeleteTimer !== null)
+      clearTimeout(this.keydownHandledDeleteTimer)
+    this.keydownHandledDeleteTimer = null
   }
 
   private _markKeydownHandledDelete() {
@@ -68,7 +84,8 @@ export class CursorAgent {
   }
 
   private _keyDown(evt: KeyboardEvent) {
-    if (evt.key === 'Backspace' || evt.key === 'Delete') {
+    if (!this.canvasEvent.isComposing && !evt.isComposing && evt.keyCode !== 229 &&
+      (evt.key === 'Backspace' || evt.key === 'Delete')) {
       this._markKeydownHandledDelete()
     }
     this.canvasEvent.keydown(evt)
@@ -100,9 +117,11 @@ export class CursorAgent {
   }
 
   private _input(evt: Event) {
-    const data = (<InputEvent>evt).data
-    if (data) {
-      this.canvasEvent.input(data)
+    const input = evt as InputEvent
+    const data = input.data
+    if (data !== null || this.canvasEvent.isComposing) {
+      // Null can describe composition deletion; use the live textarea then.
+      this.canvasEvent.input(data ?? this.agentCursorDom.value, input)
     }
     if (this.eventBus.isSubscribe('input')) {
       this.eventBus.emit('input', evt)
@@ -112,6 +131,7 @@ export class CursorAgent {
   private _paste(evt: ClipboardEvent) {
     const isReadonly = this.draw.isReadonly()
     if (isReadonly) return
+    this.canvasEvent.finishComposition()
     const clipboardData = evt.clipboardData
     if (!clipboardData) return
     pasteByEvent(this.canvasEvent, evt)

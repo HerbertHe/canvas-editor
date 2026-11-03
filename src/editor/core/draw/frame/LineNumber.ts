@@ -25,7 +25,7 @@ export class LineNumber {
     const adapter = this.draw.getLayoutHostAdapter()
     if (!adapter.isReady()) return
     const { width, margins } = this.draw.getPageSize(pageNo)
-    const positionList = this.draw.getPosition().getOriginalMainPositionList()
+    const positionList = this.draw.getPosition().getOriginalMainPositionList(true)
     const pageRowList = this.draw.getLayoutPages()
     const rowList = pageRowList[pageNo] || []
     ctx.save()

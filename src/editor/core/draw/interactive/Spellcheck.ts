@@ -250,7 +250,7 @@ export class Spellcheck {
     if (this.options.spellcheck.disabled || !this.spellcheckRangeList.length) {
       return
     }
-    const mainPositionList = this.position.getOriginalMainPositionList()
+    const mainPositionList = this.position.getOriginalMainPositionList(true)
     const elementList = this.draw.getOriginalMainElementList()
     ctx.save()
     ctx.strokeStyle = this.options.spellcheck.color

@@ -1,0 +1,2325 @@
+{
+  "date": "2026-11-02T04:11:50.767Z",
+  "passed": true,
+  "browser": "156.0.8078.76",
+  "node": "v24.22.1",
+  "machine": {
+    "cpu": "Apple M1 Pro",
+    "platform": "darwin",
+    "release": "25.4.0",
+    "memory": 17179869184
+  },
+  "settings": {
+    "trials": 3,
+    "iterations": 20,
+    "warmup": 1,
+    "profile": "sync",
+    "paragraphs": 1000,
+    "viewport": {
+      "width": 1366,
+      "height": 720
+    },
+    "dpr": 1
+  },
+  "semantics": "Same-code counterfactual: incrementalCommit=false/true; all earlier incremental features stay enabled. Synchronous compositionend handler/geometry timings exclude later paint, notifications and presentation. Inclusive stages overlap. Work is measured through the next rAF. Synthetic events, not OS IME.",
+  "sourceHashes": {
+    "src/editor/core/layout/IncrementalFlow.ts": "9c3a5dae368bd58b97c7138d94a7987e86238b34df54995ef0e87a5e1da38d04",
+    "src/editor/core/layout/FlowCheckpoint.ts": "c3206acc7b979221be9e1328933f560ab535fe4e7f0e387cd971074621b7d91e",
+    "src/editor/core/layout/ParagraphIndex.ts": "3b0104154520c5fc0c12bcd268b34ff14ef4e98df0ffac35296bd95440a75438",
+    "src/editor/core/layout/relativeLayout.ts": "faec808de0eaa15f71cc54af1fe5006188c97775a2926fad9045d4c861c21448",
+    "src/editor/core/layout/NativeQueryIndex.ts": "d3a16d762de13611c54f09267951041ef54edd04a0a13cfc2969b86fd247de84",
+    "src/editor/core/draw/Draw.ts": "693eaeeabf52f1df1d2de9a873f66640e7cad9cf7d926c298b9558ab53259df7",
+    "src/editor/core/position/Position.ts": "ecb0b83a47399f72dde0ca0c5b78eff18b78f8bdd4f001d73e0b87e47dfed9ea",
+    "src/editor/core/position/PositionList.ts": "58104cc9e7736c0c48eea29ff53924987dadcc77732b074c0d5e040f7ff6d599",
+    "src/editor/core/draw/interactive/Area.ts": "dd6bfe27db0d945cd27c144532b215284b25e3d67a476672f707ba2e6fb3e729",
+    "src/editor/core/event/CanvasEvent.ts": "e60de29d1438f7266f0a1f4ac7d63b62238451d1d53ba789cbe1985642dc5117",
+    "src/editor/core/event/handlers/input.ts": "6018c57b1933711f3382a7713cc26a0046ebc47dea37c2054cb780648010d33d",
+    "src/editor/utils/option.ts": "9f44a76bc969322a1aa6437e56e762082d9d13318e32cb4d48efdc8581c4d825",
+    "src/editor/utils/performanceProfile.ts": "850e3c522348edb96c2d9ebe27404020a782c5a0685cfbfa8c073c03f836bb6d",
+    "tests/fixtures/migration/ime-performance.ts": "69644ecb1d7d1e697c65805ac85d9e7051c38c43c81f2fd90ba9a090de1fd20a",
+    "scripts/test-ime-flow.mjs": "48bc044f38553479b8961fec61cdc8be33e7f5d9b9dede094730de6aebcd6e2f"
+  },
+  "fonts": {
+    "NotoSans-Latin-Regular.woff2": "09aee8065d25508f23a4c3d92cd777ac869c52d93fd868a88f025d888a7937d6",
+    "NotoSansSC-Regular.woff2": "95e3633b6a98f764ba3adfb54504a0cd4799328c009adf9081d6c1850f9c4c78"
+  },
+  "results": [
+    {
+      "kind": "stable",
+      "incrementalCommit": false,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 10.5,
+        "p50": 13.400000095367432,
+        "p95": 17,
+        "p99": 22.90000009536743,
+        "max": 22.90000009536743
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 10002,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 5.5,
+          "p50": 6.300000190734863,
+          "p95": 11.600000143051147,
+          "p99": 11.700000047683716,
+          "max": 11.700000047683716
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.5999999046325684,
+          "p50": 2,
+          "p95": 3.8999998569488525,
+          "p99": 5.200000047683716,
+          "max": 5.200000047683716
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 7.299999952316284,
+          "p50": 8.800000190734863,
+          "p95": 13.600000143051147,
+          "p99": 15.700000047683716,
+          "max": 15.700000047683716
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2,
+          "p50": 2.5,
+          "p95": 5.900000095367432,
+          "p99": 6.700000047683716,
+          "max": 6.700000047683716
+        }
+      },
+      "slowest": {
+        "ms": 22.90000009536743,
+        "stages": {
+          "computeRowList": 11.700000047683716,
+          "positions": 3.8999998569488525,
+          "computeRenderGeometry": 15.700000047683716,
+          "updateFontCoverage": 5.900000095367432
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 10002,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": true,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 8.299999952316284,
+        "p50": 10.700000047683716,
+        "p95": 13.899999856948853,
+        "p99": 15.400000095367432,
+        "max": 15.400000095367432
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1,
+        "batchChecked": 1000,
+        "batchReused": 1000,
+        "checkpointChecks": 78,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 11,
+        "reusedBlocks": 1000,
+        "projectedElements": 50,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 3.3999998569488525,
+          "p50": 3.8999998569488525,
+          "p95": 7.299999952316284,
+          "p99": 8.100000143051147,
+          "max": 8.100000143051147
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.5,
+          "p50": 2.0999999046325684,
+          "p95": 2.299999952316284,
+          "p99": 4.700000047683716,
+          "max": 4.700000047683716
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 5.099999904632568,
+          "p50": 6.099999904632568,
+          "p95": 9.799999952316284,
+          "p99": 10.300000190734863,
+          "max": 10.300000190734863
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.1000001430511475,
+          "p50": 2.5,
+          "p95": 7,
+          "p99": 7.6000001430511475,
+          "max": 7.6000001430511475
+        }
+      },
+      "slowest": {
+        "ms": 15.400000095367432,
+        "stages": {
+          "computeRowList": 4.799999952316284,
+          "positions": 2.0999999046325684,
+          "computeRenderGeometry": 7.199999809265137,
+          "updateFontCoverage": 7.6000001430511475
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1,
+          "batchChecked": 1000,
+          "batchReused": 1000,
+          "checkpointChecks": 78,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 11,
+          "reusedBlocks": 1000,
+          "projectedElements": 50,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": false,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 159.59999990463257,
+        "p50": 172.60000014305115,
+        "p95": 204,
+        "p99": 225,
+        "max": 225
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 147,
+          "p50": 156,
+          "p95": 174.5,
+          "p99": 190.39999985694885,
+          "max": 190.39999985694885
+        },
+        "positions": {
+          "count": 20,
+          "min": 8.199999809265137,
+          "p50": 10.400000095367432,
+          "p95": 12,
+          "p99": 12.799999952316284,
+          "max": 12.799999952316284
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 155.5,
+          "p50": 167.5,
+          "p95": 185.5,
+          "p99": 203.39999985694885,
+          "max": 203.39999985694885
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.0999999046325684,
+          "p50": 2.4000000953674316,
+          "p95": 4.700000047683716,
+          "p99": 5.299999952316284,
+          "max": 5.299999952316284
+        }
+      },
+      "slowest": {
+        "ms": 225,
+        "stages": {
+          "computeRowList": 190.39999985694885,
+          "positions": 12.799999952316284,
+          "computeRenderGeometry": 203.39999985694885,
+          "updateFontCoverage": 3
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": true,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 31.600000143051147,
+        "p50": 35.09999990463257,
+        "p95": 69.20000004768372,
+        "p99": 105.89999985694885,
+        "max": 105.89999985694885
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 6.8999998569488525,
+          "p50": 7.700000047683716,
+          "p95": 11,
+          "p99": 30.09999990463257,
+          "max": 30.09999990463257
+        },
+        "positions": {
+          "count": 20,
+          "min": 17.200000047683716,
+          "p50": 21.5,
+          "p95": 25.5,
+          "p99": 81.09999990463257,
+          "max": 81.09999990463257
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 27.399999856948853,
+          "p50": 30.200000047683716,
+          "p95": 51.5,
+          "p99": 92.39999985694885,
+          "max": 92.39999985694885
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.0999999046325684,
+          "p50": 2.5,
+          "p95": 4.800000190734863,
+          "p99": 6.200000047683716,
+          "max": 6.200000047683716
+        }
+      },
+      "slowest": {
+        "ms": 105.89999985694885,
+        "stages": {
+          "computeRowList": 11,
+          "positions": 81.09999990463257,
+          "computeRenderGeometry": 92.39999985694885,
+          "updateFontCoverage": 3.4000000953674316
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": false,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 212.90000009536743,
+        "p50": 225,
+        "p95": 260.09999990463257,
+        "p99": 270.09999990463257,
+        "max": 270.09999990463257
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 180.29999995231628,
+          "p50": 188.69999980926514,
+          "p95": 218.59999990463257,
+          "p99": 224.30000019073486,
+          "max": 224.30000019073486
+        },
+        "positions": {
+          "count": 20,
+          "min": 11.599999904632568,
+          "p50": 14.099999904632568,
+          "p95": 15.599999904632568,
+          "p99": 21.200000047683716,
+          "max": 21.200000047683716
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 193.20000004768372,
+          "p50": 203.20000004768372,
+          "p95": 234.39999985694885,
+          "p99": 240.20000004768372,
+          "max": 240.20000004768372
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.200000047683716,
+          "p50": 8.5,
+          "p95": 14.400000095367432,
+          "p99": 32.60000014305115,
+          "max": 32.60000014305115
+        }
+      },
+      "slowest": {
+        "ms": 270.09999990463257,
+        "stages": {
+          "computeRowList": 224.30000019073486,
+          "positions": 15.599999904632568,
+          "computeRenderGeometry": 240.20000004768372,
+          "updateFontCoverage": 8.200000047683716
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": true,
+      "trial": 0,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 69.59999990463257,
+        "p50": 77.5,
+        "p95": 144.40000009536743,
+        "p99": 145.70000004768372,
+        "max": 145.70000004768372
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 26.799999952316284,
+          "p50": 30.5,
+          "p95": 34.90000009536743,
+          "p99": 41.10000014305115,
+          "max": 41.10000014305115
+        },
+        "positions": {
+          "count": 20,
+          "min": 20.200000047683716,
+          "p50": 24.100000143051147,
+          "p95": 27.59999990463257,
+          "p99": 75.20000004768372,
+          "max": 75.20000004768372
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 49.90000009536743,
+          "p50": 55,
+          "p95": 65.40000009536743,
+          "p99": 104.89999985694885,
+          "max": 104.89999985694885
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.299999952316284,
+          "p50": 10.600000143051147,
+          "p95": 13.099999904632568,
+          "p99": 14.200000047683716,
+          "max": 14.200000047683716
+        }
+      },
+      "slowest": {
+        "ms": 145.70000004768372,
+        "stages": {
+          "computeRowList": 33.5,
+          "positions": 27.59999990463257,
+          "computeRenderGeometry": 61.299999952316284,
+          "updateFontCoverage": 8.099999904632568
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": true,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 8.100000143051147,
+        "p50": 9.799999952316284,
+        "p95": 13.799999952316284,
+        "p99": 14.699999809265137,
+        "max": 14.699999809265137
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1,
+        "batchChecked": 1000,
+        "batchReused": 1000,
+        "checkpointChecks": 78,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 11,
+        "reusedBlocks": 1000,
+        "projectedElements": 50,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 3.200000047683716,
+          "p50": 3.799999952316284,
+          "p95": 6.800000190734863,
+          "p99": 7.200000047683716,
+          "max": 7.200000047683716
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.6999998092651367,
+          "p50": 2,
+          "p95": 3.1999998092651367,
+          "p99": 8.100000143051147,
+          "max": 8.100000143051147
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 5,
+          "p50": 5.800000190734863,
+          "p95": 9.599999904632568,
+          "p99": 11.5,
+          "max": 11.5
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.0999999046325684,
+          "p50": 2.6000001430511475,
+          "p95": 5.299999952316284,
+          "p99": 5.799999952316284,
+          "max": 5.799999952316284
+        }
+      },
+      "slowest": {
+        "ms": 14.699999809265137,
+        "stages": {
+          "computeRowList": 3.299999952316284,
+          "positions": 8.100000143051147,
+          "computeRenderGeometry": 11.5,
+          "updateFontCoverage": 2.3999998569488525
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1,
+          "batchChecked": 1000,
+          "batchReused": 1000,
+          "checkpointChecks": 78,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 11,
+          "reusedBlocks": 1000,
+          "projectedElements": 50,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": false,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 10.399999856948853,
+        "p50": 11.799999952316284,
+        "p95": 16.200000047683716,
+        "p99": 21.600000143051147,
+        "max": 21.600000143051147
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 10002,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 5.3999998569488525,
+          "p50": 5.800000190734863,
+          "p95": 9.299999952316284,
+          "p99": 9.399999856948853,
+          "max": 9.399999856948853
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.6000001430511475,
+          "p50": 1.9000000953674316,
+          "p95": 4.900000095367432,
+          "p99": 5.200000047683716,
+          "max": 5.200000047683716
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 7.200000047683716,
+          "p50": 7.700000047683716,
+          "p95": 11.699999809265137,
+          "p99": 12.299999952316284,
+          "max": 12.299999952316284
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2,
+          "p50": 2.3000001907348633,
+          "p95": 6.099999904632568,
+          "p99": 6.5,
+          "max": 6.5
+        }
+      },
+      "slowest": {
+        "ms": 21.600000143051147,
+        "stages": {
+          "computeRowList": 5.800000190734863,
+          "positions": 5.200000047683716,
+          "computeRenderGeometry": 11.100000143051147,
+          "updateFontCoverage": 2.299999952316284
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 10002,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": true,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 32.200000047683716,
+        "p50": 36.299999952316284,
+        "p95": 42,
+        "p99": 42.200000047683716,
+        "max": 42.200000047683716
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 7.099999904632568,
+          "p50": 8.5,
+          "p95": 11.599999904632568,
+          "p99": 12,
+          "max": 12
+        },
+        "positions": {
+          "count": 20,
+          "min": 16.600000143051147,
+          "p50": 22.200000047683716,
+          "p95": 27.5,
+          "p99": 27.5,
+          "max": 27.5
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 26.40000009536743,
+          "p50": 30.59999990463257,
+          "p95": 36.200000047683716,
+          "p99": 37.09999990463257,
+          "max": 37.09999990463257
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.1000001430511475,
+          "p50": 2.5,
+          "p95": 3.0999999046325684,
+          "p99": 5.5,
+          "max": 5.5
+        }
+      },
+      "slowest": {
+        "ms": 42.200000047683716,
+        "stages": {
+          "computeRowList": 9.200000047683716,
+          "positions": 22.200000047683716,
+          "computeRenderGeometry": 31.40000009536743,
+          "updateFontCoverage": 2.799999952316284
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": false,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 165.29999995231628,
+        "p50": 175.09999990463257,
+        "p95": 238.40000009536743,
+        "p99": 282,
+        "max": 282
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 150.70000004768372,
+          "p50": 158.29999995231628,
+          "p95": 190.5,
+          "p99": 193.90000009536743,
+          "max": 193.90000009536743
+        },
+        "positions": {
+          "count": 20,
+          "min": 8.900000095367432,
+          "p50": 10.900000095367432,
+          "p95": 56.40000009536743,
+          "p99": 110,
+          "max": 110
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 159.89999985694885,
+          "p50": 168.79999995231628,
+          "p95": 208.29999995231628,
+          "p99": 274.2999999523163,
+          "max": 274.2999999523163
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 1.8999998569488525,
+          "p50": 2.3999998569488525,
+          "p95": 4.5,
+          "p99": 4.900000095367432,
+          "max": 4.900000095367432
+        }
+      },
+      "slowest": {
+        "ms": 282,
+        "stages": {
+          "computeRowList": 164.29999995231628,
+          "positions": 110,
+          "computeRenderGeometry": 274.2999999523163,
+          "updateFontCoverage": 4.300000190734863
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": true,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 70.70000004768372,
+        "p50": 78.90000009536743,
+        "p95": 104,
+        "p99": 152.90000009536743,
+        "max": 152.90000009536743
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 26.700000047683716,
+          "p50": 30.90000009536743,
+          "p95": 40.89999985694885,
+          "p99": 41.10000014305115,
+          "max": 41.10000014305115
+        },
+        "positions": {
+          "count": 20,
+          "min": 20.799999952316284,
+          "p50": 24.700000047683716,
+          "p95": 36.299999952316284,
+          "p99": 73.90000009536743,
+          "max": 73.90000009536743
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 48.89999985694885,
+          "p50": 56.89999985694885,
+          "p95": 72,
+          "p99": 112.09999990463257,
+          "max": 112.09999990463257
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.099999904632568,
+          "p50": 8.400000095367432,
+          "p95": 13.299999952316284,
+          "p99": 18.700000047683716,
+          "max": 18.700000047683716
+        }
+      },
+      "slowest": {
+        "ms": 152.90000009536743,
+        "stages": {
+          "computeRowList": 37.89999985694885,
+          "positions": 73.90000009536743,
+          "computeRenderGeometry": 112.09999990463257,
+          "updateFontCoverage": 9.199999809265137
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": false,
+      "trial": 1,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 214.5,
+        "p50": 231.20000004768372,
+        "p95": 272.5,
+        "p99": 276.40000009536743,
+        "max": 276.40000009536743
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 181.29999995231628,
+          "p50": 191.59999990463257,
+          "p95": 225.59999990463257,
+          "p99": 231.10000014305115,
+          "max": 231.10000014305115
+        },
+        "positions": {
+          "count": 20,
+          "min": 11.699999809265137,
+          "p50": 13.400000095367432,
+          "p95": 15.799999952316284,
+          "p99": 16,
+          "max": 16
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 194.09999990463257,
+          "p50": 205.5,
+          "p95": 239,
+          "p99": 244.70000004768372,
+          "max": 244.70000004768372
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.299999952316284,
+          "p50": 8.699999809265137,
+          "p95": 12.5,
+          "p99": 17.5,
+          "max": 17.5
+        }
+      },
+      "slowest": {
+        "ms": 276.40000009536743,
+        "stages": {
+          "computeRowList": 231.10000014305115,
+          "positions": 13.400000095367432,
+          "computeRenderGeometry": 244.70000004768372,
+          "updateFontCoverage": 10.800000190734863
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": false,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 10.399999856948853,
+        "p50": 13.700000047683716,
+        "p95": 17.200000047683716,
+        "p99": 17.200000047683716,
+        "max": 17.200000047683716
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 10002,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 5.299999952316284,
+          "p50": 5.800000190734863,
+          "p95": 9.299999952316284,
+          "p99": 12,
+          "max": 12
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.6999998092651367,
+          "p50": 2,
+          "p95": 5.299999952316284,
+          "p99": 5.599999904632568,
+          "max": 5.599999904632568
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 7.299999952316284,
+          "p50": 8.599999904632568,
+          "p95": 11.399999856948853,
+          "p99": 14.5,
+          "max": 14.5
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2,
+          "p50": 2.4000000953674316,
+          "p95": 2.799999952316284,
+          "p99": 2.8000001907348633,
+          "max": 2.8000001907348633
+        }
+      },
+      "slowest": {
+        "ms": 17.200000047683716,
+        "stages": {
+          "computeRowList": 7.5,
+          "positions": 2.799999952316284,
+          "computeRenderGeometry": 10.5,
+          "updateFontCoverage": 2.700000047683716
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 10002,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": true,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 8.200000047683716,
+        "p50": 10.899999856948853,
+        "p95": 15,
+        "p99": 23.200000047683716,
+        "max": 23.200000047683716
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1,
+        "batchChecked": 1000,
+        "batchReused": 1000,
+        "checkpointChecks": 78,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 11,
+        "reusedBlocks": 1000,
+        "projectedElements": 50,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 3.1000001430511475,
+          "p50": 3.9000000953674316,
+          "p95": 7.400000095367432,
+          "p99": 13.600000143051147,
+          "max": 13.600000143051147
+        },
+        "positions": {
+          "count": 20,
+          "min": 1.7000000476837158,
+          "p50": 2,
+          "p95": 3.9000000953674316,
+          "p99": 5.799999952316284,
+          "max": 5.799999952316284
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 5.099999904632568,
+          "p50": 6.400000095367432,
+          "p95": 9.400000095367432,
+          "p99": 17.799999952316284,
+          "max": 17.799999952316284
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2.0999999046325684,
+          "p50": 2.6000001430511475,
+          "p95": 6.5,
+          "p99": 7.3999998569488525,
+          "max": 7.3999998569488525
+        }
+      },
+      "slowest": {
+        "ms": 23.200000047683716,
+        "stages": {
+          "computeRowList": 13.600000143051147,
+          "positions": 3.9000000953674316,
+          "computeRenderGeometry": 17.799999952316284,
+          "updateFontCoverage": 4.099999904632568
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1,
+          "batchChecked": 1000,
+          "batchReused": 1000,
+          "checkpointChecks": 78,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 11,
+          "reusedBlocks": 1000,
+          "projectedElements": 50,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": false,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 164.90000009536743,
+        "p50": 171.70000004768372,
+        "p95": 188.70000004768372,
+        "p99": 361.89999985694885,
+        "max": 361.89999985694885
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 150.40000009536743,
+          "p50": 155.90000009536743,
+          "p95": 167,
+          "p99": 173.29999995231628,
+          "max": 173.29999995231628
+        },
+        "positions": {
+          "count": 20,
+          "min": 9.700000047683716,
+          "p50": 11,
+          "p95": 12.299999952316284,
+          "p99": 168.79999995231628,
+          "max": 168.79999995231628
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 160.29999995231628,
+          "p50": 166.5,
+          "p95": 178.09999990463257,
+          "p99": 342.2000000476837,
+          "max": 342.2000000476837
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2,
+          "p50": 2.4000000953674316,
+          "p95": 3.9000000953674316,
+          "p99": 4.599999904632568,
+          "max": 4.599999904632568
+        }
+      },
+      "slowest": {
+        "ms": 361.89999985694885,
+        "stages": {
+          "computeRowList": 173.29999995231628,
+          "positions": 168.79999995231628,
+          "computeRenderGeometry": 342.2000000476837,
+          "updateFontCoverage": 3.9000000953674316
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": true,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 31.5,
+        "p50": 35.799999952316284,
+        "p95": 40.60000014305115,
+        "p99": 107.10000014305115,
+        "max": 107.10000014305115
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 6.900000095367432,
+          "p50": 8,
+          "p95": 11.099999904632568,
+          "p99": 12,
+          "max": 12
+        },
+        "positions": {
+          "count": 20,
+          "min": 17.09999990463257,
+          "p50": 21,
+          "p95": 24.59999990463257,
+          "p99": 45.40000009536743,
+          "max": 45.40000009536743
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 27,
+          "p50": 28.90000009536743,
+          "p95": 34.89999985694885,
+          "p99": 54.799999952316284,
+          "max": 54.799999952316284
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 2,
+          "p50": 2.5,
+          "p95": 6.599999904632568,
+          "p99": 38.799999952316284,
+          "max": 38.799999952316284
+        }
+      },
+      "slowest": {
+        "ms": 107.10000014305115,
+        "stages": {
+          "computeRowList": 9.399999856948853,
+          "positions": 45.40000009536743,
+          "computeRenderGeometry": 54.799999952316284,
+          "updateFontCoverage": 38.799999952316284
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": false,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 212.40000009536743,
+        "p50": 225.5,
+        "p95": 273.90000009536743,
+        "p99": 323.90000009536743,
+        "max": 323.90000009536743
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 178.19999980926514,
+          "p50": 189.20000004768372,
+          "p95": 229.70000004768372,
+          "p99": 277.5,
+          "max": 277.5
+        },
+        "positions": {
+          "count": 20,
+          "min": 12,
+          "p50": 13.399999856948853,
+          "p95": 16.5,
+          "p99": 18,
+          "max": 18
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 190.19999980926514,
+          "p50": 204.5,
+          "p95": 247.79999995231628,
+          "p99": 292.7999999523163,
+          "max": 292.7999999523163
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.299999952316284,
+          "p50": 8.400000095367432,
+          "p95": 12.200000047683716,
+          "p99": 13.100000143051147,
+          "max": 13.100000143051147
+        }
+      },
+      "slowest": {
+        "ms": 323.90000009536743,
+        "stages": {
+          "computeRowList": 277.5,
+          "positions": 15,
+          "computeRenderGeometry": 292.7999999523163,
+          "updateFontCoverage": 8.899999856948853
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": true,
+      "trial": 2,
+      "finalHandlerMs": {
+        "count": 20,
+        "min": 71.59999990463257,
+        "p50": 79.40000009536743,
+        "p95": 90.69999980926514,
+        "p99": 149.69999980926514,
+        "max": 149.69999980926514
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 20,
+          "min": 27.100000143051147,
+          "p50": 30.40000009536743,
+          "p95": 37.200000047683716,
+          "p99": 38.299999952316284,
+          "max": 38.299999952316284
+        },
+        "positions": {
+          "count": 20,
+          "min": 21.600000143051147,
+          "p50": 24.199999809265137,
+          "p95": 30.399999856948853,
+          "p99": 77,
+          "max": 77
+        },
+        "computeRenderGeometry": {
+          "count": 20,
+          "min": 49.80000019073486,
+          "p50": 55.5,
+          "p95": 66.70000004768372,
+          "p99": 107.09999990463257,
+          "max": 107.09999990463257
+        },
+        "updateFontCoverage": {
+          "count": 20,
+          "min": 7.900000095367432,
+          "p50": 10.200000047683716,
+          "p95": 13,
+          "p99": 13.200000047683716,
+          "max": 13.200000047683716
+        }
+      },
+      "slowest": {
+        "ms": 149.69999980926514,
+        "stages": {
+          "computeRowList": 30.09999990463257,
+          "positions": 77,
+          "computeRenderGeometry": 107.09999990463257,
+          "updateFontCoverage": 9
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "aggregate": [
+    {
+      "kind": "stable",
+      "incrementalCommit": false,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 10.399999856948853,
+        "p50": 13.400000095367432,
+        "p95": 17.200000047683716,
+        "p99": 22.90000009536743,
+        "max": 22.90000009536743
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 10002,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 5.299999952316284,
+          "p50": 6.099999904632568,
+          "p95": 9.399999856948853,
+          "p99": 12,
+          "max": 12
+        },
+        "positions": {
+          "count": 60,
+          "min": 1.5999999046325684,
+          "p50": 2,
+          "p95": 5.200000047683716,
+          "p99": 5.599999904632568,
+          "max": 5.599999904632568
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 7.200000047683716,
+          "p50": 8.599999904632568,
+          "p95": 12.299999952316284,
+          "p99": 15.700000047683716,
+          "max": 15.700000047683716
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 2,
+          "p50": 2.4000000953674316,
+          "p95": 5.900000095367432,
+          "p99": 6.700000047683716,
+          "max": 6.700000047683716
+        }
+      },
+      "slowest": {
+        "ms": 22.90000009536743,
+        "stages": {
+          "computeRowList": 11.700000047683716,
+          "positions": 3.8999998569488525,
+          "computeRenderGeometry": 15.700000047683716,
+          "updateFontCoverage": 5.900000095367432
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 10002,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "stable",
+      "incrementalCommit": true,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 8.100000143051147,
+        "p50": 10.700000047683716,
+        "p95": 14.699999809265137,
+        "p99": 23.200000047683716,
+        "max": 23.200000047683716
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 1000,
+        "shifted": 499,
+        "reflowed": 0,
+        "checked": 1,
+        "batchChecked": 1000,
+        "batchReused": 1000,
+        "checkpointChecks": 78,
+        "computedElements": 11,
+        "reusedElements": 5060,
+        "visitedElements": 11,
+        "reusedBlocks": 1000,
+        "projectedElements": 50,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 3.1000001430511475,
+          "p50": 3.799999952316284,
+          "p95": 7.299999952316284,
+          "p99": 13.600000143051147,
+          "max": 13.600000143051147
+        },
+        "positions": {
+          "count": 60,
+          "min": 1.5,
+          "p50": 2,
+          "p95": 3.9000000953674316,
+          "p99": 8.100000143051147,
+          "max": 8.100000143051147
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 5,
+          "p50": 6.099999904632568,
+          "p95": 9.799999952316284,
+          "p99": 17.799999952316284,
+          "max": 17.799999952316284
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 2.0999999046325684,
+          "p50": 2.6000001430511475,
+          "p95": 6.700000047683716,
+          "p99": 7.6000001430511475,
+          "max": 7.6000001430511475
+        }
+      },
+      "slowest": {
+        "ms": 23.200000047683716,
+        "stages": {
+          "computeRowList": 13.600000143051147,
+          "positions": 3.9000000953674316,
+          "computeRenderGeometry": 17.799999952316284,
+          "updateFontCoverage": 4.099999904632568
+        },
+        "work": {
+          "computed": 1,
+          "reused": 1000,
+          "shifted": 499,
+          "reflowed": 0,
+          "checked": 1,
+          "batchChecked": 1000,
+          "batchReused": 1000,
+          "checkpointChecks": 78,
+          "computedElements": 11,
+          "reusedElements": 5060,
+          "visitedElements": 11,
+          "reusedBlocks": 1000,
+          "projectedElements": 50,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 39,
+          "addedPages": 0,
+          "changedParagraphs": 1,
+          "reusedParagraphs": 1000
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": false,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 159.59999990463257,
+        "p50": 172.60000014305115,
+        "p95": 225,
+        "p99": 361.89999985694885,
+        "max": 361.89999985694885
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 147,
+          "p50": 156.09999990463257,
+          "p95": 174.5,
+          "p99": 193.90000009536743,
+          "max": 193.90000009536743
+        },
+        "positions": {
+          "count": 60,
+          "min": 8.199999809265137,
+          "p50": 10.900000095367432,
+          "p95": 15.799999952316284,
+          "p99": 168.79999995231628,
+          "max": 168.79999995231628
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 155.5,
+          "p50": 167.79999995231628,
+          "p95": 206.69999980926514,
+          "p99": 342.2000000476837,
+          "max": 342.2000000476837
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 1.8999998569488525,
+          "p50": 2.4000000953674316,
+          "p95": 4.599999904632568,
+          "p99": 5.299999952316284,
+          "max": 5.299999952316284
+        }
+      },
+      "slowest": {
+        "ms": 361.89999985694885,
+        "stages": {
+          "computeRowList": 173.29999995231628,
+          "positions": 168.79999995231628,
+          "computeRenderGeometry": 342.2000000476837,
+          "updateFontCoverage": 3.9000000953674316
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "wrap",
+      "incrementalCommit": true,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 31.5,
+        "p50": 36,
+        "p95": 42.200000047683716,
+        "p99": 107.10000014305115,
+        "max": 107.10000014305115
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 5180,
+        "reusedElements": 70,
+        "visitedElements": 10181,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 6.8999998569488525,
+          "p50": 8,
+          "p95": 11.599999904632568,
+          "p99": 30.09999990463257,
+          "max": 30.09999990463257
+        },
+        "positions": {
+          "count": 60,
+          "min": 16.600000143051147,
+          "p50": 21.899999856948853,
+          "p95": 27.5,
+          "p99": 81.09999990463257,
+          "max": 81.09999990463257
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 26.40000009536743,
+          "p50": 30.200000047683716,
+          "p95": 37.09999990463257,
+          "p99": 92.39999985694885,
+          "max": 92.39999985694885
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 2,
+          "p50": 2.5,
+          "p95": 6.200000047683716,
+          "p99": 38.799999952316284,
+          "max": 38.799999952316284
+        }
+      },
+      "slowest": {
+        "ms": 107.10000014305115,
+        "stages": {
+          "computeRowList": 9.399999856948853,
+          "positions": 45.40000009536743,
+          "computeRenderGeometry": 54.799999952316284,
+          "updateFontCoverage": 38.799999952316284
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 5180,
+          "reusedElements": 70,
+          "visitedElements": 10181,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 40,
+          "addedPages": 1,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": false,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 212.40000009536743,
+        "p50": 227.70000004768372,
+        "p95": 272.5,
+        "p99": 323.90000009536743,
+        "max": 323.90000009536743
+      },
+      "meanWork": {
+        "computed": 500,
+        "reused": 501,
+        "shifted": 0,
+        "reflowed": 0,
+        "checked": 1001,
+        "batchChecked": 0,
+        "batchReused": 0,
+        "checkpointChecks": 1000,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 0
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 178.19999980926514,
+          "p50": 189.5,
+          "p95": 225.59999990463257,
+          "p99": 277.5,
+          "max": 277.5
+        },
+        "positions": {
+          "count": 60,
+          "min": 11.599999904632568,
+          "p50": 13.600000143051147,
+          "p95": 16.5,
+          "p99": 21.200000047683716,
+          "max": 21.200000047683716
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 190.19999980926514,
+          "p50": 204.5,
+          "p95": 240.20000004768372,
+          "p99": 292.7999999523163,
+          "max": 292.7999999523163
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 7.200000047683716,
+          "p50": 8.599999904632568,
+          "p95": 13.100000143051147,
+          "p99": 32.60000014305115,
+          "max": 32.60000014305115
+        }
+      },
+      "slowest": {
+        "ms": 323.90000009536743,
+        "stages": {
+          "computeRowList": 277.5,
+          "positions": 15,
+          "computeRenderGeometry": 292.7999999523163,
+          "updateFontCoverage": 8.899999856948853
+        },
+        "work": {
+          "computed": 500,
+          "reused": 501,
+          "shifted": 0,
+          "reflowed": 0,
+          "checked": 1001,
+          "batchChecked": 0,
+          "batchReused": 0,
+          "checkpointChecks": 1000,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 0
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    },
+    {
+      "kind": "page",
+      "incrementalCommit": true,
+      "finalHandlerMs": {
+        "count": 60,
+        "min": 69.59999990463257,
+        "p50": 79.40000009536743,
+        "p95": 144.40000009536743,
+        "p99": 152.90000009536743,
+        "max": 152.90000009536743
+      },
+      "meanWork": {
+        "computed": 1,
+        "reused": 501,
+        "shifted": 499,
+        "reflowed": 499,
+        "checked": 500,
+        "batchChecked": 1000,
+        "batchReused": 501,
+        "checkpointChecks": 576,
+        "computedElements": 6800,
+        "reusedElements": 70,
+        "visitedElements": 11801,
+        "reusedBlocks": 0,
+        "projectedElements": 0,
+        "reusedMetrics": 4990
+      },
+      "stagesMs": {
+        "computeRowList": {
+          "count": 60,
+          "min": 26.700000047683716,
+          "p50": 30.59999990463257,
+          "p95": 40.19999980926514,
+          "p99": 41.10000014305115,
+          "max": 41.10000014305115
+        },
+        "positions": {
+          "count": 60,
+          "min": 20.200000047683716,
+          "p50": 24.299999952316284,
+          "p95": 36.299999952316284,
+          "p99": 77,
+          "max": 77
+        },
+        "computeRenderGeometry": {
+          "count": 60,
+          "min": 48.89999985694885,
+          "p50": 55.5,
+          "p95": 72,
+          "p99": 112.09999990463257,
+          "max": 112.09999990463257
+        },
+        "updateFontCoverage": {
+          "count": 60,
+          "min": 7.099999904632568,
+          "p50": 9.199999809265137,
+          "p95": 13.200000047683716,
+          "p99": 18.700000047683716,
+          "max": 18.700000047683716
+        }
+      },
+      "slowest": {
+        "ms": 152.90000009536743,
+        "stages": {
+          "computeRowList": 37.89999985694885,
+          "positions": 73.90000009536743,
+          "computeRenderGeometry": 112.09999990463257,
+          "updateFontCoverage": 9.199999809265137
+        },
+        "work": {
+          "computed": 1,
+          "reused": 501,
+          "shifted": 499,
+          "reflowed": 499,
+          "checked": 500,
+          "batchChecked": 1000,
+          "batchReused": 501,
+          "checkpointChecks": 576,
+          "computedElements": 6800,
+          "reusedElements": 70,
+          "visitedElements": 11801,
+          "reusedBlocks": 0,
+          "projectedElements": 0,
+          "reusedMetrics": 4990
+        },
+        "trace": {
+          "firstPage": 38,
+          "changedPages": 42,
+          "addedPages": 3,
+          "changedParagraphs": 500,
+          "reusedParagraphs": 501
+        }
+      }
+    }
+  ]
+}

@@ -12,12 +12,61 @@ function worker() {
     value.onmessage?.call(value, new MessageEvent('message', {
       data: { sessionId: message.sessionId, requestId: message.requestId,
         documentRevision: message.documentRevision, fontRevision: message.fontRevision,
-        constraintsRevision: message.constraintsRevision, type, layouts: [], inputs: [] }
+        constraintsRevision: message.constraintsRevision, type, layouts: [], inputs: [],
+        ...(message.type === 'preview' ? { composition: message.composition } : {}) }
     }))
   return { value, messages, answer }
 }
 
 describe('layout worker client lifecycle and backpressure', () => {
+  it('drops a waiting preview on a synchronous barrier while draining the active request', async () => {
+    const fake = worker()
+    const client = new LayoutWorkerClient(() => fake.value)
+    const initialized = client.initialize({ main: [], header: [], footer: [] }, [], '', 0, 0)
+    fake.answer(fake.messages[0])
+    await initialized
+    const input = { source: { scope: 'ime-preview' } } as Parameters<typeof client.preview>[0]
+    const active = client.preview(input, 1, { generation: 1, sequence: 1 })
+    const waiting = expect(client.preview(input, 2,
+      { generation: 1, sequence: 2 })).rejects.toThrow('invalidated')
+    client.cancelPreview()
+    await waiting
+    fake.answer(fake.messages.at(-1)!, 'preview')
+    await active
+    await client.waitForIdle()
+    expect(fake.messages.filter(m => m.type === 'preview')).toHaveLength(1)
+    client.destroy()
+  })
+
+  it('coalesces transient previews without editing the mirror and validates their sequence', async () => {
+    const fake = worker()
+    const client = new LayoutWorkerClient(() => fake.value)
+    const initialized = client.initialize({ main: [], header: [], footer: [] }, [], '', 0, 0)
+    fake.answer(fake.messages[0])
+    await initialized
+    const input = { source: { scope: 'ime-preview' } } as Parameters<typeof client.preview>[0]
+    const first = client.preview(input, 1, { generation: 2, sequence: 1 })
+    const skipped = expect(client.preview(input, 2,
+      { generation: 2, sequence: 2 })).rejects.toThrow('superseded')
+    const latest = client.preview(input, 3, { generation: 2, sequence: 3 })
+    await skipped
+    fake.answer(fake.messages.at(-1)!, 'preview')
+    expect((await first).composition?.sequence).toBe(1)
+    await Promise.resolve()
+    const request = fake.messages.at(-1)!
+    expect(request.type).toBe('preview')
+    const rejected = expect(latest).rejects.toThrow('version mismatch')
+    fake.value.onmessage!.call(fake.value, new MessageEvent('message', { data: {
+      ...request, type: 'preview', composition: { generation: 1, sequence: 3 }, layouts: []
+    } }))
+    await rejected
+    await client.waitForIdle()
+    expect(client.getRevision()).toBe(0)
+    expect(fake.messages.some(m => m.type === 'edit' || m.type === 'edits')).toBe(false)
+    expect(client.getQueueStats()).toMatchObject({ requests: 0, waiting: false })
+    client.destroy()
+  })
+
   it('batches ordered edits and waits for their acknowledgement before layout', async () => {
     const fake = worker()
     const client = new LayoutWorkerClient(() => fake.value)

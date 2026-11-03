@@ -117,7 +117,7 @@ it('commits repeat deletion geometry without posting redundant Worker layouts', 
   caret(draw, 20)
   const client = { ready: true, stats: {},
     getRevision: () => draw.getDocumentRevision(), getSession: () => 1,
-    edit: () => Promise.resolve(), layout: vi.fn(), destroy: vi.fn() }
+    edit: () => Promise.resolve(), layout: vi.fn(), destroy: vi.fn(), cancelPreview: vi.fn() }
   Object.assign(draw, { layoutWorkerClient: client,
     workerFontRevision: draw.getLayoutHostAdapter().getFontManager().getRevision() })
   draw.getOptions().lab.layoutWorker = true
@@ -143,7 +143,7 @@ it('commits current geometry when a worker cannot keep up and releases its deadl
   const client = { ready: true, stats: {},
     getRevision: () => draw.getDocumentRevision(), getSession: () => 1,
     getQueueStats: () => ({ requests: 0, waiting: false, queuedBytes: 0 }),
-    edit: () => Promise.resolve(), destroy: vi.fn(),
+    edit: () => Promise.resolve(), destroy: vi.fn(), cancelPreview: vi.fn(),
     layout: () => new Promise((_, reject) => { rejectLayout = reject }) }
   Object.assign(draw, { layoutWorkerClient: client,
     workerFontRevision: draw.getLayoutHostAdapter().getFontManager().getRevision() })
@@ -1101,4 +1101,60 @@ describe('PERF-12–14 incremental flow', () => {
       expect(state(incremental)).toEqual(state(full))
     }
   })
+})
+
+
+it('reduces checkpoint and explicit position visits beyond existing element reuse', async () => {
+  const work: { checkpoints: number; visited: number; computed: number }[] = []
+  for (const incrementalCommit of [false, true]) {
+    const draw = await setup(Array.from({ length: 100 }, () => [
+      { value: ZERO }, { value: 'abcdefghijklmno' }
+    ]).flat(), { lab: { performanceProfile: 'sync', incrementalCommit } })
+    caret(draw, 50 * 16 + 5)
+    const positions = draw.getPosition()
+    const before = positions.getPlacementStats()
+    const flow = { ...draw.getFlowStats() }
+    draw.getCanvasEvent().input('x')
+    draw.flushGeometry()
+    const after = positions.getPlacementStats()
+    work.push({ checkpoints: draw.getFlowStats().checkpointChecks - flow.checkpointChecks,
+      visited: after.visitedElements - before.visitedElements,
+      computed: after.computedElements - before.computedElements })
+    const actual = structuredClone(positions.getOriginalMainPositionList())
+    draw.getOptions().lab.incrementalFlow = false
+    draw.render({ isCompute: true, isSubmitHistory: false, isLazy: false })
+    expect(positions.getOriginalMainPositionList()).toEqual(actual)
+  }
+  expect(work[0].visited).toBeGreaterThan(1500)
+  expect(work[1].visited).toBeLessThan(100)
+  expect(work[1].checkpoints).toBeLessThan(work[0].checkpoints / 2)
+  expect(work[1].computed).toBe(work[0].computed)
+})
+
+
+it('re-places unchanged breaks across pages instead of repeating paragraph layout', async () => {
+  const counts: { computed: number; reflowed: number; metrics: number }[] = []
+  for (const incrementalCommit of [false, true]) {
+    const draw = await setup(Array.from({ length: 100 }, () => [
+      { value: ZERO }, { value: 'abcdefghijklmno' }
+    ]).flat(), { lab: { performanceProfile: 'sync', incrementalCommit } })
+    caret(draw, 50 * 16 + 5)
+    const before = { ...draw.getFlowStats() }
+    const beforeMetrics = draw.getPosition().getPlacementStats().reusedMetrics
+    draw.getCanvasEvent().input('x'.repeat(120))
+    draw.flushGeometry()
+    const after = draw.getFlowStats()
+    counts.push({ computed: after.computed - before.computed,
+      reflowed: after.reflowed - before.reflowed,
+      metrics: draw.getPosition().getPlacementStats().reusedMetrics - beforeMetrics })
+    const positions = structuredClone(draw.getPosition().getOriginalMainPositionList())
+    draw.getOptions().lab.incrementalFlow = false
+    draw.getLayoutHostAdapter().clearParagraphCache()
+    draw.render({ isCompute: true, isSubmitHistory: false, isLazy: false })
+    expect(draw.getPosition().getOriginalMainPositionList()).toEqual(positions)
+  }
+  expect(counts[0].computed).toBeGreaterThan(40)
+  expect(counts[1].computed).toBeLessThan(5)
+  expect(counts[1].reflowed).toBeGreaterThan(40)
+  expect(counts[1].metrics).toBeGreaterThan(500)
 })

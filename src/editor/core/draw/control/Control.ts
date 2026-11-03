@@ -1102,8 +1102,10 @@ export class Control {
           // 删除占位符时替换前一个历史记录
           if (!isHasSubmitHistory) {
             isHasSubmitHistory = true
-            this.draw.getHistoryManager().popUndo()
-            this.draw.submitHistory(startIndex)
+            if (!this.draw.hasActiveEditTransaction?.()) {
+              this.draw.getHistoryManager().popUndo()
+              this.draw.submitHistory(startIndex)
+            }
           }
           elementList.splice(index, 1)
         } else {

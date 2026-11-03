@@ -102,11 +102,16 @@ export function mergeOption(
     throw new TypeError('autoDownloadFonts must be a boolean')
   const labOptions: Required<ILabOption> = {
     performanceProfile: 'baseline',
+    imePreview: false,
+    imeWindowPreview: false,
+    imeTableLayout: false,
+    imeWorkerPreview: false,
     incrementalCompute: false,
     deferredPaint: false,
     glyphPathCache: false,
     shapingRunCache: false,
     incrementalFlow: false,
+    incrementalCommit: false,
     dirtyPagePaint: false,
     layoutWorker: false,
     workerTransfer: false,

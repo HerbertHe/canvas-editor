@@ -17,6 +17,7 @@ import { EditorLifecycle } from '../EditorLifecycle'
 import { DocumentFlow } from '../layout/DocumentFlow'
 import { LayoutWorkerClient } from '../worker/layout/LayoutWorkerClient'
 import { IncrementalFlow, changedLayoutPages } from '../layout/IncrementalFlow'
+import { CompositionPreview } from './CompositionPreview'
 import type { LayoutChangeSet } from '../layout/IncrementalFlow'
 import { getHostRowsHeight } from '../layout/hostRowGeometry'
 import { isFloatingImage } from '../layout/InlineObjectMeasure'
@@ -33,6 +34,7 @@ import { groupAreaLayouts } from '../text-engine-host/AreaLayoutHost'
 import { layoutFlowParagraph } from '../text-engine-host/FlowParagraphHost'
 import { layoutHostObject } from '../text-engine-host/ObjectLayoutHost'
 import { layoutHostTable } from '../text-engine-host/TableLayoutHost'
+import { TableLayoutCache } from '../layout/TableLayoutCache'
 import { FontCoverageTracker } from '../text-engine/font/FontCoverageTracker'
 import { FontDownloadManager } from '../text-engine/font/FontDownloadManager'
 import { DirtyRangeTracker } from './DirtyRangeTracker'
@@ -529,7 +531,46 @@ export class Draw {
     this.pendingFontCoverage = report
   })
 
+  private compositionCallbacks: Map<string, () => void> | null = null
+
+  /** Publish plugin callbacks only after composition history and state settle. */
+  public afterCompositionCommit(key: string, callback: () => void) {
+    if (this.compositionCallbacks) this.compositionCallbacks.set(key, callback)
+    else callback()
+  }
+
+  public finalizeComposition(action: () => void) {
+    if (this.compositionCallbacks) { action(); return }
+    const callbacks = new Map<string, () => void>()
+    this.compositionCallbacks = callbacks
+    try { action() } finally {
+      this.compositionCallbacks = null
+      for (const callback of callbacks.values()) {
+        if (!this.isReady()) break
+        callback()
+      }
+    }
+  }
+
+  /** Baseline has no edit journal; capture once, just before formal mutation. */
+  public createCompositionRollback(): (() => void) | null {
+    if (this.options.lab?.incrementalEditing) return null
+    const model = this.captureEditModel()
+    const state = this.captureEditState()
+    return () => {
+      this.replaceEditModel(model)
+      this.restoreEditState(state)
+      this.layoutHostAdapter.clearParagraphCache()
+      this.modelRevision++
+      this.render({ isSubmitHistory: false, curIndex: state.cursorIndex })
+    }
+  }
+
   private publishFontCoverage() {
+    if (this.compositionCallbacks) {
+      this.afterCompositionCommit('fontCoverageChange', () => this.publishFontCoverage())
+      return
+    }
     if (this.lifecycle.state === 'initializing') return
     if (!this.isReady() || !this.pendingFontCoverage) return
     const report = this.getFontCoverageReport()
@@ -602,6 +643,10 @@ export class Draw {
 
   public getFontCoverageReport() {
     this.lifecycle.assertReady(true)
+    if (this.compositionCoverageDirty && !this.flushingCompositionDerived) {
+      this.canvasEvent.flushComposition()
+      this.flushCompositionDerivedState()
+    }
     return this.fontDownloadManager.decorate({
       ...this.fontCoverageTracker.getReport(),
       autoDownloadFonts: this.options.autoDownloadFonts
@@ -625,7 +670,96 @@ export class Draw {
     ])
   }
 
+  private compositionCoverage = new FontCoverageTracker()
+  private compositionCoverageDirty = false
+  private compositionHighlightsDirty = false
+  private compositionToolsDirty = false
+  private renderToolsQueued = false
+  private renderToolsCompute = false
+  private flushingCompositionDerived = false
+  private coverageFontRevision = -1
+
+  private deferCompositionDerived() {
+    return !!this.options.lab?.imePreview && this.canvasEvent?.isComposing &&
+      !this.flushingCompositionDerived
+  }
+
+  /** Queries and exports require complete, current derived state. */
+  public flushCompositionDerivedState() {
+    if (this.flushingCompositionDerived || !this.isReady()) return
+    this.flushingCompositionDerived = true
+    try {
+      if (this.compositionCoverageDirty) this.updateFontCoverage()
+      if (this.compositionHighlightsDirty) {
+        this.updateCompositionHighlights()
+        this.paintRender(false)
+      }
+      if (this.compositionToolsDirty) {
+        this.compositionToolsDirty = false
+        this.renderToolsQueued = false
+        this.renderToolsCompute = false
+        this.refreshRenderTools(true)
+      }
+    } finally {
+      this.flushingCompositionDerived = false
+    }
+  }
+
+  /** Keep new missing glyphs eligible for download without publishing a partial report. */
+  public updateCompositionCoverage(value: string) {
+    if (!this.deferCompositionDerived()) return
+    this.compositionCoverageDirty = true
+    const elements = this.compositionPreview?.coverageElements || this.getElementList()
+    let start = 0
+    let end = elements.length
+    if (!this.compositionPreview) {
+      end = Math.min(elements.length, this.range.getRange().endIndex + 1)
+      // UTF-16 length is a conservative bound on the number of inserted elements.
+      start = Math.max(0, end - value.length - 1)
+      while (start > 0 && elements[start].value !== ZERO) start--
+      while (end < elements.length && elements[end].value !== ZERO) end++
+    }
+    const inputs = this.layoutHostAdapter.collectFontCoverage([
+      { scope: 'ime-coverage', elements: elements.slice(start, end) }
+    ])
+    const tracker = this.compositionCoverage
+    tracker.update(tracker.begin(), inputs,
+      this.layoutHostAdapter.getFontManager(), this.options.autoDownloadFonts)
+    // This union is only a download work list. Public reports always use a full scan.
+    const report = this.fontCoverageTracker.getReport()
+    for (const issue of tracker.getReport().issues) {
+      const previous = report.issues.find(item => item.id === issue.id)
+      if (!previous) report.issues.push(issue)
+      else {
+        previous.missingCharacters = [...new Set([
+          ...previous.missingCharacters, ...issue.missingCharacters
+        ])]
+        previous.missingSequences = [...new Set([
+          ...previous.missingSequences, ...issue.missingSequences
+        ])]
+      }
+    }
+    this.fontDownloadManager.sync(report, id => [
+      ...this.fontCoverageTracker.getContexts(id), ...tracker.getContexts(id)
+    ], this.isReady())
+  }
+
+  private updateCompositionHighlights() {
+    this.compositionHighlightsDirty = false
+    const keyword = this.search.getSearchKeyword()
+    if (keyword) this.search.compute(keyword)
+    this.control.computeHighlightList()
+  }
+
   private updateFontCoverage() {
+    if (this.deferCompositionDerived() &&
+      this.coverageFontRevision === this.layoutHostAdapter.getFontManager().getRevision() &&
+      this.auxiliaryCoverageSignature === this.getAuxiliaryCoverageSignature()) {
+      this.compositionCoverageDirty = true
+      return
+    }
+    this.compositionCoverageDirty = false
+    this.coverageFontRevision = this.layoutHostAdapter.getFontManager().getRevision()
     if (!this.layoutHostAdapter.isReady()) return
     const roots = [{ scope: 'main', elements: this.elementList }]
     if (this.getIsPagingMode()) {
@@ -1949,6 +2083,8 @@ export class Draw {
   }
 
   public setPageScale(payload: number) {
+    if (this.options.lab?.imePreview && this.canvasEvent.isComposing)
+      this.canvasEvent.flushComposition()
     this.options.scale = payload
     this._updatePageSizes()
     const cursorPosition = this.position.getCursorPosition()
@@ -2607,7 +2743,20 @@ export class Draw {
               isAreaHideDisabled: this.isAreaHideDisabled(),
               isTraceHidden: element =>
                 this.traceParticle.isTraceHidden(element)
-            })
+            }),
+            cache: this.options.lab.imePreview && this.options.lab.imeTableLayout
+              ? this.tableLayoutCache : undefined,
+            stats: this.tableLayoutCache.stats,
+            dependencies: this.options.lab.imePreview && this.options.lab.imeTableLayout
+              ? JSON.stringify([
+              this.layoutHostAdapter.getParagraphEpoch(),
+              this.layoutHostAdapter.getFontManager().getRevision(),
+              this.isDesignMode(), this.isAreaHideDisabled(), el.areaId,
+              this.options.defaultFont, this.options.defaultSize,
+              this.options.defaultColor, this.options.defaultDirection,
+              this.options.defaultRowMargin, this.options.defaultBasicRowMarginHeight,
+              this.options.wordBreak, this.options.table
+            ]) : undefined
           },
           (elements, innerWidth, scope, direction, align) => {
             const nodes: LayoutNode[] = []
@@ -2886,7 +3035,45 @@ export class Draw {
       const rows: LayoutRow[] = []
       const compatibility: { startIndex: number; endIndex: number;
         layout: import('../text-engine/types').LayoutResult }[] = []
-      for (const entry of entries) {
+      const append = (entry: typeof entries[number], result: {
+        rows: LayoutRow[]; nodes: LayoutNode[];
+        compatibility?: import('../text-engine/types').LayoutResult
+      }) => {
+        rows.push(...result.rows)
+        if (result.compatibility) compatibility.push({
+          startIndex: entry.start, endIndex: entry.end - 1,
+          layout: result.compatibility
+        })
+        payload.nativeNodes?.push(...result.nodes)
+      }
+      let first = 0
+      const dirty = payload.dirtyRange
+      const batch = this.options.lab.incrementalCommit && dirty
+      if (batch) {
+        let low = 0
+        let high = entries.length
+        while (low < high) {
+          const mid = (low + high) >>> 1
+          if (entries[mid].end <= dirty.startIndex) low = mid + 1
+          else high = mid
+        }
+        const prefix = entries.slice(0, low)
+        const reused = this.incrementalFlow.reuseRange(prefix, flow!, dependencies, 0)
+        if (reused) {
+          reused.forEach((result, i) => append(prefix[i], result))
+          first = prefix.length
+        }
+      }
+      for (let i = first; i < entries.length; i++) {
+        const entry = entries[i]
+        if (batch && entry.start >= dirty.endIndex) {
+          const reused = this.incrementalFlow.reuseRange(
+            entries, flow!, dependencies, rows.length, i)
+          if (reused) {
+            reused.forEach((result, j) => append(entries[i + j], result))
+            break
+          }
+        }
         const result = this.incrementalFlow.paragraph(
           entry.record, entry.start, rows.length, flow!, dependencies, () => {
             const nodes: LayoutNode[] = []
@@ -2899,14 +3086,10 @@ export class Draw {
               this.layoutHostAdapter.findLayoutByElementIndex(entry.start, layoutScope)?.layout }
           },
           !!payload.dirtyRange && entry.end > payload.dirtyRange.startIndex &&
-            entry.start < payload.dirtyRange.endIndex
+            entry.start < payload.dirtyRange.endIndex,
+          this.options.lab.incrementalCommit
         )
-        rows.push(...result.rows)
-        if (result.compatibility) compatibility.push({
-          startIndex: entry.start, endIndex: entry.end - 1,
-          layout: result.compatibility
-        })
-        payload.nativeNodes?.push(...result.nodes)
+        append(entry, result)
       }
       this.incrementalFlow.end()
       this.layoutHostAdapter.replaceParagraphLayouts(layoutScope, compatibility)
@@ -3014,6 +3197,7 @@ export class Draw {
     const highlightMarginHeight = this.getHighlightMarginHeight()
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
+      if (this.compositionPreview?.row === curRow) continue
       // 内容高度：不含段后间距
       const rowContentHeight = curRow.height - (curRow.spacingAfter || 0)
       let preHighlight = ''
@@ -3099,6 +3283,11 @@ export class Draw {
     let index = startIndex
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
+      if (this.compositionPreview?.row === curRow) {
+        this.compositionPreview.paint(ctx)
+        index += curRow.elementList.length
+        continue
+      }
       // 内容高度：不含段后间距
       const rowContentHeight = curRow.height - (curRow.spacingAfter || 0)
       // Dedicated object rows use their object bounds for selection.
@@ -3697,7 +3886,7 @@ export class Draw {
       imgDisplays: [ImageDisplay.FLOAT_BOTTOM]
     })
     // 控件高亮
-    if (!isPrintMode) {
+    if (!isPrintMode && !this.compositionHighlightsDirty) {
       this.control.renderHighlightList(ctx, pageNo)
     }
     // 渲染元素
@@ -3731,7 +3920,7 @@ export class Draw {
       imgDisplays: [ImageDisplay.FLOAT_TOP, ImageDisplay.SURROUND]
     })
     // 搜索匹配绘制
-    if (!isPrintMode && this.search.getSearchKeyword()) {
+    if (!isPrintMode && !this.compositionHighlightsDirty && this.search.getSearchKeyword()) {
       this.search.render(ctx, pageNo)
     }
     // 拼写检查错词绘制
@@ -3781,7 +3970,7 @@ export class Draw {
     if (!this.pageRowList[pageNo]) return
     this._drawPage({
       elementList: this.elementList,
-      positionList: this.position.getOriginalMainPositionList(),
+      positionList: this.position.getOriginalMainPositionList(true),
       rowList: this.pageRowList[pageNo], pageNo
     })
     this.dirtyPages.delete(pageNo)
@@ -3821,7 +4010,7 @@ export class Draw {
       }
       return
     }
-    const positionList = this.position.getOriginalMainPositionList()
+    const positionList = this.position.getOriginalMainPositionList(true)
     const elementList = this.getOriginalMainElementList()
     this._disconnectLazyRender()
     this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
@@ -3844,7 +4033,7 @@ export class Draw {
 
   private _immediateRender() {
     this.dirtyPages.clear()
-    const positionList = this.position.getOriginalMainPositionList()
+    const positionList = this.position.getOriginalMainPositionList(true)
     const elementList = this.getOriginalMainElementList()
     for (let i = 0; i < this.pageRowList.length; i++) {
       this._drawPage({
@@ -3908,10 +4097,12 @@ export class Draw {
         faults: this.workerFaults, needsResync: this.workerNeedsResync,
         counters, fallbackReasons: { ...this.workerFallbackReasons } },
       flow: { ...this.incrementalFlow.stats },
+      tables: this.getTableLayoutStats(),
       placements: this.position.getPlacementStats(),
       paths: { ...this.layoutHostAdapter.getGlyphRenderer().stats },
       runs: { ...this.layoutHostAdapter.getRunStats() },
       utilityWorkers: { ...this.workerManager.stats },
+      composition: this.canvasEvent.getCompositionDiagnostics(),
       pages: { observed: this.observedPages.size,
         visible: this.visiblePages.size, dirty: this.dirtyPages.size }
     }
@@ -4074,10 +4265,12 @@ export class Draw {
   }
 
   private incrementalFlow = new IncrementalFlow()
+  private tableLayoutCache = new TableLayoutCache()
   private usedIncrementalFlow = false
   private layoutChange: LayoutChangeSet | null = null
   public getLayoutChangeSet() { return this.layoutChange }
   public getFlowStats() { return this.incrementalFlow.stats }
+  public getTableLayoutStats() { return { ...this.tableLayoutCache.stats } }
 
   private modelRevision = 0
   private geometryRevision = 0
@@ -4106,6 +4299,7 @@ export class Draw {
   /** Pixel readers/exporters can force a scheduled paint immediately. */
   public flushPaint() {
     this.flushGeometry()
+    this.flushCompositionDerivedState()
     if (this.options.lab?.dirtyPagePaint && this.dirtyPages.size) {
       this.cancelPaint()
       this._immediateRender()
@@ -4117,8 +4311,135 @@ export class Draw {
     if (this.isReady()) this.paintRender(false)
   }
 
+  private compositionPreview: CompositionPreview | null = null
+  private workerCompositionPreview: CompositionPreview | null = null
+  private compositionPreviewEpoch = 0
+  private compositionPreviewPending: { generation: number; sequence: number } | null = null
+  private compositionPreviewTimer: ReturnType<typeof setTimeout> | null = null
+  private compositionPreviewWaiters = new Set<() => void>()
+  private compositionWorkerStats = { submitted: 0, committed: 0, stale: 0,
+    fallbacks: 0, deadlines: 0 }
+
+  public getCompositionWorkerStats() {
+    return { ...this.compositionWorkerStats, pending: !!this.compositionPreviewPending }
+  }
+
+  public waitForCompositionPreview() {
+    if (!this.compositionPreviewPending) return Promise.resolve()
+    return new Promise<void>(resolve => this.compositionPreviewWaiters.add(resolve))
+  }
+
+  private finishCompositionPreviewWork() {
+    if (this.compositionPreviewTimer !== null) clearTimeout(this.compositionPreviewTimer)
+    this.compositionPreviewTimer = null
+    this.compositionPreviewPending = null
+    for (const resolve of this.compositionPreviewWaiters) resolve()
+    this.compositionPreviewWaiters.clear()
+  }
+
+  public getCompositionPreviewWork() {
+    return this.compositionPreview ? { ...this.compositionPreview.work } : undefined
+  }
+
+  public previewComposition(value: string, from: number, to: number,
+    composition?: { generation: number; sequence: number }) {
+    const preview = this.workerCompositionPreview || this.compositionPreview ||
+      CompositionPreview.create(this, from, to)
+    const client = this.layoutWorkerClient
+    if (preview && composition && this.options.lab.imeWorkerPreview &&
+      this.options.lab.layoutWorker && client?.ready && !this.workerNeedsResync &&
+      this.workerFontRevision === this.layoutHostAdapter.getFontManager().getRevision()) {
+      const prepared = preview.prepare(value)
+      if (!prepared) return false
+      const input = preview.workerInput(prepared)
+      if (input.spans.reduce((sum, span) => sum + span.text.length, 0) > 4096)
+        return false
+      const revision = this.getDocumentRevision()
+      const geometryRevision = this.geometryRevision
+      const constraintsRevision = ++this.workerGeneration
+      const epoch = this.compositionPreviewEpoch
+      this.workerCompositionPreview = preview
+      this.compositionPreviewPending = composition
+      this.compositionWorkerStats.submitted++
+      const fallback = () => {
+        if (epoch !== this.compositionPreviewEpoch || !this.compositionPreviewPending ||
+          this.compositionPreviewPending.sequence !== composition.sequence) return
+        this.compositionWorkerStats.fallbacks++
+        this.canvasEvent.flushComposition()
+      }
+      if (this.compositionPreviewTimer === null) this.compositionPreviewTimer = setTimeout(() => {
+        this.compositionPreviewTimer = null
+        if (epoch !== this.compositionPreviewEpoch || !this.compositionPreviewPending) return
+        this.compositionWorkerStats.deadlines++
+        this.compositionWorkerStats.fallbacks++
+        this.canvasEvent.flushComposition()
+      }, 50)
+      void client.preview(input, constraintsRevision, composition).then(response => {
+        if (!this.isReady() || epoch !== this.compositionPreviewEpoch ||
+          revision !== this.getDocumentRevision() ||
+          geometryRevision !== this.geometryRevision ||
+          constraintsRevision !== this.workerGeneration ||
+          response.constraintsRevision !== constraintsRevision ||
+          response.documentRevision !== revision ||
+          response.fontRevision !== this.layoutHostAdapter.getFontManager().getRevision()) {
+          this.compositionWorkerStats.stale++
+          return
+        }
+        const accepted = this.canvasEvent.acceptWorkerComposition(
+          composition.generation, composition.sequence, value, () => {
+            if (!response.layouts?.[0] || !preview.accept(prepared, response.layouts[0]))
+              return false
+            this.applyCompositionPreview(preview)
+            return true
+          })
+        if (accepted === 'committed') {
+          this.compositionWorkerStats.committed++
+          if (epoch === this.compositionPreviewEpoch &&
+            this.compositionPreviewPending?.generation === composition.generation &&
+            this.compositionPreviewPending.sequence === composition.sequence)
+            this.finishCompositionPreviewWork()
+        } else if (accepted === 'fallback') fallback()
+        else this.compositionWorkerStats.stale++
+      }).catch(() => {
+        if (epoch !== this.compositionPreviewEpoch ||
+          this.compositionPreviewPending?.sequence !== composition.sequence) {
+          this.compositionWorkerStats.stale++
+          return
+        }
+        this.workerFaults++
+        this.scheduleWorkerRecovery()
+        fallback()
+      })
+      return 'pending' as const
+    }
+    if (this.compositionPreviewPending) return false
+    if (!preview || !preview.update(value)) return false
+    this.applyCompositionPreview(preview)
+    return true
+  }
+
+  private applyCompositionPreview(preview: CompositionPreview) {
+    this.compositionPreview = preview
+    this.compositionHighlightsDirty = true
+    this.compositionToolsDirty = true
+    this.paintPage(preview.placed.pageNo)
+    this.cursor.setCompositionCaret(preview.caret)
+  }
+
+  public clearCompositionPreview() {
+    this.compositionPreviewEpoch++
+    this.layoutWorkerClient?.cancelPreview()
+    this.workerCompositionPreview = null
+    this.finishCompositionPreviewWork()
+    const preview = this.compositionPreview
+    this.compositionPreview = null
+    this.cursor.setCompositionCaret(null)
+    if (preview && this.isReady()) this.paintPage(preview.placed.pageNo)
+  }
+
   /** Geometry commands may explicitly assert the current synchronous commit. */
   public flushGeometry() {
+    this.canvasEvent.flushComposition()
     if (this.pendingWorkerRender) {
       this.cancelWorkerCommitTimer()
       const payload = this.pendingWorkerRender
@@ -4146,6 +4467,7 @@ export class Draw {
   }
 
   private computeRenderGeometry(innerWidth: number, isPagingMode: boolean) {
+    this.tableLayoutCache.beginPass()
     const { header, footer } = this.options
     // 清空拼写检查错词信息
     this.spellcheck.setSpellcheckRangeList(null)
@@ -4209,13 +4531,8 @@ export class Draw {
     // 区域信息
     this.area.compute()
     if (!this.isPrintMode()) {
-      // 搜索信息
-      const searchKeyword = this.search.getSearchKeyword()
-      if (searchKeyword) {
-        this.search.compute(searchKeyword)
-      }
-      // 控件关键词高亮
-      this.control.computeHighlightList()
+      if (this.deferCompositionDerived()) this.compositionHighlightsDirty = true
+      else this.updateCompositionHighlights()
     }
     // 涂鸦信息
     if (this.isGraffitiMode()) {
@@ -4270,35 +4587,57 @@ export class Draw {
     }
   }
 
+  private refreshRenderTools(isCompute: boolean) {
+    // 选区样式
+    this.range.setRangeStyle()
+    // 重新唤起弹窗类控件
+    if (isCompute && this.control.getActiveControl()) {
+      this.control.reAwakeControl()
+    }
+    // 表格工具重新渲染
+    if (
+      isCompute &&
+      !this.isReadonly() &&
+      this.position.getPositionContext().isTable
+    ) {
+      this.tableTool.render()
+    }
+    // 页眉指示器重新渲染
+    if (isCompute && !this.zone.isMainActive()) {
+      this.zone.drawZoneIndicator()
+    }
+    // 标尺重新渲染
+    if (isCompute) {
+      this.ruler.render()
+    }
+  }
+
   private notifyRender(payload: IDrawOption, oldPageSize: number) {
     const {
       isCompute = true, isSubmitHistory = true,
       isSourceHistory = false, isInit = false
     } = payload
+    const deferred = this.deferCompositionDerived()
+    if (deferred) this.compositionToolsDirty = true
+    else {
+      this.compositionToolsDirty = false
+      this.renderToolsQueued = true
+      this.renderToolsCompute ||= isCompute
+    }
     // Each edit retains its own notification, even if its paint is merged.
     nextTick(() => {
       if (!this.isReady()) return
-      // 选区样式
-      this.range.setRangeStyle()
-      // 重新唤起弹窗类控件
-      if (isCompute && this.control.getActiveControl()) {
-        this.control.reAwakeControl()
-      }
-      // 表格工具重新渲染
-      if (
-        isCompute &&
-        !this.isReadonly() &&
-        this.position.getPositionContext().isTable
-      ) {
-        this.tableTool.render()
-      }
-      // 页眉指示器重新渲染
-      if (isCompute && !this.zone.isMainActive()) {
-        this.zone.drawZoneIndicator()
-      }
-      // 标尺重新渲染
-      if (isCompute) {
-        this.ruler.render()
+      if (this.deferCompositionDerived()) {
+        this.compositionToolsDirty = true
+        this.renderToolsQueued = false
+        this.renderToolsCompute = false
+      } else if (!deferred &&
+        (!this.options.lab?.imePreview || this.renderToolsQueued)) {
+        const compute = this.options.lab?.imePreview
+          ? this.renderToolsCompute : isCompute
+        this.renderToolsQueued = false
+        this.renderToolsCompute = false
+        this.refreshRenderTools(compute)
       }
       // 页数改变
       if (oldPageSize !== this.pageRowList.length) {
@@ -4322,6 +4661,7 @@ export class Draw {
   }
 
   public render(payload?: IDrawOption) {
+    this.canvasEvent?.flushComposition()
     if (this.historyReplayDepth) {
       this.deferredHistoryRender = payload || {}
       return
@@ -4420,7 +4760,9 @@ export class Draw {
           if (this.isReady()) this.eventBus.emit('renderChange')
         })
       } else {
-        this.eventBus.emit('renderChange')
+        this.afterCompositionCommit('renderChange', () => {
+          if (this.isReady()) this.eventBus.emit('renderChange')
+        })
       }
     }
     this.notifyRender({ ...payload, isCompute }, oldPageSize)
@@ -4514,7 +4856,7 @@ export class Draw {
     if (!this.options.lab?.incrementalEditing || !this.options.lab?.incrementalCoverage)
       return null
     return this.derivedState.catalogSignature(this.elementList,
-      this.position.getOriginalMainPositionList(), this.layoutHostAdapter.paragraphs)
+      this.position.getOriginalMainPositionList(true), this.layoutHostAdapter.paragraphs)
   }
 
   public getDocumentRevision() { return this.editJournal.getRevision() }
@@ -4611,6 +4953,11 @@ export class Draw {
     const index = this.layoutHostAdapter.paragraphs.get(elements)
     return index.between(Math.max(0, range.startIndex - 1), range.endIndex + 3)
       .every(record => record.editable)
+  }
+
+  public hasActiveEditTransaction() {
+    return !!this.activeEdit || !!this.compositionCallbacks ||
+      !!this.canvasEvent?.isComposing
   }
 
   public beginEditTransaction(kind: string, groupable = true) {
@@ -4727,12 +5074,42 @@ export class Draw {
     }
   }
 
+  private compactCompositionHistory(edit: PendingEdit): EditOperation[] {
+    const operations = edit.operations
+    const first = operations[0]
+    const index = edit.before.range.startIndex + 1
+    if (edit.kind !== 'composition' || !edit.trusted || !first ||
+      !operations.every(operation => operation.kind === 'splice' &&
+        operation.scope === first.scope && operation.index >= index))
+      return operations
+    const after = getSlimCloneElementList(this.resolveEditScope(first.scope)
+      .slice(index, this.range.getRange().endIndex + 1))
+    let before = [...after]
+    // Deletion can be recorded as descending grapheme splices. Reverse the
+    // log inside the replacement window, never by cloning the whole scope.
+    for (const operation of [...operations].reverse()) {
+      if (operation.kind !== 'splice') return operations
+      const offset = operation.index - index
+      if (offset > before.length || offset + operation.after.length > before.length)
+        return operations
+      before = [...before.slice(0, offset), ...operation.before,
+        ...before.slice(offset + operation.after.length)]
+    }
+    if (before.length !== edit.before.range.endIndex - edit.before.range.startIndex)
+      return operations
+    if (JSON.stringify(before) === JSON.stringify(after)) return []
+    return [{ kind: 'splice', scope: first.scope, index, before, after }]
+  }
+
   public commitEditTransaction() {
     const edit = this.activeEdit
     if (!edit || --edit.depth > 0) return
     this.publishEditAtRender()
     this.activeEdit = null
     if (!edit.history || !this.options.historyMaxRecordCount) return
+    // The journal already published every materialized revision for mirrors.
+    // History retains only the original replacement and final text when safe.
+    edit.operations = this.compactCompositionHistory(edit)
     const after = this.captureEditState()
     if (this.pendingWorkerRender) this.pendingWorkerHistory = after
     if (edit.trusted && edit.operations.length && this.options.lab?.transactionHistory) {
@@ -4756,7 +5133,7 @@ export class Draw {
 
   public rollbackEditTransaction() {
     const edit = this.activeEdit
-    if (!edit) return
+    if (!edit) return false
     this.activeEdit = null
     let published: EditOperation[]
     if (edit.snapshot) {
@@ -4777,6 +5154,7 @@ export class Draw {
     this.layoutHostAdapter.clearParagraphCache()
     this.modelRevision++
     this.render({ isSubmitHistory: false, curIndex: edit.before.cursorIndex })
+    return true
   }
 
   public runEditTransaction<T>(kind: string, action: () => T, groupable = true): T {
@@ -4925,6 +5303,12 @@ export class Draw {
 
   public destroy() {
     if (!this.lifecycle.destroy()) return
+    this.canvasEvent.destroy()
+    this.compositionPreviewEpoch++
+    this.layoutWorkerClient?.cancelPreview()
+    this.workerCompositionPreview = null
+    this.finishCompositionPreviewWork()
+    this.compositionPreview = null
     this.pendingFontCoverage = null
     this.coveragePublishedSignature = ''
     this.workerGeneration++
@@ -4937,6 +5321,7 @@ export class Draw {
     this.pendingWorkerHistory = null
     this.derivedState.clear()
     this.incrementalFlow.clear()
+    this.tableLayoutCache.clear()
     this.editJournal.destroy()
     this.activeEdit = null
     this.journalModel = null
@@ -4946,13 +5331,14 @@ export class Draw {
     this.fontDiagnostics.destroy()
     this.fontDownloadManager.destroy()
     this.fontCoverageTracker.destroy()
+    this.compositionCoverage.destroy()
     this.layoutHostAdapter.destroy()
     this.cancelPaint()
     this.position.destroy()
     for (const event of this.guardedEvents) {
       this.container.removeEventListener(event, this.interactionGuard, true)
     }
-    this.cursor.recoveryCursor()
+    this.cursor.destroy()
     this.container.remove()
     this.globalEvent.removeEvent()
     this.scrollObserver.removeEvent()

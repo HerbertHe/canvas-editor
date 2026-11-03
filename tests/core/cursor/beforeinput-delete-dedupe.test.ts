@@ -6,6 +6,7 @@ describe('DEFER-021 beforeinput delete dedupe', () => {
     const keydown = vi.fn()
     const draw = {
       getContainer: () => document.body,
+      getOptions: () => ({ lab: { imePreview: false } }),
       getEventBus: () => ({
         isSubscribe: () => false,
         emit: () => undefined,
@@ -43,6 +44,7 @@ describe('DEFER-021 beforeinput delete dedupe', () => {
     expect(prevented || beforeInput.defaultPrevented).toBe(true)
     expect(keydown).toHaveBeenCalledTimes(1)
 
+    agent.destroy()
     dom.remove()
   })
 })

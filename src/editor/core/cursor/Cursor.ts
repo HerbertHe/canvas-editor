@@ -12,6 +12,8 @@ import { Draw } from '../draw/Draw'
 import { CanvasEvent } from '../event/CanvasEvent'
 import { Position } from '../position/Position'
 import { CursorAgent } from './CursorAgent'
+import { CompositionAnchor } from './CompositionAnchor'
+import type { NativeCaret } from '../layout/InteractionGeometry'
 
 /** 光标墨迹盒：上下标用名义字号，避免 actualSize/垫高 metrics 把光标算矮、算飘 */
 export function resolveCursorInkMetrics(payload: {
@@ -59,6 +61,7 @@ export type IDrawCursorOption = ICursorOption & {
   isBlink?: boolean
   isFocus?: boolean
   hitLineStartIndex?: number
+  revealComposition?: boolean
 }
 
 export interface IMoveCursorToVisibleOption {
@@ -77,9 +80,16 @@ export class Cursor {
   private cursorAgent: CursorAgent
   private blinkTimeout: number | null
   private hitLineStartIndex: number | undefined
+  private compositionAnchor: CompositionAnchor
+  private canvasEvent: CanvasEvent
+  private destroyed = false
+  private focusSuppressed = 0
+  private placementGeneration = 0
+  private focusTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(draw: Draw, canvasEvent: CanvasEvent) {
     this.draw = draw
+    this.canvasEvent = canvasEvent
     this.container = draw.getContainer()
     this.position = draw.getPosition()
     this.options = draw.getOptions()
@@ -89,6 +99,21 @@ export class Cursor {
     this.container.append(this.cursorDom)
     this.cursorAgent = new CursorAgent(draw, canvasEvent)
     this.blinkTimeout = null
+    this.compositionAnchor = new CompositionAnchor(this.container,
+      this.getAgentDom(), this.cursorDom, this.options,
+      () => this.isCompositionTracking(), reveal => this.drawCursor({
+        isFocus: false, isBlink: false, revealComposition: reveal
+      }))
+  }
+
+  private isCompositionTracking() {
+    return !this.destroyed && !!this.options.lab?.imePreview &&
+      this.canvasEvent.isComposing
+  }
+
+  public withoutFocus(callback: () => void) {
+    this.focusSuppressed++
+    try { callback() } finally { this.focusSuppressed-- }
   }
 
   public getCursorDom(): HTMLDivElement {
@@ -139,6 +164,7 @@ export class Cursor {
   }
 
   public focus() {
+    if (this.destroyed || this.focusSuppressed || this.isCompositionTracking()) return
     // 移动端只读模式禁用聚焦避免唤起输入法，web端允许聚焦避免事件无法捕获
     if (isMobile && this.draw.isReadonly()) return
     const agentCursorDom = this.cursorAgent.getAgentCursorDom()
@@ -151,6 +177,10 @@ export class Cursor {
   }
 
   public drawCursor(payload?: IDrawCursorOption) {
+    if (this.destroyed) return
+    const generation = ++this.placementGeneration
+    if (this.focusTimer !== null) clearTimeout(this.focusTimer)
+    this.focusTimer = null
     let cursorPosition = this.position.getCursorPosition()
     if (!cursorPosition) return
     const { scale, cursor } = this.options
@@ -159,9 +189,11 @@ export class Cursor {
       width,
       isShow = true,
       isBlink = true,
-      isFocus = true,
+      isFocus: requestFocus = true,
+      revealComposition = true,
       hitLineStartIndex
     } = { ...cursor, ...payload }
+    const isFocus = requestFocus && !this.focusSuppressed
     // 设置光标代理
     // 光标位置
     this.hitLineStartIndex = hitLineStartIndex
@@ -176,7 +208,7 @@ export class Cursor {
       pageNo,
       index: cursorIndex
     } = cursorPosition
-    const nativeCaret = this.position.getNativeCaret?.(
+    const nativeCaret = this.compositionCaret || this.position.getNativeCaret?.(
       hitLineStartIndex !== undefined ? hitLineStartIndex - 1 : cursorIndex,
       hitLineStartIndex
     )
@@ -200,11 +232,6 @@ export class Cursor {
     const cursorHeight = nativeCaret?.height ?? textHeight + pad * 2
     const defaultOffsetHeight = CURSOR_AGENT_OFFSET_HEIGHT * scale
     const agentCursorDom = this.cursorAgent.getAgentCursorDom()
-    if (isFocus) {
-      setTimeout(() => {
-        this.focus()
-      })
-    }
     // 基线：leftTop + ascent；光标相对字身上下各外扩 pad。
     // 图片/公式的 position.ascent 是顶对齐偏移（row.ascent - height），不是行基线
     const isImageLike =
@@ -223,17 +250,32 @@ export class Cursor {
           : isRtlRun
             ? leftTop[0]
             : rightTop[0])) + preX
+    let direction: 'ltr' | 'rtl' | 'auto' = 'ltr'
     // Sync IME textarea direction with paragraph
     try {
       const adapter = this.draw.getLayoutHostAdapter()
       const elementList = this.draw.getElementList()
-      const dir = adapter.resolveElementDirection(
+      direction = adapter.resolveElementDirection(
         elementList,
         cursorPosition.index
       )
-      this.cursorAgent.syncDirection(dir)
     } catch {
       /* adapter may be unavailable during destroy */
+    }
+    if (this.isCompositionTracking()) {
+      this._clearBlinkTimeout()
+      this.compositionAnchor.update({ left: cursorLeft, top: cursorTop,
+        height: cursorHeight, width: width * scale, color, direction,
+        show: isShow && !this.draw.isReadonly() }, revealComposition)
+      return
+    }
+    this.compositionAnchor.restore()
+    this.cursorAgent.syncDirection(direction)
+    if (isFocus) {
+      this.focusTimer = setTimeout(() => {
+        this.focusTimer = null
+        if (generation === this.placementGeneration) this.focus()
+      })
     }
     agentCursorDom.style.left = `${cursorLeft}px`
     agentCursorDom.style.top = `${
@@ -262,7 +304,8 @@ export class Cursor {
     // 移动到视野范围内（仅在聚焦时）
     if (isFocus) {
       nextTick(() => {
-        // nexttick后执行 => 避免画布没有渲染完成造成残影
+        // Ignore work superseded by a composition frame, blur or destruction.
+        if (this.destroyed || generation !== this.placementGeneration) return
         this.moveCursorToVisible({
           cursorPosition: cursorPosition!,
           direction:
@@ -275,6 +318,24 @@ export class Cursor {
   public recoveryCursor() {
     this.cursorDom.style.display = 'none'
     this._clearBlinkTimeout()
+  }
+
+  private compositionCaret: NativeCaret | null = null
+
+  public setCompositionCaret(caret: NativeCaret | null) {
+    this.compositionCaret = caret
+    this.compositionAnchor.cancel()
+    if (caret) this.drawCursor({ isFocus: false, isBlink: false })
+  }
+
+  public destroy() {
+    this.destroyed = true
+    this.placementGeneration++
+    if (this.focusTimer !== null) clearTimeout(this.focusTimer)
+    this.focusTimer = null
+    this._clearBlinkTimeout()
+    this.compositionAnchor.destroy()
+    this.cursorAgent.destroy()
   }
 
   public moveCursorToVisible(payload: IMoveCursorToVisibleOption) {

@@ -65,6 +65,25 @@ export class LayoutWorkerServer {
         throw new Error('Layout model requires resynchronization')
       if (message.type === 'inspect')
         return { ...version, type: 'mirror', model: structuredClone(this.model) }
+      if (message.type === 'preview') {
+        const { input, composition } = message
+        if (!Number.isSafeInteger(composition.generation) || composition.generation < 1 ||
+          !Number.isSafeInteger(composition.sequence) || composition.sequence < 1 ||
+          input.source.scope !== 'ime-preview' || input.spans.reduce(
+            (sum, span) => sum + span.text.length, 0) > 4096 ||
+          input.positions.length > 4096)
+          throw new Error('Unsupported composition preview')
+        const started = performance.now()
+        const layout = this.kernel.layout({ schemaVersion: 1, input }).layout
+        const estimatedBytes = layout.lines.reduce((sum, line) => sum + 512 +
+          line.glyphs.length * 256 + line.clusters.length * 512 +
+          line.carets.length * 256 + line.inlines.length * 512, 0) +
+          layout.shaped.lines.reduce((sum, line) => sum + line.glyphs.length * 1024, 0)
+        if (estimatedBytes > 4 * 1024 * 1024)
+          throw new Error('Composition preview exceeds result budget')
+        return { ...version, type: 'preview', composition,
+          layouts: [layout], computeMs: performance.now() - started, estimatedBytes }
+      }
       if (message.type !== 'layout') throw new Error('Unknown layout request')
       const layouts = []
       const inputs = []

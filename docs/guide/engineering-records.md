@@ -80,6 +80,9 @@ rtk npm run test:performance:acceptance -- \
 
 ## 后续可选方向
 
+中文输入法连续拼音刷新的实施拆分见 [IME 性能优化任务](ime-performance-tasks.md)。
+先建立专项基线，再实施合成调度与局部预览；普通输入指标不能代替真实输入法验收。
+
 优先减少超长段落整段排版和全局 flow/元数据遍历，再补系统输入与呈现验收。Tile 缓存、OffscreenCanvas 绘制 Worker 和 WebGL/WebGPU 字形绘制仍为候选；只有 CPU profile 显示绘制成为主要瓶颈时再实现，GPU API 不能直接消除 BiDi、整形与文档流成本。
 
 尚有参考价值的专项设计保留：[RTL 设计](rtl-layout-design.md)、[RTL 后续事项](rtl-deferred-todo.md)、[SVG 评估](harfbuzz-svg-assessment.md)。SVG 页面与独立 SVG 导出目前不可用。

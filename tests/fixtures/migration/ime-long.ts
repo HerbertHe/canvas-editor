@@ -12,7 +12,7 @@ import { createLayoutWork } from '../../../src/editor/core/text-engine/layout/La
 import type { IElement } from '../../../src/editor/interface/Element'
 
 type Kind = 'latin' | 'cjk' | 'unicode' | 'arabic'
-type Location = 'end' | 'middle'
+type Location = 'end' | 'middle' | 'start'
 let draw: Draw
 let original = ''
 let originalElements: string[] = []
@@ -50,8 +50,9 @@ async function setup(windowPreview: boolean, kind: Kind, location: Location) {
   draw = new Draw(container, options, content, new Listener(), new EventBus(), new Override())
   await draw.ready
   const lines = draw.getPosition().getNativeLines()
-  const target = location === 'end' ? lines.at(-1)! : lines[Math.floor(lines.length / 2)]
-  from = target.line.source.start + 1
+  const target = location === 'end' ? lines.at(-1)! :
+    location === 'start' ? lines[0] : lines[Math.floor(lines.length / 2)]
+  from = location === 'start' ? 3 : target.line.source.start + 1
   to = from
   if (location === 'middle') {
     const elements = draw.getOriginalMainElementList()

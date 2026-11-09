@@ -45,6 +45,27 @@ describe('canonical position blocks', () => {
     expect(reads).toBe(2)
   })
 
+  it('projects a relocated row from canonical positions through page slices', () => {
+    const original = { ...position(0), lineHeight: 3.25,
+      coordinate: { leftTop: [1, 0.1], leftBottom: [1, 3.35],
+        rightTop: [2, 0.1], rightBottom: [2, 3.35] } }
+    const list = createPositionList()
+    let projected = 0
+    setPositionBlock(list, 0, [original], 0, 5, 1, () => projected++,
+      { pageNo: 2, y: 7.1 })
+    const next = createPositionList()
+    appendPositionList(next, slicePositionList(list, 0))
+
+    expect(projected).toBe(0)
+    expect(next[0]).toMatchObject({ pageNo: 2, rowIndex: 5, rowNo: 1,
+      coordinate: { leftTop: [1, 7.1], leftBottom: [1, 7.1 + 3.25],
+        rightTop: [2, 7.1], rightBottom: [2, 7.1 + 3.25] } })
+    expect(next[0]).toBe(list[0])
+    expect(projected).toBe(1)
+    expect(original.pageNo).toBe(0)
+    expect(original.coordinate.leftTop).toEqual([1, 0.1])
+  })
+
   it('preserves array order, sparse holes, overrides and truncation', () => {
     const list = createPositionList()
     setPositionBlock(list, 0, [position(0), position(1), position(2)], 0, 0, 0)

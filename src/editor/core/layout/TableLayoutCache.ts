@@ -1,34 +1,36 @@
 import type { IElement } from '../../interface/Element'
 import type { LayoutNode, LayoutRevision } from '../../interface/Layout'
 import type { LayoutRow } from '../../interface/LayoutRow'
-import { getSlimCloneElementList } from '../../utils/element'
+import { getSlimCloneElementList, matchesSlimScalarElements } from '../../utils/element'
 import { projectTextLine } from './relativeLayout'
 import { getCellContentWidth, layoutTable } from './TableLayout'
 import type { CellContentLayout, TableCellInput, TableLayoutInput,
   TableLayoutResult } from './TableLayout'
 
 type CellLayout = { rows: LayoutRow[]; nodes: LayoutNode[] }
+type ScalarSnapshot = { elements: IElement[]; keyCounts: number[] }
+type CellEntry = { key: string; value: CellLayout; elements: IElement[]
+  bytes: number; lastPass: number; dependencies: string; snapshot?: ScalarSnapshot }
 
 /** Bounded canonical cell contents; table geometry itself has weak ownership. */
 export class TableLayoutCache {
-  private cells = new Map<IElement[], { key: string; value: CellLayout;
-    elements: IElement[]; bytes: number; lastPass: number }>()
+  private cells = new Map<IElement[], CellEntry>()
   private tables = new WeakMap<IElement, { key: string; value: TableLayoutResult }>()
   private bytes = 0
   private pass = 0
   private evictionCandidates: IElement[][] | null = null
   readonly stats = { checkedCells: 0, computedCells: 0, reusedCells: 0,
     computedRows: 0, reusedRows: 0, inputElements: 0, bytes: 0,
-    entries: 0, admissionSkips: 0, evictions: 0 }
+    entries: 0, admissionSkips: 0, evictions: 0, scalarHits: 0, signatures: 0 }
 
-  constructor(private maxEntries = 512, private byteBudget = 16 * 1024 * 1024) {}
+  constructor(private maxEntries = 1024, private byteBudget = 16 * 1024 * 1024) {}
 
   beginPass() {
     this.pass++
     this.evictionCandidates = null
     Object.assign(this.stats, { checkedCells: 0, computedCells: 0, reusedCells: 0,
       computedRows: 0, reusedRows: 0, inputElements: 0,
-      admissionSkips: 0, evictions: 0 })
+      admissionSkips: 0, evictions: 0, scalarHits: 0, signatures: 0 })
   }
 
   clear() {
@@ -44,49 +46,69 @@ export class TableLayoutCache {
     compute: () => CellLayout): CellLayout {
     this.stats.checkedCells++
     this.stats.inputElements += elements.length
+    const cached = this.cells.get(elements)
+    const sameElements = !!cached && cached.elements.length === elements.length &&
+      cached.elements.every((element, i) => element === elements[i])
+    const scalarHit = sameElements && cached.dependencies === dependencies &&
+      !!cached.snapshot && matchesSlimScalarElements(
+        elements, cached.snapshot.elements, cached.snapshot.keyCounts
+      )
     // Containers recurse normally so a changed nested scope cannot hide behind
     // an unchanged outer array. Stateful controls/areas/objects also run normally.
-    const eligible = elements.length <= 4096 && elements.every(e =>
+    const eligible = !scalarHit && elements.length <= 4096 && elements.every(e =>
       (!e.type || e.type === 'text') && !e.controlId && !e.control &&
       !e.listId && !e.areaId && !e.area && !e.groupIds?.length &&
       !e.hide && !e.trace?.length && !e.imgDisplay && !e.titleId && !e.title)
     let key = ''
+    let model: IElement[] | undefined
     if (eligible) {
-      try { key = dependencies + ':' + JSON.stringify(getSlimCloneElementList(elements)) }
+      this.stats.signatures++
+      try {
+        model = getSlimCloneElementList(elements)
+        key = dependencies + ':' + JSON.stringify(model)
+      }
       catch { /* Cyclic extension metadata is not a cacheable text cell. */ }
     }
-    const cached = this.cells.get(elements)
-    if (key && cached?.key === key && cached.elements.every((e, i) => e === elements[i])) {
+    if (cached && (scalarHit ||
+      (!cached.snapshot && sameElements && key && cached.key === key))) {
       this.stats.reusedCells++
+      if (scalarHit) this.stats.scalarHits++
       cached.lastPass = this.pass
       this.cells.delete(elements)
       this.cells.set(elements, cached)
       const project = (node: LayoutNode) => node.kind === 'textLine'
         ? projectTextLine(node, 0, revision) : node
       return {
-        rows: cached.value.rows.map(row => ({ ...row,
-          nativeLine: row.nativeLine && projectTextLine(row.nativeLine, 0, revision),
-          node: row.node && project(row.node) })),
+        rows: cached.value.rows.map(row => {
+          const nativeLine = row.nativeLine && projectTextLine(row.nativeLine, 0, revision)
+          return { ...row, nativeLine,
+            node: row.node === row.nativeLine ? nativeLine : row.node && project(row.node) }
+        }),
         nodes: cached.value.nodes.map(project)
       }
     }
     this.stats.computedCells++
     const value = compute()
     if (cached) { this.cells.delete(elements); this.bytes -= cached.bytes }
-    if (key && value.nodes.every(n => n.kind === 'textLine') &&
+    if (key && model && value.nodes.every(n => n.kind === 'textLine') &&
       value.rows.every(row => !!row.nativeLine)) {
+      const snapshot = model.every(element => Object.values(element).every(item =>
+        item === null || ['string', 'number', 'boolean', 'undefined'].includes(typeof item)
+      )) ? { elements: model, keyCounts: model.map(e => Object.keys(e).length) } : undefined
+      const snapshotBytes = snapshot?.keyCounts.reduce((sum, count) =>
+        sum + 32 + 16 * count, 0) || 0
       const bytes = key.length * 2 + value.rows.reduce((sum, row) => sum + 512 +
-        row.nativeLine!.glyphs.length * 512 + row.nativeLine!.carets.length * 256, 0)
-      this.admit(elements, { key, value, bytes, elements: [...elements], lastPass: this.pass })
+        row.nativeLine!.glyphs.length * 512 + row.nativeLine!.carets.length * 256, 0) +
+        snapshotBytes
+      this.admit(elements, { key, value, bytes, elements: [...elements],
+        lastPass: this.pass, dependencies, snapshot })
     }
     this.stats.bytes = this.bytes
     this.stats.entries = this.cells.size
     return value
   }
 
-  private admit(elements: IElement[], entry: {
-    key: string; value: CellLayout; bytes: number; elements: IElement[]; lastPass: number
-  }) {
+  private admit(elements: IElement[], entry: CellEntry) {
     let bytes = this.bytes + entry.bytes
     let count = this.cells.size + 1
     if (bytes <= this.byteBudget && count <= this.maxEntries) {

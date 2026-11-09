@@ -109,8 +109,8 @@ const stages = [
   ['preview', 'scripts/test-ime-preview.mjs', 'cypress/results/ime/preview-differential.json', 12],
   ['anchor', 'scripts/test-ime-anchor.mjs', 'cypress/results/ime/anchor-geometry.json', 8],
   ['closure', 'scripts/test-ime-commit.mjs', 'cypress/results/ime/commit-closure.json', 16],
-  ['long', 'scripts/test-ime-long.mjs', 'cypress/results/ime/long-comparison.json', 35],
-  ['tableWorker', 'scripts/test-ime-table-worker.mjs', 'cypress/results/ime/table-worker-comparison.json', 59],
+  ['long', 'scripts/test-ime-long.mjs', 'cypress/results/ime/long-comparison.json', 42],
+  ['tableWorker', 'scripts/test-ime-table-worker.mjs', 'cypress/results/ime/table-worker-comparison.json', 62],
   ['workerAnchor', 'scripts/test-ime-table-worker-anchors.mjs', null, 60]
 ]
 const originalExecutable = process.env.BROWSER_EXECUTABLE

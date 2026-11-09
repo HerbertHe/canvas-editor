@@ -10,9 +10,11 @@ import { formatElementList, getSlimCloneElementList } from '../../../src/editor/
 import { mergeOption } from '../../../src/editor/utils/option'
 import type { IElement } from '../../../src/editor/interface/Element'
 import type { LayoutWorkerClient } from '../../../src/editor/core/worker/layout/LayoutWorkerClient'
+import { TableLayoutCache } from '../../../src/editor/core/layout/TableLayoutCache'
 
 type Kind = 'table' | 'large' | 'merged' | 'nested' | 'repeated' | 'rtl' | 'plain' | 'wide'
-type Config = { kind: Kind; tableCache: boolean; workerPreview: boolean; denied?: boolean }
+type Config = { kind: Kind; tableCache: boolean; workerPreview: boolean
+  denied?: boolean; tableCacheEntries?: number }
 let draw: Draw
 let config: Config
 let original = ''
@@ -70,6 +72,8 @@ async function setup(next: Config) {
   try {
     draw = new Draw(container, options, content, new Listener(), new EventBus(), new Override())
     await draw.ready
+    if (next.tableCacheEntries !== undefined)
+      Reflect.set(draw, 'tableLayoutCache', new TableLayoutCache(next.tableCacheEntries))
     if (!body) {
       const root = draw.getOriginalMainElementList()
       const index = root.findIndex(e => e.type === ElementType.TABLE)

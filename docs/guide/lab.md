@@ -93,12 +93,12 @@ const editor = await Editor.create(container, data, {
 `imePreview` 默认 false，独立于 profile 和段落缓存。开启后按帧消费最新合成文本；
 简单 LTR 正文单行、行高和基线不变时，使用 HarfBuzz 临时几何在原页面绘制预览，
 选字结束才写入最终文本。`sync` / `worker` profile 还启用 `imeWindowPreview`：
-长段落只重排编辑行及前后校验行，窗口最多三行、2048 个元素；断点、行高、
-基线和邻行绘制/光标几何完全一致才接受预览，其余行沿用正式几何。
-段落可跨页，但预编辑本身改变断行或分页时回退。
+长段落先尝试编辑行及前后校验行。同步预览可向后扩大窗口，最多十行、2048 个元素，
+在编辑页内替换断点改变的行。窗口外仍有内容时须验证末尾行的断点、绘制和光标几何收敛。
+总行数、行高、基线或分页变化时回退到正式布局。
 显式设置 `imeWindowPreview: false` 可单独关闭此能力；baseline 默认关闭。
 表格采用下文的单元格缓存，仍同步更新正式模型。
-暂不支持的换行/跨页变化、控件、复杂方向、
+超出窗口的换行传播、分页变化、控件、复杂方向、
 装饰等路径采用按帧的同步回退，不能据此宣称这些范围已局部布局。
 
 长段窗口要求单一度量样式、LTR、安全的整词/字素边界；Arabic、BiDi、
@@ -107,6 +107,7 @@ const editor = await Editor.create(container, data, {
 `composition.previewWork` 的 `windowElements` / `laidOutLines` 记录实际重排范围，
 `checkedLines` 记录校验行，`skippedLines` 才是本次没有参与临时布局的行数；
 `reusedLines` 含重排后丢弃临时结果、继续沿用正式几何的校验行。
+`replacedLines` 表示本次实际替换绘制的行数。
 
 ### 表格内合成与 Worker 预览
 
@@ -114,10 +115,12 @@ const editor = await Editor.create(container, data, {
 未变的安全文本单元格复用规范布局；内容高度和表格依赖不变时沿用网格/行高。
 高度变化仍重新解算表格行高、合并跨度和后续分页，但保留其他单元格内容缓存。
 嵌套表格的父单元格仍递归检查其叶单元格；列宽、字体或全局样式变化使缓存失效。
-缓存最多 512 项、估算 16 MiB；`imeTableLayout: false` 可独立回退。
+缓存最多 1024 项、估算 16 MiB。`imeTableLayout: false` 可独立回退。
+纯标量内容命中时直接比较模型字段，复杂元数据继续使用内容签名。
 超过容量时优先保留本轮及上轮的热条目，新候选无法入缓存就直接使用本次计算结果，
 不连续淘汰接下来将用到的单元格。闲置一个完整布局周期后可接纳新文档。
-`tables.entries` / `admissionSkips` / `evictions` 可用于检查容量行为。
+`tables.entries` / `admissionSkips` / `evictions` 可用于检查容量行为，
+`scalarHits` 和 `signatures` 分别记录标量命中与完整内容签名次数。
 
 `tables.computedCells` 统计子布局回调，`reusedCells` 统计跳过的回调；
 `computedRows` / `reusedRows` 统计表格行高/网格的解算或复用。
@@ -186,12 +189,14 @@ Demo 对照可在 URL 增加 `?performance=sync&paragraphCache=off&imePreview=on
 
 范围提交先定位脏段落，验证全部依赖后接续前缀/收敛后缀；文本及断行约束未变时，
 后续段落只重新放置行。可用宽度变化、字体/样式变化或复杂对象等保持原有排版回退。
-未变几何使用按行的惰性位置视图；大量几何变化时改用普通数组提交，并安全复用字形度量。
+横向几何相同的行使用按行的惰性位置视图，跨页或纵移时按需投影坐标与页号。
+大量行需要实际重建时改用普通数组提交，并安全复用字形度量。
 内部位置视图不会替代诊断用的普通数组快照；显式读取完整位置数据仍会支付全文成本。
 
 新增诊断 `flow.checkpointChecks` / `batchChecked` / `reflowed` 区分几何检查、
 目录元数据访问和缓存断行重放；`placements.visitedElements` 统计显式位置提交遍历，
-`projectedElements` 统计按需生成的位置对象，`reusedMetrics` 统计新位置沿用的字形度量。
+`projectedElements` 统计按需生成的位置对象，`relocatedBlocks` 统计跨页或纵移的复用行，
+`reusedMetrics` 统计新位置沿用的字形度量。
 后者属于 `computedElements` 内部的复用，不应相加。`flow.reused`、查询块与字形缓存
 已有的复用不计为本项新实现。页/行目录、对象分类及覆盖聚合等仍可能遍历全文，
 不承诺常数时间编辑。实测与限制见 [IME-10 报告](benchmark.md)。

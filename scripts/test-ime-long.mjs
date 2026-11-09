@@ -12,7 +12,7 @@ const trials = Number(process.env.TRIALS || 3)
 const iterations = Number(process.env.ITERATIONS || 5)
 assert.ok(Number.isInteger(trials) && trials > 0 && Number.isInteger(iterations) && iterations > 0)
 const output = process.env.OUTPUT || 'cypress/results/ime/long-comparison.json'
-const cases = [['cjk', 'end'], ['latin', 'end'], ['cjk', 'middle']]
+const cases = [['cjk', 'end'], ['latin', 'end'], ['cjk', 'middle'], ['cjk', 'start']]
 const report = { date: '2026-11-02', passed: false, browser: browser.version(),
   node: process.version, machine: { platform: platform(), release: release(),
     arch: arch(), cpu: cpus()[0]?.model, memoryGiB: totalmem() / 2 ** 30 },
@@ -94,6 +94,12 @@ try {
         assert.ok(Math.abs(preview.caret[key] - reference.caret[key]) < 1e-7,
           `${kind}/${location}/${i} caret ${key}`)
       if (kind === 'arabic') assert.equal(preview.diagnostics.local, false)
+      if (kind === 'cjk' && location === 'middle' && report.settings.values[i] === 'nihao')
+        assert.ok(preview.diagnostics.previewWork?.replacedLines > 1)
+      if (kind === 'cjk' && location === 'start' && i === 0)
+        assert.ok(preview.diagnostics.previewWork?.replacedLines > 1)
+      if (kind === 'cjk' && location === 'start' && report.settings.values[i] === 'niha')
+        assert.equal(preview.diagnostics.local, false)
       report.checks.push({ kind, location, value: report.settings.values[i],
         pixels: true, caret: true, local: preview.diagnostics.local,
         work: preview.diagnostics.previewWork })

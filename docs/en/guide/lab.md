@@ -103,12 +103,11 @@ Opt in with `lab: { performanceProfile: 'sync', imePreview: true }`.
 It consumes the latest preedit state once per frame. Supported simple LTR body
 paragraphs use a temporary HarfBuzz line when line count, height and baseline remain
 unchanged; final text is committed when composition ends. The sync/worker presets
-also enable `imeWindowPreview`: long paragraphs re-layout at most three rows and
-2048 elements, accepting a replacement only when surrounding breaks and native
-paint/caret geometry converge. Set it explicitly to false for rollback; baseline
-leaves it off. Existing pages may be reused, but changes to wrapping/pagination,
-controls, complex directions and decorations retain a
-frame-coalesced synchronous fallback.
+also enable `imeWindowPreview`. Synchronous long-paragraph previews can extend
+the initial window to ten rows and 2048 elements and replace changed rows on
+the edit page if the suffix converges. Changes to row count, height or
+pagination, controls, complex directions and decorations use the synchronous
+fallback. Set the window option to false to roll back independently.
 Tables keep synchronous model updates with the cell cache described below.
 
 The window requires a uniform metric style, safe word/grapheme boundaries and
@@ -133,8 +132,9 @@ baseline. It needs incremental editing/flow. Set it explicitly to false for the
 previous per-paragraph/per-element commit path while retaining earlier caches.
 Exact flow ranges are validated before reuse. Unchanged text can re-place cached
 breaks only while every line interval keeps its width. Changed widths, fonts,
-styles and unsupported objects retain layout fallbacks. Small geometry changes
-use lazy row-position blocks; broad changes use ordinary arrays and safe metric
+styles and unsupported objects retain layout fallbacks. Rows with unchanged
+horizontal geometry use lazy position blocks that project page and Y coordinates
+when read. Commits that rebuild many rows use ordinary arrays and safe metric
 reuse. Diagnostic position snapshots remain ordinary arrays. Directory, object
 classification and coverage work may still be global; editing is not constant time.
 See the [IME-10 measurements](../../guide/benchmark.md).
@@ -146,7 +146,9 @@ leaves it off. Unchanged safe text cells reuse canonical rows, and unchanged
 content heights reuse grid geometry. Changed heights re-solve table row heights
 and propagate through spans/pagination while reusing other cell contents.
 Nested containers still recurse into their leaves. Width/font/style dependencies
-invalidate the cache, bounded to 512 entries and an estimated 16 MiB.
+invalidate the cache, bounded to 1024 entries and an estimated 16 MiB.
+Scalar-only cells compare model fields on a hit. Other cacheable metadata
+uses the content signature.
 Set `imeTableLayout: false` to roll back independently. Table signatures, position
 commits and page assembly may still scan the whole table. Existing extreme nested
 overflow/caret limitations are not extended by this optimization.

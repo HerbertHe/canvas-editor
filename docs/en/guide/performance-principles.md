@@ -77,14 +77,14 @@ For cheap edits, waiting for a frame can increase geometry latency.
 
 The temporary preview still uses HarfBuzz glyphs, line breaking and carets. It does
 not estimate width from character counts or use browser text APIs. A successful
-preview keeps the formal model, substitutes the target row and paints the composition
-underline. The whole containing page is painted; this is not Tile rendering.
+preview keeps the formal model, substitutes the changed rows and paints the
+composition underline on the containing page.
 
-Long-paragraph windows contain the target and available neighboring rows, limited
-to 2048 elements and safe complete wrap-unit boundaries. Surrounding source ranges,
-glyphs, carets, heights and baselines must converge. Changed wrapping/dependencies
-cause fallback. The window currently supports eligible Latin/Han/Common/Inherited
-text with uniform metric styles, not arbitrary BiDi/contextual scripts or containers.
+Long-paragraph windows start with the target and available neighboring rows. The
+synchronous path can extend the window to ten rows and 2048 elements at safe wrap
+boundaries. Replacement requires stable row count, height, baseline and pagination
+and a converged tail when content follows the window. The window supports eligible
+Latin/Han/Common/Inherited text with uniform metric styles.
 
 Final selection becomes a formal transaction; cancellation restores content/range.
 Intermediate previews are not separate undo records. Public content/geometry queries
@@ -116,14 +116,15 @@ project current revisions instead of repeating child layout. Unchanged table str
 and cell heights permit grid reuse. Height changes still propagate row constraints
 and pagination; unsupported nested/stateful content follows ordinary recursion.
 
-The cache allows 512 entries and an internally estimated 16 MiB. A plain LRU scanning
-600 cells can repeatedly evict the next pass's useful entries. Admission now protects
+The cache allows 1024 entries and an internally estimated 16 MiB. A plain LRU scan
+over capacity can repeatedly evict the next pass's useful entries. Admission protects
 entries used in the current/previous pass, accepts a candidate only if it fits fully,
 and otherwise skips it without partial eviction. Eviction candidates are built once
 per pass; old documents become reclaimable after a full idle pass.
 
-A stable 600-cell scan can therefore reuse 512 and compute 88. It still checks the
-whole table. `computedCells` counts child layout, not HarfBuzz cache misses; estimated
+A stable 600-cell scan can retain every cell when the byte budget permits. Scalar
+model fields are compared directly on a hit, while other cacheable metadata uses a
+content signature. The whole table is still checked. `computedCells` counts child layout; estimated
 `bytes` is not actual process/WASM/GPU memory. Implementation: `TableLayoutCache.ts`.
 
 ## Worker freshness and recovery

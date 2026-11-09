@@ -9,6 +9,7 @@ import { compareNativeQueries } from '../../fixtures/migration/compareNativeQuer
 import { CommandAdapt } from '@/editor/core/command/CommandAdapt'
 import { Draw } from '@/editor/core/draw/Draw'
 import { EventBus } from '@/editor/core/event/eventbus/EventBus'
+import { pasteElement } from '@/editor/core/event/handlers/paste'
 import {
   lineCarets,
   pageRect,
@@ -88,6 +89,39 @@ function caret(draw: Draw, index: number) {
   draw.getRange().setRange(index, index)
   draw.render({ curIndex: index, isCompute: false, isSubmitHistory: false })
 }
+
+it('keeps rich paste styles across the insert batch boundary', async () => {
+  const draw = await setup([{ value: 'prefix suffix' }])
+  caret(draw, 7)
+  const elements = draw.getOriginalMainElementList()
+  const suffix = elements[8]
+  pasteElement(draw.getCanvasEvent(), [
+    { value: 'a'.repeat(1024), color: '#123456' },
+    { value: 'bc', color: '#654321' }
+  ])
+  expect(elements.slice(1031, 1034).map(({ value, color }) => ({ value, color })))
+    .toEqual([
+      { value: 'a', color: '#123456' },
+      { value: 'b', color: '#654321' },
+      { value: 'c', color: '#654321' }
+    ])
+  expect(elements[1034]).toBe(suffix)
+  expect(draw.getRange().getRange().endIndex).toBe(1033)
+})
+
+it('bounds splice arguments for a very large insertion', async () => {
+  const draw = await setup([{ value: 'abc' }])
+  const elements = draw.getOriginalMainElementList()
+  const suffix = elements[2]
+  const inserted = Array.from({ length: 150000 }, () => ({ value: 'x' }))
+
+  draw.spliceElementList(elements, 2, 0, inserted)
+
+  expect(draw.getOriginalMainElementList()).toBe(elements)
+  expect(elements.length).toBe(150004)
+  expect(inserted.every((element, i) => elements[i + 2] === element)).toBe(true)
+  expect(elements[150002]).toBe(suffix)
+})
 
 it('reuses unchanged suffix positions while matching a fresh full commit', async () => {
   const draw = await setup(Array.from({ length: 80 }, () => [
@@ -808,6 +842,36 @@ describe('PERF-03/04/05 interaction pipeline', () => {
 describe('PERF-06–10 tracked edits', () => {
   const lab = { incrementalEditing: true, incrementalCompute: true,
     transactionHistory: true, incrementalCoverage: true }
+
+  it.each([1025, 4097])(
+    'replaces a selection with %i pasted elements in one history edit',
+    async count => {
+      const draw = await setup([{ value: 'prefix OLD suffix' }], { lab })
+      const command = new CommandAdapt(draw)
+      caret(draw, 7)
+      draw.getRange().setRange(7, 10)
+      const elements = draw.getOriginalMainElementList()
+      const suffix = elements[11]
+      const payload = 'ab'.repeat(Math.floor(count / 2)) + 'c'
+      const text = () => command.getText().main
+      const before = draw.getHistoryManager().getStats().undo
+
+      draw.getCanvasEvent().input(payload)
+
+      expect(draw.getOriginalMainElementList()).toBe(elements)
+      expect(elements[8 + count]).toBe(suffix)
+      expect(text()).toBe(`prefix ${payload} suffix`)
+      expect(draw.getRange().getRange()).toMatchObject({
+        startIndex: 7 + count,
+        endIndex: 7 + count
+      })
+      expect(draw.getHistoryManager().getStats().undo).toBe(before + 1)
+      command.undo()
+      expect(text()).toBe('prefix OLD suffix')
+      command.redo()
+      expect(text()).toBe(`prefix ${payload} suffix`)
+    }
+  )
 
   it('replays trace edits and rolls back a command affecting multiple scopes', async () => {
     const draw = await setup([{ value: 'abcd', bold: true }], {

@@ -7,7 +7,7 @@ const cells = (count: number) => Array.from({ length: count }, () => [{ value: '
 
 describe('table cache admission under sequential scans', () => {
   it('keeps 512 hot cells when a 600-cell table exceeds the entry limit', () => {
-    const cache = new TableLayoutCache()
+    const cache = new TableLayoutCache(512)
     const table = cells(600)
     for (let pass = 0; pass < 5; pass++) {
       cache.beginPass()
@@ -18,6 +18,33 @@ describe('table cache admission under sequential scans', () => {
       expect(cache.stats.reusedCells).toBe(pass ? 512 : 0)
       expect(cache.stats.computedCells).toBe(pass ? 88 : 600)
     }
+  })
+
+  it('reuses unchanged scalar cells without serializing them again', () => {
+    const cache = new TableLayoutCache()
+    const table = cells(600)
+    const scan = (dependencies = 'width=100') => {
+      cache.beginPass()
+      for (const value of table) cache.cell(value, dependencies, revision, contents)
+    }
+    scan()
+    expect(cache.stats).toMatchObject({ entries: 600, computedCells: 600 })
+    table[0][0].value = 'changed'
+    scan()
+    expect(cache.stats).toMatchObject({
+      entries: 600, scalarHits: 599, signatures: 1, computedCells: 1
+    })
+    Object.assign(table[0][0], { bold: true })
+    scan()
+    expect(cache.stats).toMatchObject({ scalarHits: 599, computedCells: 1 })
+    Reflect.deleteProperty(table[0][0], 'bold')
+    scan()
+    expect(cache.stats).toMatchObject({ scalarHits: 599, computedCells: 1 })
+    Reflect.set(table[0][0], 'metrics', { width: 100 })
+    scan()
+    expect(cache.stats).toMatchObject({ scalarHits: 600, signatures: 0 })
+    scan('width=90')
+    expect(cache.stats).toMatchObject({ scalarHits: 0, computedCells: 600 })
   })
 
   it('also protects hot entries when the byte limit is reached', () => {

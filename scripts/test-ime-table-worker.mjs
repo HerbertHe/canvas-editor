@@ -10,13 +10,18 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:3020'
 const correctnessOnly = process.env.CORRECTNESS_ONLY === '1'
 const trials = Number(process.env.TRIALS || 3)
 const iterations = Number(process.env.ITERATIONS || 5)
+const tableCacheEntries = process.env.TABLE_CACHE_ENTRIES === undefined
+  ? undefined : Number(process.env.TABLE_CACHE_ENTRIES)
 assert.ok(Number.isInteger(trials) && trials > 0 && Number.isInteger(iterations) && iterations > 0)
+assert.ok(tableCacheEntries === undefined ||
+  (Number.isInteger(tableCacheEntries) && tableCacheEntries > 0))
 const output = process.env.OUTPUT || 'cypress/results/ime/table-worker-comparison.json'
 const report = { date: '2026-11-02', passed: false, browser: browser.version(), node: process.version,
   machine: { platform: platform(), release: release(), arch: arch(), cpu: cpus()[0]?.model,
     memoryGiB: totalmem() / 2 ** 30 }, settings: { trials, iterations,
     values: ['n', 'ni', 'nih', 'niha', 'nihao', 'ni', ''], viewport: [1366, 720],
-    chromiumArgs: ['--disable-gpu'], incrementalCompute: false, imePreview: true },
+    chromiumArgs: ['--disable-gpu'], incrementalCompute: false, imePreview: true,
+    tableCacheEntries },
   semantics: 'Synthetic Vite development fixture, not OS IME or actual presentation FPS. Table modes use sync profile; body modes use worker profile and switch only imeWorkerPreview. handlerMs ends at input + flushComposition(false) return. geometryMs waits for local preview completion or synchronous fallback. nextRafMs waits for the following rAF, not presentation. Later scheduled paint/notifications may not be included in handlerMs. Longtasks are observer entries starting within measured update intervals; setup/reset/cancel outside those intervals is excluded. Drain starts after session cancellation and waits for worker synchronization. Table inputElements sums cell inputs presented to layout/cache checks, not actual unique traversal or allocation counts. computedCells counts child layout callbacks, not HarfBuzz calls. No heap-byte claims.',
   sources: {}, fonts: {}, checks: [], boundaries: [], bursts: [], results: [], aggregate: [], errors: [] }
 for (const file of ['src/editor/core/layout/TableLayoutCache.ts',
@@ -32,14 +37,15 @@ for (const file of ['tests/fixtures/fonts/NotoSans-Latin-Regular.woff2',
   'tests/fixtures/fonts/NotoSansSC-Regular.woff2', 'public/fonts/NotoNaskhArabic-Regular.ttf'])
   report.fonts[file] = createHash('sha256').update(await readFile(file)).digest('hex')
 
-async function open(kind, enabled, denied = false) {
+async function open(kind, enabled, denied = false, capacity) {
   const body = ['plain', 'wide'].includes(kind)
   const page = await browser.newPage({ viewport: { width: 1366, height: 720 } })
   page.on('pageerror', error => report.errors.push(error.message))
   await page.goto(base + '/canvas-editor/tests/fixtures/migration/ime-table-worker.html')
   await page.waitForFunction(() => window.imeTableWorker)
   const fixture = await page.evaluate(config => window.imeTableWorker.setup(config),
-    { kind, tableCache: body || enabled, workerPreview: body && enabled, denied })
+    { kind, tableCache: body || enabled, workerPreview: body && enabled, denied,
+      tableCacheEntries: capacity })
   return { page, fixture }
 }
 async function close(page) {
@@ -70,7 +76,7 @@ function summarize(samples, drains, tasks) {
     slowest: samples.reduce((a, b) => a.geometryMs > b.geometryMs ? a : b) }
 }
 try {
-  for (const kind of ['table', 'merged', 'nested', 'repeated', 'rtl', 'plain', 'wide']) {
+  for (const kind of ['table', 'large', 'merged', 'nested', 'repeated', 'rtl', 'plain', 'wide']) {
     const results = []
     for (const enabled of [false, true]) {
       const { page } = await open(kind, enabled)
@@ -85,6 +91,11 @@ try {
     const comparison = await browser.newPage()
     for (let i = 0; i < results[0].results.length; i++) {
       const a = results[0].results[i], b = results[1].results[i]
+      if (kind === 'large') {
+        assert.equal(b.tables.computedCells, 1)
+        assert.equal(b.tables.scalarHits, 599)
+        assert.equal(b.tables.signatures, 1)
+      }
       assert.equal(b.geometry, a.geometry, `${kind}/${i} table geometry`)
       assert.equal(b.model, a.model, `${kind}/${i} model`)
       assert.equal(b.previewGeometry, a.previewGeometry, `${kind}/${i} preview geometry`)
@@ -125,10 +136,13 @@ try {
   }
   const raw = []
   if (!correctnessOnly) {
+    const cases = [['table', false], ['large', false], ['merged', true],
+      ['plain', false], ['wide', false]]
     for (let trial = 0; trial < trials; trial++) {
-      for (const [kind, grow] of [['table', false], ['merged', true], ['plain', false], ['wide', false]]) {
+      for (const [kind, grow] of cases) {
         for (const enabled of trial % 2 ? [true, false] : [false, true]) {
-          const { page, fixture } = await open(kind, enabled)
+          const { page, fixture } = await open(kind, enabled, false,
+            kind === 'large' ? tableCacheEntries : undefined)
           const result = await page.evaluate(({ iterations, grow }) =>
             window.imeTableWorker.trial(iterations, grow), { iterations, grow })
           raw.push({ kind, grow, enabled, trial, ...result })
@@ -138,7 +152,7 @@ try {
         }
       }
     }
-    for (const kind of ['table', 'merged', 'plain', 'wide'])
+    for (const [kind] of cases)
       for (const enabled of [false, true]) {
         const runs = raw.filter(r => r.kind === kind && r.enabled === enabled)
         report.aggregate.push({ kind, enabled,

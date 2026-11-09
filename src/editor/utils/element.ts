@@ -2136,6 +2136,27 @@ export function getSlimCloneElementList(elementList: IElement[]) {
   return cloneOmitRenderKeys(elementList, new WeakMap())
 }
 
+/** Fast equality for scalar-only model elements, ignoring layout writeback. */
+export function matchesSlimScalarElements(
+  elements: IElement[],
+  snapshot: IElement[],
+  keyCounts: number[]
+) {
+  if (elements.length !== snapshot.length) return false
+  return elements.every((element, index) => {
+    const previous = snapshot[index]
+    let count = 0
+    for (const key in element) {
+      if (!Object.hasOwn(element, key) || HISTORY_LAYOUT_KEYS.has(key)) continue
+      if (!Object.hasOwn(previous, key) ||
+        !Object.is(Reflect.get(element, key), Reflect.get(previous, key)))
+        return false
+      count++
+    }
+    return count === keyCounts[index]
+  })
+}
+
 export function getIsBlockElement(element?: IElement) {
   return (
     !!element?.type &&

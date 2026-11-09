@@ -35,5 +35,5 @@ export interface EditorPerformanceDiagnostics {
       fallbacks: number; deadlines: number; pending: boolean };
     previewWork?: { paragraphElements: number; windowElements: number;
       laidOutLines: number; checkedLines: number; reusedLines: number;
-      skippedLines: number } }
+      skippedLines: number; replacedLines?: number } }
 }

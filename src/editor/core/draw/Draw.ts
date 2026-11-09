@@ -165,6 +165,8 @@ import { Graffiti } from './graffiti/Graffiti'
 import { Magnifier } from './interactive/Magnifier'
 import { Accessibility } from '../accessibility/Accessibility'
 
+const ELEMENT_INSERT_BATCH_SIZE = 1024
+
 interface EditSelection {
   cursorIndex: number
   hint: NativeCaret | null
@@ -1838,7 +1840,6 @@ export class Draw {
         }
       }
     }
-    // 循环添加，避免使用解构影响性能
     if (items?.length) {
       this.performElementInsert(elementList, start, items)
     }
@@ -3197,7 +3198,7 @@ export class Draw {
     const highlightMarginHeight = this.getHighlightMarginHeight()
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
-      if (this.compositionPreview?.row === curRow) continue
+      if (this.compositionPreview?.replaces(curRow)) continue
       // 内容高度：不含段后间距
       const rowContentHeight = curRow.height - (curRow.spacingAfter || 0)
       let preHighlight = ''
@@ -3283,8 +3284,8 @@ export class Draw {
     let index = startIndex
     for (let i = 0; i < rowList.length; i++) {
       const curRow = rowList[i]
-      if (this.compositionPreview?.row === curRow) {
-        this.compositionPreview.paint(ctx)
+      if (this.compositionPreview?.replaces(curRow)) {
+        this.compositionPreview.paint(ctx, curRow)
         index += curRow.elementList.length
         continue
       }
@@ -5240,8 +5241,21 @@ export class Draw {
       this.promoteSnapshotEdit()
     const scope = this.activeEdit?.trusted ? this.editScope(elements) : undefined
     const index = Math.min(Math.max(start, 0), elements.length)
-    // Do not spread large pastes into splice's argument list.
-    for (let i = 0; i < items.length; i++) elements.splice(start + i, 0, items[i])
+    if (items.length > 32 && Number.isInteger(start) && start >= 0) {
+      // Move the document suffix once per batch and bound the argument count.
+      for (
+        let offset = 0;
+        offset < items.length;
+        offset += ELEMENT_INSERT_BATCH_SIZE
+      ) {
+        const batch = items.slice(offset, offset + ELEMENT_INSERT_BATCH_SIZE)
+        elements.splice(index + offset, 0, ...batch)
+      }
+    } else {
+      for (let i = 0; i < items.length; i++) {
+        elements.splice(start + i, 0, items[i])
+      }
+    }
     if (scope) this.recordEdit({ kind: 'splice', scope, index,
       before: [], after: getSlimCloneElementList(items) })
   }

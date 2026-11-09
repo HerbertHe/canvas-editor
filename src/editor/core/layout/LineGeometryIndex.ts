@@ -1,4 +1,5 @@
 import type { LayoutCaret, LayoutRect, TextLine } from '../../interface/Layout'
+import { getTextLineOrigin } from './relativeLayout'
 import {
   hostCaretIndex,
   lineSegments,
@@ -200,6 +201,19 @@ export class LineGeometryIndex {
 export class LineGeometryCache {
   private local = new WeakMap<TextLine, LocalLineGeometry>()
   private placed = new WeakMap<PlacedTextLine, LineGeometryIndex>()
+  private horizontal = new WeakMap<TextLine, PlacedTextLine>()
+
+  /** Plain rows can share horizontal geometry across pages and vertical moves. */
+  getHorizontalPlacement(placed: PlacedTextLine) {
+    const { base } = getTextLineOrigin(placed.line)
+    let horizontal = this.horizontal.get(base)
+    if (!horizontal || horizontal.x !== placed.x ||
+      horizontal.scale !== placed.scale || horizontal.columnIndex !== placed.columnIndex) {
+      horizontal = { ...placed, line: base, pageNo: 0, y: 0 }
+      this.horizontal.set(base, horizontal)
+    }
+    return horizontal
+  }
 
   get(placed: PlacedTextLine) {
     let local = this.local.get(placed.line)
@@ -222,6 +236,7 @@ export class LineGeometryCache {
   clear() {
     this.local = new WeakMap()
     this.placed = new WeakMap()
+    this.horizontal = new WeakMap()
   }
 }
 

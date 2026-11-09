@@ -8,6 +8,7 @@ type Block = {
   shift: number
   rowIndex: number
   rowNo: number
+  placement?: { pageNo: number; y: number }
   values: Map<number, IElementPosition>
   projected?: () => void
 }
@@ -31,12 +32,24 @@ class PositionList {
       if (!block) return undefined
       const at = block.offset + index - block.start
       const original = block.source[at]
-      if (!block.shift && original.rowIndex === block.rowIndex &&
+      if (!block.placement && !block.shift && original.rowIndex === block.rowIndex &&
         original.rowNo === block.rowNo) return original
       let value = block.values.get(at)
       if (!value) {
         value = { ...original, index: original.index + block.shift,
           rowIndex: block.rowIndex, rowNo: block.rowNo }
+        if (block.placement) {
+          const { pageNo, y } = block.placement
+          const bottom = y + original.lineHeight
+          const { leftTop, leftBottom, rightTop, rightBottom } = original.coordinate
+          value.pageNo = pageNo
+          value.coordinate = {
+            leftTop: [leftTop[0], y],
+            leftBottom: [leftBottom[0], bottom],
+            rightTop: [rightTop[0], y],
+            rightBottom: [rightBottom[0], bottom]
+          }
+        }
         block.values.set(at, value)
         block.projected?.()
       }
@@ -182,9 +195,9 @@ export function slicePositionList(array: IElementPosition[], start: number, end 
 
 export function setPositionBlock(array: IElementPosition[], start: number,
   source: IElementPosition[], shift: number, rowIndex: number, rowNo: number,
-  projected?: () => void) {
+  projected?: () => void, placement?: Block['placement']) {
   const list = lists.get(array)
   if (!list || !source.length) return false
   return list.add({ start, end: start + source.length, source, shift, rowIndex, rowNo,
-    offset: 0, values: new Map(), projected })
+    offset: 0, values: new Map(), projected, placement })
 }

@@ -40,6 +40,7 @@ export interface LayoutChangeSet {
   full: boolean
   firstPage: number
   changedPages: number[]
+  reflowedParagraphs: number
   removedPages: number[]
   addedPages: number[]
   reusedParagraphs: string[]
@@ -242,7 +243,8 @@ export function changedLayoutPages(
   reusedParagraphs: string[],
   full: boolean,
   metadata: Pick<LayoutChangeSet, 'scope' | 'changedParagraphs' | 'indexShifts' |
-    'documentRevision' | 'geometryRevision' | 'fontRevision' | 'constraintsRevision'>
+    'documentRevision' | 'geometryRevision' | 'fontRevision' | 'constraintsRevision' |
+    'reflowedParagraphs'>
 ): LayoutChangeSet {
   const changedPages = current.flatMap((rows, page) => {
     const old = previous[page]

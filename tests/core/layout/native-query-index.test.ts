@@ -96,6 +96,33 @@ describe('native query differential', () => {
     builds.mockRestore()
   })
 
+  it('reuses query maps across page and vertical changes', () => {
+    const cache = new LineGeometryCache()
+    const before = [placed(1), placed(5, false, true)]
+    const first = NativeQueryIndex.create(before, cache, true, true)
+    const oldCaret = first.caret(4, null)
+    const relocated = before.map((p, i) => ({
+      ...p, y: 0.1 + i / 3, pageNo: i + 2, line: projectTextLine(p.line, 7)
+    }))
+    const reference = new NativeQueryIndex(relocated, new LineGeometryCache())
+    const get = vi.spyOn(cache, 'get')
+    const query = NativeQueryIndex.create(relocated, cache, true, true)
+    expect(get).not.toHaveBeenCalled()
+    for (const index of [9, 11, 12]) {
+      const caret = reference.caret(index, null)!
+      expect(query.caret(index, caret)).toEqual(caret)
+      expect(query.atX(index, caret.x, caret.pageNo))
+        .toEqual(reference.atX(index, caret.x, caret.pageNo))
+      expect(query.atX(index, caret.x, 99)).toBeNull()
+      expect(query.move(caret, 1, true, true))
+        .toEqual(reference.move(caret, 1, true, true))
+      expect(query.deleteRange(caret, true, true))
+        .toEqual(reference.deleteRange(caret, true, true))
+    }
+    expect(first.caret(4, null)).toEqual(oldCaret)
+    get.mockRestore()
+  })
+
   it('retains boundaries, hints, hidden lines, bidi, clips and repeated placements', () => {
     const lines = [placed(), placed(5, true), placed(9, false, true)]
     lines[2].line.carets.push({ ...caret(10, 0, 70), affinity: 'downstream' })

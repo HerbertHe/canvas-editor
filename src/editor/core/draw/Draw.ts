@@ -4487,6 +4487,7 @@ export class Draw {
       }
     }
     const previousPages = this.pageRowList
+    const previousReflowed = this.incrementalFlow.stats.reflowed
     // 行信息
     const margins = this.getMargins()
     const pageHeight = this.getHeight()
@@ -4520,6 +4521,7 @@ export class Draw {
     this.layoutChange = changedLayoutPages(previousPages, this.pageRowList,
       this.incrementalFlow.reused, !this.usedIncrementalFlow, {
         scope: 'main', changedParagraphs: [...this.incrementalFlow.changed],
+        reflowedParagraphs: this.incrementalFlow.stats.reflowed - previousReflowed,
         indexShifts: [...this.incrementalFlow.shifts],
         documentRevision: this.getDocumentRevision(),
         geometryRevision: this.modelRevision,

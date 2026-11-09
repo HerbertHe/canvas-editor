@@ -189,12 +189,14 @@ Demo 对照可在 URL 增加 `?performance=sync&paragraphCache=off&imePreview=on
 
 范围提交先定位脏段落，验证全部依赖后接续前缀/收敛后缀；文本及断行约束未变时，
 后续段落只重新放置行。可用宽度变化、字体/样式变化或复杂对象等保持原有排版回退。
-未变几何使用按行的惰性位置视图；大量几何变化时改用普通数组提交，并安全复用字形度量。
+横向几何相同的行使用按行的惰性位置视图，跨页或纵移时按需投影坐标与页号。
+大量行需要实际重建时改用普通数组提交，并安全复用字形度量。
 内部位置视图不会替代诊断用的普通数组快照；显式读取完整位置数据仍会支付全文成本。
 
 新增诊断 `flow.checkpointChecks` / `batchChecked` / `reflowed` 区分几何检查、
 目录元数据访问和缓存断行重放；`placements.visitedElements` 统计显式位置提交遍历，
-`projectedElements` 统计按需生成的位置对象，`reusedMetrics` 统计新位置沿用的字形度量。
+`projectedElements` 统计按需生成的位置对象，`relocatedBlocks` 统计跨页或纵移的复用行，
+`reusedMetrics` 统计新位置沿用的字形度量。
 后者属于 `computedElements` 内部的复用，不应相加。`flow.reused`、查询块与字形缓存
 已有的复用不计为本项新实现。页/行目录、对象分类及覆盖聚合等仍可能遍历全文，
 不承诺常数时间编辑。实测与限制见 [IME-10 报告](benchmark.md)。

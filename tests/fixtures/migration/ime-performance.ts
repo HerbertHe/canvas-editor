@@ -215,17 +215,36 @@ async function replay(values: string[], final = '你好', interval = 8) {
 
 async function flowDifferential(kind: 'stable' | 'wrap' | 'page') {
   const host = draw.getCanvasEvent()
+  const position = draw.getPosition()
+  const before = position.getPlacementStats().relocatedBlocks
   host.compositionstart()
   host.input('nihao')
   host.flushComposition(false)
   const value = kind === 'stable' ? '你' :
     kind === 'wrap' ? '中文 abcdef '.repeat(18) : '中文 abcdef '.repeat(180)
   host.compositionend(new CompositionEvent('compositionend', { data: value }))
+  if (kind !== 'stable' && draw.getOptions().lab.incrementalCommit &&
+    position.getPlacementStats().relocatedBlocks === before)
+    throw new Error(`Flow differential did not reuse any relocated rows: ${kind}`)
   draw.flushPaint()
-  const position = draw.getPosition()
+  const queries = () => position.getNativeLines().filter((_, index) => index % 101 === 0)
+    .map(({ line, pageNo }) => {
+      const index = line.source.start + 2
+      const caret = position.getNativeCaret(index)
+      if (!caret) throw new Error('Flow differential missing caret')
+      return {
+        caret,
+        hit: position.getPositionByXY({ x: caret.x, y: caret.y, pageNo }),
+        range: position.getNativeRangeRects(index, index + 2, undefined, pageNo),
+        horizontal: position.moveNativeCaret(index, 1),
+        vertical: position.moveNativeCaret(index, 1, true, true),
+        deletion: position.getNativeDeleteRange(index, false, true)
+      }
+    })
   const capture = () => ({
     data: draw.getValue().data,
     positions: position.getOriginalMainPositionList(),
+    queries: queries(),
     pages: draw.getLayoutPages().map(rows => rows.map(row => ({
       start: row.startIndex, rowIndex: row.rowIndex, width: row.width,
       height: row.height, flow: row.flow, indices: row.sourceIndices && [...row.sourceIndices]
@@ -259,12 +278,20 @@ async function flowTrial(kind: 'stable' | 'wrap' | 'page', iterations: number) {
     })
   }
   const position = draw.getPosition()
-  const computePositions = position.computePositionList.bind(position)
-  position.computePositionList = (...args) => {
-    const start = performance.now()
-    try { return computePositions(...args) } finally {
-      if (stages) stages.positions = (stages.positions || 0) + performance.now() - start
-    }
+  const positionMethods = new Map<string, (...args: any[]) => any>()
+  for (const [method, stage] of [
+    ['computePositionList', 'positions'],
+    ['computePositionListInternal', 'positionBody'],
+    ['computePageRowPositionInternal', 'positionRows']
+  ]) {
+    const original = Reflect.get(position, method).bind(position)
+    positionMethods.set(method, original)
+    Reflect.set(position, method, (...args: unknown[]) => {
+      const start = performance.now()
+      try { return original(...args) } finally {
+        if (stages) stages[stage] = (stages[stage] || 0) + performance.now() - start
+      }
+    })
   }
   const stats = () => ({ ...draw.getFlowStats(), ...position.getPlacementStats() })
   const records: { ms: number; stages: Record<string, number>; work: Record<string, number>;
@@ -290,6 +317,18 @@ async function flowTrial(kind: 'stable' | 'wrap' | 'page', iterations: number) {
       const after = stats()
       const work = Object.fromEntries(Object.entries(after).map(([key, value]) =>
         [key, value - before[key as keyof typeof before]]))
+      measuredStages.positionDirectory = measuredStages.positionBody - measuredStages.positionRows
+      measuredStages.positionQueryIndex = measuredStages.positions - measuredStages.positionBody
+      const lines = position.getNativeLines()
+      const placed = lines[Math.floor(lines.length * .85)]
+      const startHit = performance.now()
+      const hit = position.getNativeCaret(placed.line.source.start, placed.line.source.start)
+      if (!hit) throw new Error('Flow benchmark missing suffix caret')
+      position.getPositionByXY({ x: hit.x, y: hit.y, pageNo: hit.pageNo })
+      measuredStages.firstSuffixQuery = performance.now() - startHit
+      const startSnapshot = performance.now()
+      position.getOriginalMainPositionList()
+      measuredStages.positionSnapshot = performance.now() - startSnapshot
       if (i >= 0) records.push({ ms, stages: measuredStages, work,
         trace: { firstPage: change.firstPage, changedPages: change.changedPages.length,
           addedPages: change.addedPages.length, changedParagraphs: change.changedParagraphs.length,
@@ -301,7 +340,7 @@ async function flowTrial(kind: 'stable' | 'wrap' | 'page', iterations: number) {
     return records
   } finally {
     for (const [name, original] of originals) Reflect.set(draw, name, original)
-    position.computePositionList = computePositions
+    for (const [method, original] of positionMethods) Reflect.set(position, method, original)
   }
 }
 

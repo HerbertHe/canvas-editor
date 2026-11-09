@@ -62,14 +62,14 @@ export class NativeQueryIndex {
   private ordinals = new Map<string, number>()
 
   static create(lines: PlacedTextLine[], cache: LineGeometryCache,
-    incremental = false) {
+    incremental = false, reuseHorizontal = false) {
     if (incremental && lines.length &&
       new Set(lines.map(p => lineKey(p.line.id, p.pageNo))).size === lines.length &&
       lines.every((placed, i) =>
       placed.line.source.scope === 'main' && !placed.line.hidden &&
       !placed.clip && placed.line.source.end > placed.line.source.start &&
       (!i || lines[i - 1].line.source.end <= placed.line.source.start)))
-      return new IncrementalNativeQueryIndex(lines, cache)
+      return new IncrementalNativeQueryIndex(lines, cache, reuseHorizontal)
     return new NativeQueryIndex(lines, cache)
   }
 
@@ -195,6 +195,7 @@ export class NativeQueryIndex {
 
 interface QueryChunk {
   placed: PlacedTextLine
+  basis: PlacedTextLine
   query: NativeQueryIndex
   delta: number
 }
@@ -203,30 +204,30 @@ interface QueryChunk {
 // chain of old document generations. Only the small line directory is rebuilt.
 const chunks = new WeakMap<LineGeometryCache,
   WeakMap<PlacedTextLine['line'], {
-    key: string; query: NativeQueryIndex; delta: number
+    key: string; query: NativeQueryIndex; delta: number; basis: PlacedTextLine
   }>>()
 
 class IncrementalNativeQueryIndex extends NativeQueryIndex {
   private chunks: QueryChunk[]
   private byLine = new Map<string, number>()
 
-  constructor(lines: PlacedTextLine[], cache: LineGeometryCache) {
+  constructor(lines: PlacedTextLine[], cache: LineGeometryCache, reuseHorizontal: boolean) {
     super([], cache)
     let owned = chunks.get(cache)
     if (!owned) chunks.set(cache, owned = new WeakMap())
     this.chunks = lines.map((placed, index) => {
       const { base, delta } = getTextLineOrigin(placed.line)
-      const key = JSON.stringify([placed.x, placed.y, placed.scale,
-        placed.pageNo, placed.columnIndex, base.revision])
+      const basis = reuseHorizontal ? cache.getHorizontalPlacement(placed) : placed
+      const key = JSON.stringify([basis.x, basis.y, basis.scale,
+        basis.pageNo, basis.columnIndex, base.revision, reuseHorizontal])
       let chunk = owned.get(base)
       if (!chunk || chunk.key !== key) {
-        // The position pass already built this placement's geometry. Retain
-        // that basis and shift query results relative to it on later commits.
-        chunk = { key, delta, query: new NativeQueryIndex([placed], cache) }
+        chunk = { key, basis, delta: reuseHorizontal ? 0 : delta,
+          query: new NativeQueryIndex([basis], cache) }
         owned.set(base, chunk)
       }
       this.byLine.set(lineKey(placed.line.id, placed.pageNo), index)
-      return { placed, query: chunk.query, delta: delta - chunk.delta }
+      return { placed, basis: chunk.basis, query: chunk.query, delta: delta - chunk.delta }
     })
   }
 
@@ -250,8 +251,15 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
     return result
   }
 
-  private project(caret: NativeCaret | null, delta: number): NativeCaret | null {
-    return !caret || !delta ? caret : { ...caret, index: caret.index + delta,
+  private project(caret: NativeCaret | null, chunk: QueryChunk,
+    forward = true): NativeCaret | null {
+    const delta = forward ? chunk.delta : -chunk.delta
+    const from = forward ? chunk.basis : chunk.placed
+    const to = forward ? chunk.placed : chunk.basis
+    if (!caret || (!delta && from.y === to.y && from.pageNo === to.pageNo))
+      return caret
+    return { ...caret, index: caret.index + delta,
+      y: caret.y + (to.y - from.y), pageNo: to.pageNo,
       position: { ...caret.position,
         elementIndex: caret.position.elementIndex + delta } }
   }
@@ -259,7 +267,7 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
   private logicalResult(caret: NativeCaret): NativeCaret {
     for (const chunk of this.candidates(caret.index)) {
       const first = chunk.query.firstCaret(caret.index - chunk.delta)
-      if (first) return this.project(first, chunk.delta)!
+      if (first) return this.project(first, chunk)!
     }
     return caret
   }
@@ -269,13 +277,13 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
       const chunk = this.chunks[this.lower(start)]
       if (chunk?.placed.line.source.start === start)
         return this.project(chunk.query.caret(index - chunk.delta, null,
-          start - chunk.delta), chunk.delta)
+          start - chunk.delta), chunk)
     }
     const candidates = this.candidates(index).flatMap(chunk => {
       // Query each affinity so a boundary hint is preserved across two lines.
       const current = chunk.query.caret(index - chunk.delta,
-        this.project(hint, -chunk.delta))
-      return current ? [this.project(current, chunk.delta)!] : []
+        hint?.pageNo === chunk.placed.pageNo ? this.project(hint, chunk, false) : null)
+      return current ? [this.project(current, chunk)!] : []
     })
     if (hint?.index === index) {
       const found = candidates.find(c => c.lineId === hint.lineId &&
@@ -294,8 +302,9 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
 
   override atX(index: number, x: number, pageNo?: number) {
     const chunk = this.chunks[this.lower(index)]
-    return chunk && chunk.placed.line.source.start <= index
-      ? this.project(chunk.query.atX(index - chunk.delta, x, pageNo), chunk.delta)
+    return chunk && chunk.placed.line.source.start <= index &&
+      (pageNo === undefined || pageNo === chunk.placed.pageNo)
+      ? this.project(chunk.query.atX(index - chunk.delta, x), chunk)
       : null
   }
 
@@ -305,10 +314,10 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
     if (at === undefined) return null
     const chunk = this.chunks[at]
     if (!vertical) {
-      const local = chunk.query.move(this.project(current, -chunk.delta)!,
+      const local = chunk.query.move(this.project(current, chunk, false)!,
         delta, visual, false)
       if (local) {
-        const result = this.project(local, chunk.delta)!
+        const result = this.project(local, chunk)!
         return visual ? result : this.logicalResult(result)
       }
     }
@@ -317,12 +326,12 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
     for (let i = at + step; i >= 0 && i < this.chunks.length; i += step) {
       const next = this.chunks[i]
       const start = next.placed.line.source.start - next.delta
-      if (vertical) return this.project(next.query.atX(start, current.x), next.delta)
+      if (vertical) return this.project(next.query.atX(start, current.x), next)
       if (visual) return this.project(next.query.atX(start,
-        delta > 0 ? -Infinity : Infinity), next.delta)
-      const result = next.query.move(this.project(current, -next.delta)!,
+        delta > 0 ? -Infinity : Infinity), next)
+      const result = next.query.move(this.project(current, next, false)!,
         delta, false, false)
-      if (result) return this.logicalResult(this.project(result, next.delta)!)
+      if (result) return this.logicalResult(this.project(result, next)!)
     }
     return null
   }
@@ -333,7 +342,7 @@ class IncrementalNativeQueryIndex extends NativeQueryIndex {
       : this.candidates(current.index)
     for (const chunk of candidates) {
       const result = chunk.query.deleteRange(
-        this.project(current, -chunk.delta)!, backward, visual)
+        this.project(current, chunk, false)!, backward, visual)
       if (result) return { ...result, index: result.index + chunk.delta,
         cursorIndex: result.cursorIndex + chunk.delta }
     }

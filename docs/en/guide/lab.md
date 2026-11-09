@@ -132,8 +132,9 @@ baseline. It needs incremental editing/flow. Set it explicitly to false for the
 previous per-paragraph/per-element commit path while retaining earlier caches.
 Exact flow ranges are validated before reuse. Unchanged text can re-place cached
 breaks only while every line interval keeps its width. Changed widths, fonts,
-styles and unsupported objects retain layout fallbacks. Small geometry changes
-use lazy row-position blocks; broad changes use ordinary arrays and safe metric
+styles and unsupported objects retain layout fallbacks. Rows with unchanged
+horizontal geometry use lazy position blocks that project page and Y coordinates
+when read. Commits that rebuild many rows use ordinary arrays and safe metric
 reuse. Diagnostic position snapshots remain ordinary arrays. Directory, object
 classification and coverage work may still be global; editing is not constant time.
 See the [IME-10 measurements](../../guide/benchmark.md).

@@ -10,6 +10,7 @@ const browser = await chromium.launch({ headless: true,
   ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) })
 const trials = Number(process.env.TRIALS || 3)
 const iterations = Number(process.env.ITERATIONS || 20)
+const syncOnly = process.env.SYNC_ONLY === '1'
 assert.ok(Number.isInteger(trials) && trials > 0 && Number.isInteger(iterations) && iterations > 0)
 const base = process.env.BASE_URL || 'http://127.0.0.1:3020'
 const output = process.env.OUTPUT || 'cypress/results/ime/flow-comparison.json'
@@ -30,8 +31,8 @@ function summarize(records) {
 const report = { date: new Date().toISOString(), passed: false, browser: browser.version(),
   node: process.version, machine: { cpu: cpus()[0]?.model, platform: platform(),
     release: release(), memory: totalmem() }, settings: { trials, iterations,
-    warmup: 1, profile: 'sync', paragraphs: 1000, viewport: { width: 1366, height: 720 }, dpr: 1 },
-  semantics: 'Same-code counterfactual: incrementalCommit=false/true; all earlier incremental features stay enabled. Synchronous compositionend handler/geometry timings exclude later paint, notifications and presentation. Inclusive stages overlap. Work is measured through the next rAF. Synthetic events, not OS IME.',
+    warmup: 1, profile: 'sync', syncOnly, paragraphs: 1000, viewport: { width: 1366, height: 720 }, dpr: 1 },
+  semantics: 'Synchronous compositionend handler/geometry timings exclude later paint, notifications and presentation. Inclusive stages overlap. Position directory and query timings are residuals of nested stages. Suffix query and snapshot are timed separately after the next rAF. Work is measured through the next rAF, before those reads. Synthetic events, not OS IME.',
   sourceHashes: {}, fonts: {}, results: [], errors: [] }
 for (const file of ['src/editor/core/layout/IncrementalFlow.ts',
   'src/editor/core/layout/FlowCheckpoint.ts', 'src/editor/core/layout/ParagraphIndex.ts',
@@ -48,7 +49,7 @@ const groups = new Map()
 try {
   for (let trial = 0; trial < trials; trial++)
     for (const kind of (process.env.CASES || 'stable,wrap,page').split(','))
-      for (const incrementalCommit of trial % 2 ? [true, false] : [false, true]) {
+      for (const incrementalCommit of syncOnly ? [true] : trial % 2 ? [true, false] : [false, true]) {
         const page = await browser.newPage({ viewport: report.settings.viewport, deviceScaleFactor: 1 })
         page.on('pageerror', error => report.errors.push(error.message))
         await page.goto(base + '/canvas-editor/tests/fixtures/migration/ime-performance.html')

@@ -1197,20 +1197,23 @@ it('reduces checkpoint and explicit position visits beyond existing element reus
 
 
 it('re-places unchanged breaks across pages instead of repeating paragraph layout', async () => {
-  const counts: { computed: number; reflowed: number; metrics: number }[] = []
+  const counts: { computed: number; reflowed: number; relocated: number;
+    positions: number }[] = []
   for (const incrementalCommit of [false, true]) {
     const draw = await setup(Array.from({ length: 100 }, () => [
       { value: ZERO }, { value: 'abcdefghijklmno' }
     ]).flat(), { lab: { performanceProfile: 'sync', incrementalCommit } })
     caret(draw, 50 * 16 + 5)
     const before = { ...draw.getFlowStats() }
-    const beforeMetrics = draw.getPosition().getPlacementStats().reusedMetrics
+    const beforePositions = draw.getPosition().getPlacementStats()
     draw.getCanvasEvent().input('x'.repeat(120))
     draw.flushGeometry()
     const after = draw.getFlowStats()
+    const afterPositions = draw.getPosition().getPlacementStats()
     counts.push({ computed: after.computed - before.computed,
       reflowed: after.reflowed - before.reflowed,
-      metrics: draw.getPosition().getPlacementStats().reusedMetrics - beforeMetrics })
+      relocated: afterPositions.relocatedBlocks - beforePositions.relocatedBlocks,
+      positions: afterPositions.computedElements - beforePositions.computedElements })
     const positions = structuredClone(draw.getPosition().getOriginalMainPositionList())
     draw.getOptions().lab.incrementalFlow = false
     draw.getLayoutHostAdapter().clearParagraphCache()
@@ -1220,5 +1223,6 @@ it('re-places unchanged breaks across pages instead of repeating paragraph layou
   expect(counts[0].computed).toBeGreaterThan(40)
   expect(counts[1].computed).toBeLessThan(5)
   expect(counts[1].reflowed).toBeGreaterThan(40)
-  expect(counts[1].metrics).toBeGreaterThan(500)
+  expect(counts[1].relocated).toBeGreaterThan(40)
+  expect(counts[1].positions).toBeLessThan(counts[0].positions / 2)
 })

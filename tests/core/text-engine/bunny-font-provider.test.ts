@@ -1,6 +1,7 @@
 import { BunnyFontProvider } from '@/editor/core/text-engine/font/bunny/BunnyFontProvider'
 import { bunnyFontCandidate } from '@/editor/core/text-engine/font/bunny/bunnyFontCatalog'
 import {
+  bunnyResourceUrl,
   parseBunnyFontCss,
   parseUnicodeRanges
 } from '@/editor/core/text-engine/font/bunny/bunnyFontCss'
@@ -240,6 +241,21 @@ describe('Bunny font metadata and selection', () => {
       status: 'failed',
       stage: 'parse'
     })
+  })
+
+  it('allows only versioned Fontsource font files from jsDelivr', () => {
+    const url =
+      'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.3.1/0-400-normal.woff2'
+    expect(bunnyResourceUrl(url, 'font')).toBe(url)
+    expect(() => bunnyResourceUrl(url, 'css')).toThrow('URL')
+    for (const invalid of [
+      url.replace('/fontsource/fonts/', '/npm/'),
+      url.replace('@5.3.1', ''),
+      url.replace('https:', 'http:'),
+      url + '?custom=1',
+      url + '#fragment'
+    ])
+      expect(() => bunnyResourceUrl(invalid, 'font')).toThrow('URL')
   })
 
   it('normalizes downloaded binary and includes resource content identity', async () => {

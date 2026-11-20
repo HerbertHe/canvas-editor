@@ -115,7 +115,9 @@ See the [Lab](./lab.md) chapter for experimental features (`lab`).
 
 ```typescript
 interface ILabOption {
-  incrementalCompute?: boolean // Row-level incremental layout. default: false
+  performanceProfile?: 'baseline' | 'sync' | 'worker' // Defaults to sync
+  imePreview?: boolean // On by default when performanceProfile is omitted
+  incrementalCompute?: boolean // Legacy paragraph cache, off by default
 }
 ```
 

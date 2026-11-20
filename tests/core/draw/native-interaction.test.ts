@@ -242,7 +242,9 @@ function key(draw: Draw, key: string, shiftKey = false) {
 }
 describe('T17 native interaction geometry', () => {
   it('builds one geometry index per placed row and directly indexes row lookup', async () => {
-    const draw = await setup([{ value: 'office é مرحبا '.repeat(20) }])
+    const draw = await setup([{ value: 'office é مرحبا '.repeat(20) }], {
+      lab: { performanceProfile: 'baseline' }
+    })
     const position = draw.getPosition()
     const builds = vi.spyOn(LineGeometryIndex, 'create')
     position.computePositionList({})
@@ -716,7 +718,9 @@ describe('PERF-03/04/05 interaction pipeline', () => {
   })
 
   it('commits every edit and notification before a single deferred paint', async () => {
-    const draw = await setup([{ value: 'abcd' }])
+    const draw = await setup([{ value: 'abcd' }], {
+      lab: { performanceProfile: 'baseline' }
+    })
     const callbacks = new Map<number, FrameRequestCallback>()
     let serial = 0
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {

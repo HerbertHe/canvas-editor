@@ -206,7 +206,8 @@ export class FontResourceStore {
     key: string,
     url: string,
     init: RequestInit,
-    signal: AbortSignal
+    signal: AbortSignal,
+    kind: 'css' | 'font'
   ): Promise<Entry> {
     const cached = this.memory.get(key)
     if (!this.invalidated.has(url) && cached && cached.expires > Date.now()) {
@@ -250,12 +251,12 @@ export class FontResourceStore {
           })
           if (signal.aborted || controller.signal.aborted) aborted()
           if (!response.ok) throw new HttpError(response.status)
-          if (response.url) bunnyResourceUrl(response.url)
+          if (response.url) bunnyResourceUrl(response.url, kind)
           const type = (response.headers.get('content-type') || '')
             .split(';')[0]
             .trim()
             .toLowerCase()
-          const css = new URL(url).pathname === '/css'
+          const css = kind === 'css'
           const valid = css
             ? type === 'text/css'
             : /^(?:font\/(?:woff2?|ttf|otf|sfnt)|application\/(?:octet-stream|font-woff2?|x-font-(?:ttf|opentype)))$/.test(
@@ -327,18 +328,19 @@ export class FontResourceStore {
   async fetch(
     url: string,
     init: RequestInit = {},
-    version = ''
+    version = '',
+    kind: 'css' | 'font' = 'font'
   ): Promise<Response> {
-    url = bunnyResourceUrl(url)
+    url = bunnyResourceUrl(url, kind)
     const signal = init.signal
     if (signal?.aborted) aborted()
-    const key = `${url}\n${version}`
+    const key = `${url}\n${version}\n${kind}`
     const failure = this.negative.get(key)
     if (failure && failure.expires > Date.now()) throw failure.error
     let job = this.pending.get(key)
     if (!job) {
       const controller = new AbortController()
-      const promise = this.load(key, url, init, controller.signal)
+      const promise = this.load(key, url, init, controller.signal, kind)
       job = { controller, promise, users: 0 }
       this.pending.set(key, job)
       const current = job

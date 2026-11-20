@@ -46,8 +46,9 @@ queued. `executeComputeElementListHeight` remains synchronous after readiness.
 
 `autoDownloadFonts` defaults to true. Actual uncovered text triggers basic-font
 requests to Bunny Fonts. URLs contain fixed families, weights and styles, never
-document text. Context is used locally to choose fragments. Allow the CSS and font
-resources at `https://fonts.bunny.net` in your network policy. Fonts, WASM and
+document text. Context is used locally to choose fragments. Allow CSS and font
+resources at `https://fonts.bunny.net` and versioned WOFF/WOFF2 files under
+`https://cdn.jsdelivr.net/fontsource/fonts/` in your network policy. Fonts, WASM and
 decoder resources also depend on your CSP, browser capabilities and deployment.
 
 Candidates include Noto Sans (Latin/Greek/Cyrillic), Noto Sans SC/JP/KR,

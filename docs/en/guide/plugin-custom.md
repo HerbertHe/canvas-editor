@@ -1,9 +1,7 @@
 # Custom Plugin
 
-> Linked plugins belong to upstream external projects. This fork does not maintain them; verify async initialization, font and API compatibility.
-
-::: tip
-Upstream plugin documentation (verify compatibility): https://hufe.club/canvas-editor-plugin
+::: warning Compatibility untested
+This fork has yet to test upstream plugin compatibility, including the Word and Excel plugins. Check asynchronous initialization, font registration, and the APIs your plugin uses in your application. [Upstream plugin documentation](https://hufe.club/canvas-editor-plugin)
 :::
 
 ## Write a Plugin

@@ -35,7 +35,7 @@ HarfBuzz pipeline does not imply browsers cannot display those scripts.
 | Distribution                                                      | ESM and UMD                                   | ESM-only root exports and declarations                                      |
 | SVG pages                                                         | Separate upstream experimental branch         | Deferred and unavailable; Canvas-only                                       |
 | Tables, controls, pagination, paragraph spacing, comments, macros | Existing features                             | Inherited and adapted, not fork inventions                                  |
-| External plugins                                                  | Upstream ecosystem                            | Compatibility must be verified individually                                 |
+| Plugins and DevTools                                               | Upstream plugins and browser extension        | Compatibility with this fork is untested. See [plugins](./plugin-custom.md) and [DevTools](./devtools.md). |
 
 Sources: [upstream package](https://github.com/Hufe921/canvas-editor/blob/1d7cd1a7742f3e8af1f67536a5157d03b2945de7/package.json),
 [upstream text painting](https://github.com/Hufe921/canvas-editor/blob/1d7cd1a7742f3e8af1f67536a5157d03b2945de7/src/editor/core/draw/particle/TextParticle.ts).

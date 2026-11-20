@@ -1,9 +1,7 @@
 # 自定义插件
 
-> 此处链接指向上游外部插件；它们并非本 fork 维护的插件，需验证异步初始化、字体与 API 兼容性。
-
-::: tip
-上游维护的插件文档（需验证兼容性）：https://hufe.club/canvas-editor-plugin
+::: warning 兼容性暂未验证
+本分支暂未测试上游插件的兼容性，包括 Word 和 Excel 插件。接入前请在实际项目中验证异步初始化、字体注册和插件使用的 API。 [上游插件文档](https://hufe.club/canvas-editor-plugin)
 :::
 
 ## 开发插件

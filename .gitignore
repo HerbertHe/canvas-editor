@@ -19,6 +19,7 @@ cypress/results/
 
 # Keep only the initial and latest input performance evidence
 /docs/guide/performance-baselines/*.json
+!/docs/guide/performance-baselines/playground-comparison-2026-11-20.json
 !/docs/guide/performance-baselines/perf01-2026-10-22.json
 !/docs/guide/performance-baselines/perf01-pressure-2026-10-22.json
 !/docs/guide/performance-baselines/perf21-manifest-2026-10-23.json

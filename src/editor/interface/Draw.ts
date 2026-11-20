@@ -8,6 +8,7 @@ import { IElement, IElementPosition } from './Element'
 export interface IDrawOption {
   /** Safe input paths only: commit layout/history now, paint next frame. */
   isDeferredPaint?: boolean
+  isPageScaleChanged?: boolean
   curIndex?: number
   isSetCursor?: boolean
   isSubmitHistory?: boolean

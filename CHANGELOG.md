@@ -2,8 +2,9 @@
 
 ## Unreleased — input performance rollout
 
-- Add opt-in `baseline`, `sync` and `worker` performance presets and detached
-  `getPerformanceDiagnostics()` snapshots. Existing defaults remain unchanged.
+- Default to synchronous incremental editing, grouped undo, deferred painting
+  and IME preview. Explicit `baseline`, `sync` and `worker` presets retain
+  their settings. Inspect effective options with `getPerformanceDiagnostics()`.
 - Prevent continuous Worker input from indefinitely postponing geometry commits
   by scheduling synchronous recovery after 100ms of waiting.
 - Reuse unchanged line positions and query blocks across source-index shifts.
@@ -130,38 +131,6 @@ not this fork. Their original issue, commit and release links are preserved.
 * expand cascade expression functions ([6a554b4](https://github.com/Hufe921/canvas-editor/commit/6a554b4f81082fc2ebcec52c84fdce9e83fee3f2))
 * support hover hint for elements #762 ([1855372](https://github.com/Hufe921/canvas-editor/commit/1855372ca1734ac674e0d66a865cd4f15a0b2660)), closes [#762](https://github.com/Hufe921/canvas-editor/issues/762)
 * support mixed page orientations by section #718 #866 ([499c239](https://github.com/Hufe921/canvas-editor/commit/499c239d3651f3d5d80f78cffb6fa3b1bff31fb4)), closes [#718](https://github.com/Hufe921/canvas-editor/issues/718) [#866](https://github.com/Hufe921/canvas-editor/issues/866)
-
-
-
-# [1.0.0](https://github.com/Hufe921/canvas-editor/compare/v0.9.137...v1.0.0) (2026-08-01)
-
-
-### Bug Fixes
-
-* collapse row height for hidden elements #1447 ([efe9cc1](https://github.com/Hufe921/canvas-editor/commit/efe9cc1794bc39954eeddfe5310e0af429082b1e)), closes [#1447](https://github.com/Hufe921/canvas-editor/issues/1447)
-* control member state sync for cascade restore and select highlight ([56fdf60](https://github.com/Hufe921/canvas-editor/commit/56fdf609eea8066ac52e8812b20aaded00b28b66))
-* re-activate control before input when inactive #1443 ([a92a406](https://github.com/Hufe921/canvas-editor/commit/a92a4061788a0917fd5e1ac3c983363501edbdfb)), closes [#1443](https://github.com/Hufe921/canvas-editor/issues/1443)
-* table row height adaptation for row-spanning cell with tall content ([9e54b8c](https://github.com/Hufe921/canvas-editor/commit/9e54b8c2eb8972fb9dba2636fee55086d6fae759))
-
-
-### Documentation
-
-* update README.md ([cb10612](https://github.com/Hufe921/canvas-editor/commit/cb106129fda44a102c3a4e304af6523244bc56df))
-* update start.md ([53f6ca8](https://github.com/Hufe921/canvas-editor/commit/53f6ca8a221ee4b7ff7a27c90ff9846a7b6d09cb))
-
-
-### Features
-
-* add compare api #1024 ([eba1d10](https://github.com/Hufe921/canvas-editor/commit/eba1d10861366881b00dbd85e3b5fcc34b4f80aa)), closes [#1024](https://github.com/Hufe921/canvas-editor/issues/1024)
-* add macro recording and playback #478 ([e25e05b](https://github.com/Hufe921/canvas-editor/commit/e25e05bd49a2dcd86661967726c6fba51ede424c)), closes [#478](https://github.com/Hufe921/canvas-editor/issues/478)
-* add ruler option #438 ([d5bad24](https://github.com/Hufe921/canvas-editor/commit/d5bad2449c6dea4a2f574724647fbd2fa7fd8c6d)), closes [#438](https://github.com/Hufe921/canvas-editor/issues/438)
-* add trace mode #312 ([bf51518](https://github.com/Hufe921/canvas-editor/commit/bf51518eb317e598a634065470772062ab16346f)), closes [#312](https://github.com/Hufe921/canvas-editor/issues/312)
-* control cascade and validation #671 ([342dea6](https://github.com/Hufe921/canvas-editor/commit/342dea669d1e39124b4e4d72b24352b9091dd044)), closes [#671](https://github.com/Hufe921/canvas-editor/issues/671)
-* improve trace line visibility ([bc703b7](https://github.com/Hufe921/canvas-editor/commit/bc703b7edc540b98470a0d7722ba04b952dc3808))
-* optimize table pagination #41 ([17794dd](https://github.com/Hufe921/canvas-editor/commit/17794dd78ec7de55fea823900bd626514479ab71)), closes [#41](https://github.com/Hufe921/canvas-editor/issues/41)
-* support control nesting #425 ([732b985](https://github.com/Hufe921/canvas-editor/commit/732b985995183784cfc77a102a209cfc4c689c46)), closes [#425](https://github.com/Hufe921/canvas-editor/issues/425)
-* support nested ordered list level handling #440 ([56a51c4](https://github.com/Hufe921/canvas-editor/commit/56a51c42e629706720673ad549b8bdd0a66986d5)), closes [#440](https://github.com/Hufe921/canvas-editor/issues/440)
-* table width autofit to content and page #1387 #1453 ([66c9b94](https://github.com/Hufe921/canvas-editor/commit/66c9b940dec71ed74c887c2f3ee0b8b1e068a610)), closes [#1387](https://github.com/Hufe921/canvas-editor/issues/1387) [#1453](https://github.com/Hufe921/canvas-editor/issues/1453)
 
 
 

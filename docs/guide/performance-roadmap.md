@@ -23,7 +23,7 @@
 N02 可以独立推进。先补 Firefox 千段的阶段诊断，按调度等待、布局、
 绘制和光标锚点拆分后，再决定是否触发 N01。短段和小表格先复测直接同步与按帧消费，
 避免把调度开销当作绘制开销。已有脏页、延后绘制、末行窗口、行块位置复用及缓存接纳保护
-作为新对照的起点。 [实验配置](lab.md) · [三浏览器验收](benchmark.md#本轮最终自动验收结果)
+作为新对照的起点。 [实验配置](lab.md) · [三浏览器验收](performance-baselines/ime-release-2026-11-03.json)
 
 **继续规则**　测量前固定目标场景和主指标。若即使完全去掉某个阶段也难以覆盖预算差额，
 将它降为次要任务。观察同一慢样本的阶段分解，阶段 P95 与端到端 P95 不能直接相减。
@@ -108,8 +108,8 @@ Chrome 短跑使用原生交互 fixture 的 `plain&advanced&tracked` 配置。
 报告中长段开头的 IME 几何 P95 为 79.7–133 ms。IME-11 的末行窗口已将
 两类末行场景的 P95 降到 2.1 和 6.4 ms，段中仍出现 45/105 次回退，
 P95 为 76.2 ms。段首的具体失败原因需要单独采集。
-[IME-11 对照](benchmark.md#延迟与回退) ·
-[长段基准](benchmark.md#本轮最终自动验收结果) ·
+[IME-11 对照](performance-baselines/ime-long-2026-11-02.json) ·
+[长段基准](performance-baselines/ime-release-2026-11-03.json) ·
 [窗口校验](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/draw/CompositionPreview.ts#L164) ·
 [回退路径](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/event/CanvasEvent.ts#L304)
 
@@ -140,7 +140,7 @@ P95 为 76.2 ms。段首的具体失败原因需要单独采集。
 
 600 格场景的现有缓存仍检查 600 格、计算 88 格，Firefox 几何 P95 为 90 ms。
 命中前也有内容克隆和序列化，网格复用后宿主仍会遍历写回。
-[容量压力数据](benchmark.md#本轮最终自动验收结果) ·
+[容量压力数据](performance-baselines/ime-release-2026-11-03.json) ·
 [缓存入口](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/layout/TableLayoutCache.ts#L43) ·
 [宿主写回](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/text-engine-host/TableLayoutHost.ts#L138)
 
@@ -167,7 +167,7 @@ P95 为 76.2 ms。段首的具体失败原因需要单独采集。
 跨页从 16.5 升到 36.3 ms。同一次实验中，换行和跨页的总同步提交
 P95 分别从 225.0 降到 42.2 ms、从 272.5 降到 144.4 ms。
 本次以已启用增量提交的旧实现为对照。
-[阶段数据](benchmark.md#阶段与实际工作量) ·
+[阶段数据](performance-baselines/ime-flow-2026-11-02.json) ·
 [位置复用入口](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/position/Position.ts#L750)
 
 Chrome 156.0.8078.80、Node 24.22.1、DPR 1，前后各三轮，每轮八次。
@@ -243,7 +243,7 @@ IME-13 的排版 Worker 对照中，短行和宽行的几何 P95 分别从 1.5 �
 转移控制权需要在此之前决定后端。首期限定单个可见的简单正文页，
 输入、光标定位和交互仍由主线程使用权威几何。
 [页面创建](https://github.com/HerbertHe/canvas-editor/blob/0d86c2b91da7221174681eab731a9959031e0255/src/editor/core/draw/Draw.ts#L2328) ·
-[IME-13 Worker 对照](benchmark.md#ime-13-主线程变短-没有端到端收益) ·
+[IME-13 Worker 对照](performance-baselines/ime-table-worker-2026-11-02.json) ·
 [Canvas 转移规则](https://html.spec.whatwg.org/multipage/canvas.html#dom-canvas-transfercontroltooffscreen)
 
 1. 从已提交几何生成紧凑绘制数据，附带页号、尺寸、DPR、文档及几何版本。

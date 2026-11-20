@@ -3,8 +3,9 @@
 This page explains how the current implementation reduces repeated work during
 typing, sustained deletion and Chinese composition. See [Benchmark](benchmark.md)
 for measurements and [experimental configuration](lab.md) for switches and limits.
-Baseline remains the default. Both `imePreview` and `imeWorkerPreview` default to
-false; selecting sync/worker does not enable them. Release acceptance remains hold.
+New editors default to the synchronous profile and `imePreview`. When selecting
+a profile explicitly, configure IME preview separately. Worker IME preview
+remains opt-in. The historical release result was hold.
 
 ## Where input latency comes from
 
@@ -156,7 +157,7 @@ validation and fresh geometry, presentation and memory measurements.
 
 ## Reading and reproducing the evidence
 
-See [latest automated results](benchmark.md#final-automated-results). The five-scene
+See the [current benchmark](benchmark.md) and [historical IME-14 logs](../../guide/performance-baselines/ime-release-2026-11-03.json). The historical five-scene
 baseline→sync comparison combines multiple changes; it cannot attribute all benefits
 to one switch. The large-table toggle and historical IME-10/11/12/13 studies isolate
 their own scope. Older dated measurements retain their original source/methodology.

@@ -1,12 +1,10 @@
 # DevTools
 
-> Linked plugins belong to upstream external projects. This fork does not maintain them; verify async initialization, font and API compatibility.
+::: warning Compatibility untested
+This fork has yet to test compatibility with the upstream Canvas Editor DevTools extension. The installation and feature descriptions below refer to the upstream extension. [Upstream extension repository](https://github.com/Hufe921/canvas-editor-devtools)
+:::
 
 Canvas Editor DevTools is a browser extension for debugging and analyzing Canvas Editor instances.
-
-::: tip
-Plugin repository: https://github.com/Hufe921/canvas-editor-devtools
-:::
 
 ## Installation
 

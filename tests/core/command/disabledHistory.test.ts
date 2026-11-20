@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Draw } from '../../../src/editor/core/draw/Draw'
 import * as elements from '../../../src/editor/utils/element'
 import { createTestEditor, waitMacroTask } from '../../factories/editor'
 
@@ -12,7 +13,10 @@ describe('disabled history snapshots', () => {
   it('keeps edits and content events without cloning body or stories', async () => {
     const clone = vi.spyOn(elements, 'getSlimCloneElementList')
     ctx = await createTestEditor({
-      options: { historyMaxRecordCount: 0 },
+      options: {
+        historyMaxRecordCount: 0,
+        lab: { performanceProfile: 'baseline' }
+      },
       data: {
         main: [{ value: 'body' }],
         header: [{ value: 'header' }],
@@ -33,6 +37,16 @@ describe('disabled history snapshots', () => {
     expect(ctx.editor.command.getText().main).toContain('new')
     expect(ctx.editor.command.getText().header).toBe('header')
     expect(ctx.editor.command.getText().footer).toBe('footer')
+  })
+
+  it('skips undo snapshots with incremental editing enabled by default', async () => {
+    const snapshot = vi.spyOn(Draw.prototype, 'createHistorySnapshot')
+    ctx = await createTestEditor({ options: { historyMaxRecordCount: 0 } })
+    ctx.editor.command.executeFocus()
+    ctx.editor.command.executeInsertElementList([{ value: 'new' }])
+    ctx.editor.command.executeUndo()
+    expect(snapshot).not.toHaveBeenCalled()
+    expect(ctx.editor.command.getText().main).toContain('new')
   })
 
   it('retains snapshots and working undo when the limit is positive', async () => {

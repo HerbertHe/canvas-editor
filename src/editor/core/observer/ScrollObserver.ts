@@ -2,10 +2,6 @@ import { IEditorOption } from '../../interface/Editor'
 import { debounce } from '../../utils'
 import { Draw } from '../draw/Draw'
 
-export interface IElementVisibleInfo {
-  intersectionHeight: number
-}
-
 export interface IPageVisibleInfo {
   intersectionPageNo: number
   visiblePageNoList: number[]
@@ -44,30 +40,39 @@ export class ScrollObserver {
     this.scrollContainer.removeEventListener('scroll', this._observer)
   }
 
-  public getElementVisibleInfo(element: Element): IElementVisibleInfo {
-    const rect = element.getBoundingClientRect()
-    const viewHeight =
-      this.scrollContainer === document
-        ? Math.max(document.documentElement.clientHeight, window.innerHeight)
-        : (<Element>this.scrollContainer).clientHeight
-    const visibleHeight =
-      Math.min(rect.bottom, viewHeight) - Math.max(rect.top, 0)
-    return {
-      intersectionHeight: visibleHeight > 0 ? visibleHeight : 0
-    }
-  }
-
   public getPageVisibleInfo(): IPageVisibleInfo {
     const pageList = this.draw.getPageList()
     const visiblePageNoList: number[] = []
     let intersectionPageNo = 0
     let intersectionMaxHeight = 0
-    for (let i = 0; i < pageList.length; i++) {
-      const curPage = pageList[i]
-      const { intersectionHeight } = this.getElementVisibleInfo(curPage)
-      // 之前页存在交叉 && 当前页不交叉则后续均不交叉，结束循环
-      if (intersectionMaxHeight && !intersectionHeight) break
-      if (intersectionHeight) {
+    let top = 0
+    let bottom = Math.max(
+      document.documentElement.clientHeight,
+      window.innerHeight
+    )
+    if (this.scrollContainer instanceof Element) {
+      const containerTop =
+        this.scrollContainer.getBoundingClientRect().top +
+        this.scrollContainer.clientTop
+      top = Math.max(top, containerTop)
+      bottom = Math.min(bottom, containerTop + this.scrollContainer.clientHeight)
+    }
+    // Pages are stacked vertically. Skip pages above the viewport without
+    // reading the bounds of every preceding canvas on each zoom step.
+    let first = 0
+    let end = pageList.length
+    while (first < end) {
+      const middle = Math.floor((first + end) / 2)
+      if (pageList[middle].getBoundingClientRect().bottom <= top)
+        first = middle + 1
+      else end = middle
+    }
+    for (let i = first; i < pageList.length; i++) {
+      const rect = pageList[i].getBoundingClientRect()
+      if (rect.top >= bottom) break
+      const intersectionHeight =
+        Math.min(rect.bottom, bottom) - Math.max(rect.top, top)
+      if (intersectionHeight > 0) {
         visiblePageNoList.push(i)
       }
       if (intersectionHeight > intersectionMaxHeight) {

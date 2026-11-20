@@ -33,6 +33,7 @@ export interface EventBusMap {
   pageScaleChange: IPageScaleChange
   saved: ISaved
   contentChange: IContentChange
+  compositionStateChange: (active: boolean) => void
   controlChange: IControlChange
   controlContentChange: IControlContentChange
   pageModeChange: IPageModeChange

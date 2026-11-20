@@ -6,14 +6,12 @@ import { Draw } from '../Draw'
 export class Badge {
   private draw: Draw
   private options: DeepRequired<IEditorOption>
-  private imageCache: Map<string, HTMLImageElement>
   private mainBadge: IBadge | null
   private areaBadgeMap: Map<string, IBadge>
 
   constructor(draw: Draw) {
     this.draw = draw
     this.options = draw.getOptions()
-    this.imageCache = new Map()
     this.mainBadge = null
     this.areaBadgeMap = new Map()
   }
@@ -52,18 +50,8 @@ export class Badge {
     height: number,
     value: string
   ) {
-    if (this.imageCache.has(value)) {
-      const img = this.imageCache.get(value)!
-      ctx.drawImage(img, x, y, width, height)
-    } else {
-      const img = new Image()
-      img.setAttribute('crossOrigin', 'Anonymous')
-      img.src = value
-      img.onload = () => {
-        this.imageCache.set(value, img)
-        ctx.drawImage(img, x, y, width, height)
-      }
-    }
+    const image = this.draw.getImageObserver().get(ctx.canvas, value)
+    if (image) ctx.drawImage(image, x, y, width, height)
   }
 
   public render(ctx: CanvasRenderingContext2D, pageNo: number) {

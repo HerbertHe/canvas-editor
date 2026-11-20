@@ -1,6 +1,7 @@
 # Canvas Editor 性能优化实施计划
 
 更新日期 2026-11-09。N02–N05 已有实现，历史基准继续作为对照。
+当前内置示例的交互瓶颈、交付顺序和验收指标见[交互性能优化需求](interactive-performance-requirements.md)。
 必要性判断依据仓库现有实现、提交历史和已归档的基准数据。
 历史数值保留各自测量口径。开工时用当前源码重跑对应场景，冻结同版本对照组。
 [Benchmark](benchmark.md) · [现有 IME 任务与发布门禁](ime-performance-tasks.md)

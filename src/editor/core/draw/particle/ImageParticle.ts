@@ -1,6 +1,5 @@
 import { scaleShapedLine } from '../../text-engine-host/scaleShapedLine'
 import { EDITOR_PREFIX } from '../../../dataset/constant/Editor'
-import { ImageDisplay } from '../../../dataset/enum/Common'
 import { ElementType } from '../../../dataset/enum/Element'
 import { DeepRequired } from '../../../interface/Common'
 import { IEditorOption } from '../../../interface/Editor'
@@ -12,7 +11,6 @@ import { Draw } from '../Draw'
 export class ImageParticle {
   private draw: Draw
   protected options: DeepRequired<IEditorOption>
-  protected imageCache: Map<string, HTMLImageElement>
   private container: HTMLDivElement
   private floatImageContainer: HTMLDivElement | null
   private floatImage: HTMLImageElement | null
@@ -21,7 +19,6 @@ export class ImageParticle {
     this.draw = draw
     this.options = draw.getOptions()
     this.container = draw.getContainer()
-    this.imageCache = new Map()
     this.floatImageContainer = null
     this.floatImage = null
   }
@@ -126,11 +123,15 @@ export class ImageParticle {
     }
   }
 
-  protected addImageObserver(promise: Promise<unknown>) {
-    this.draw.getImageObserver().add(promise)
+  protected getPageImage(
+    ctx: CanvasRenderingContext2D,
+    source: string,
+    fallback?: () => string
+  ) {
+    return this.draw.getImageObserver().get(ctx.canvas, source, fallback)
   }
 
-  protected getFallbackImage(width: number, height: number): HTMLImageElement {
+  private getFallbackImage(width: number, height: number) {
     const tileSize = 8
     const x = (width - Math.ceil(width / tileSize) * tileSize) / 2
     const y = (height - Math.ceil(height / tileSize) * tileSize) / 2
@@ -145,11 +146,7 @@ export class ImageParticle {
                     </pattern>
                   </defs>
                 </svg>`
-    const fallbackImage = new Image()
-    fallbackImage.src = `data:image/svg+xml;base64,${convertStringToBase64(
-      svg
-    )}`
-    return fallbackImage
+    return `data:image/svg+xml;base64,${convertStringToBase64(svg)}`
   }
 
   private _drawImageWithCrop(
@@ -242,52 +239,11 @@ export class ImageParticle {
     const { scale } = this.options
     const width = element.width! * scale
     const height = element.height! * scale
-    if (this.imageCache.has(element.value)) {
-      const img = this.imageCache.get(element.value)!
-      this._drawImageWithCrop(ctx, img, element, x, y, width, height)
+    const image = this.getPageImage(ctx, element.value,
+      () => this.getFallbackImage(width, height))
+    if (image) {
+      this._drawImageWithCrop(ctx, image, element, x, y, width, height)
       this._renderCaption(ctx, element, x, y, width, height)
-    } else {
-      const cacheRenderCount = this.draw.getRenderCount()
-      const imageLoadPromise = new Promise((resolve, reject) => {
-        const img = new Image()
-        img.setAttribute('crossOrigin', 'Anonymous')
-        img.src = element.value
-        img.onload = () => {
-          this.imageCache.set(element.value, img)
-          resolve(element)
-          // 因图片加载异步，图片加载后可能属于上一次渲染方法
-          if (cacheRenderCount !== this.draw.getRenderCount()) return
-          // 衬于文字下方图片需要重新首先绘制
-          if (element.imgDisplay === ImageDisplay.FLOAT_BOTTOM) {
-            this.draw.render({
-              isCompute: false,
-              isSetCursor: false,
-              isSubmitHistory: false
-            })
-          } else {
-            this._drawImageWithCrop(ctx, img, element, x, y, width, height)
-            this._renderCaption(ctx, element, x, y, width, height)
-          }
-        }
-        img.onerror = error => {
-          const fallbackImage = this.getFallbackImage(width, height)
-          fallbackImage.onload = () => {
-            this._drawImageWithCrop(
-              ctx,
-              fallbackImage,
-              element,
-              x,
-              y,
-              width,
-              height
-            )
-            this.imageCache.set(element.value, fallbackImage)
-            this._renderCaption(ctx, element, x, y, width, height)
-          }
-          reject(error)
-        }
-      })
-      this.addImageObserver(imageLoadPromise)
     }
   }
 }

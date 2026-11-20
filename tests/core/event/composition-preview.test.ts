@@ -15,6 +15,7 @@ import type { IElement } from '@/editor/interface/Element'
 import type { FontCoverageReport } from '@/editor/interface/FontCoverage'
 import Editor from '@/editor'
 import { ElementType } from '@/editor/dataset/enum/Element'
+import { RowFlex } from '@/editor/dataset/enum/Row'
 import { TextDirection } from '@/editor/dataset/enum/TextDirection'
 import { ControlType, ControlComponent } from '@/editor/dataset/enum/Control'
 
@@ -53,6 +54,80 @@ const end = (draw: Draw, data: string) => draw.getCanvasEvent().compositionend(
   new CompositionEvent('compositionend', { data }))
 
 describe('IME local preview', () => {
+  it('recenters a single-line preedit and matches the committed caret', async () => {
+    const draw = await setup(true, true, [
+      { value: 'abcdef', rowFlex: RowFlex.CENTER, size: 28 },
+      { value: '\nNext paragraph' }
+    ])
+    const host = draw.getCanvasEvent()
+    const original = text(draw)
+    draw.getRange().setRange(2, 4)
+    draw.setCursor(4)
+    const layout = vi.spyOn(draw, 'computeRowList')
+    host.compositionstart()
+    const positions: number[] = []
+    for (const value of ['n', 'nih', '', 'nihao']) {
+      host.input(value)
+      host.flushComposition(false)
+      const preview = Reflect.get(draw, 'compositionPreview') as CompositionPreview
+      expect(preview.caret).not.toBeNull()
+      positions.push(preview.caret!.x)
+      expect(text(draw)).toBe(original)
+    }
+    expect(new Set(positions).size).toBe(4)
+    expect(layout).not.toHaveBeenCalled()
+    const preview = Reflect.get(draw, 'compositionPreview') as CompositionPreview
+    const visual = preview.caret!
+    end(draw, 'nihao')
+    const committed = draw.getPosition().getNativeCaret(
+      draw.getRange().getRange().endIndex
+    )!
+    expect(text(draw)).toContain('abnihaoef')
+    expect(committed.pageNo).toBe(visual.pageNo)
+    expect(committed.x).toBeCloseTo(visual.x)
+    expect(committed.y).toBeCloseTo(visual.y)
+    expect(committed.height).toBeCloseTo(visual.height)
+  })
+
+  it('uses full centered layout when preedit wraps and can cancel it', async () => {
+    const draw = await setup(true, true, [
+      { value: 'abcdef', rowFlex: RowFlex.CENTER, size: 28 }
+    ])
+    const host = draw.getCanvasEvent()
+    const original = text(draw)
+    const layout = vi.spyOn(draw, 'computeRowList')
+    host.compositionstart()
+    host.input('n')
+    host.flushComposition(false)
+    expect(layout).not.toHaveBeenCalled()
+    host.input('w'.repeat(100))
+    host.flushComposition(false)
+    expect(host.getCompositionDiagnostics().local).toBe(false)
+    expect(layout).toHaveBeenCalled()
+    end(draw, '')
+    expect(text(draw)).toBe(original)
+  })
+
+  it('preserves the centered row box for a subpixel change in descent', async () => {
+    const draw = await setup(true, true, [
+      { value: 'abcdef', rowFlex: RowFlex.CENTER, size: 28 }
+    ])
+    const preview = CompositionPreview.create(draw, 2, 2)!
+    const prepared = preview.prepare('ni')!
+    const adapter = draw.getLayoutHostAdapter()
+    const layout = adapter.layoutParagraph(prepared.paragraph, prepared.elements,
+      draw.getPageSize(0).innerWidth, 'height-test')
+    const line = layout.lines[0]
+    const withDescent = (extra: number) => ({ ...layout, lines: [{
+      ...line, rect: { ...line.rect, height: line.rect.height + extra },
+      contentHeight: line.contentHeight + extra
+    }] })
+    expect(preview.accept(prepared, withDescent(0.15))).toBe(true)
+    expect(preview.caret?.height).toBeCloseTo(preview.placed.line.rect.height)
+    expect(preview.accept(prepared, withDescent(2))).toBe(false)
+    adapter.releaseScope('height-test')
+  })
+
   function previewWorker(draw: Draw) {
     const requests: { input: NativeParagraphInput;
       constraints: number;
@@ -265,6 +340,9 @@ describe('IME local preview', () => {
 
   it('lays out latest text locally without changing the formal model, then commits once', async () => {
     const draw = await setup()
+    vi.spyOn(draw.getPage(0), 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 20, y: 20, width: 600, height: 500 })
+    )
     const host = draw.getCanvasEvent()
     const original = text(draw)
     const compute = vi.spyOn(draw as any, 'computeRenderGeometry')

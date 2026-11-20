@@ -1,4 +1,9 @@
-import type { LayoutCaret, LayoutSource, TextLine } from '../../interface/Layout'
+import type {
+  LayoutCaret,
+  LayoutNode,
+  LayoutSource,
+  TextLine
+} from '../../interface/Layout'
 import type { NativeParagraphLayout } from '../text-engine/layout/TextLayoutService'
 
 /** Lazy, memoized projection. No glyph/caret traversal when creating a view. */
@@ -105,6 +110,40 @@ export function projectLayout(layout: NativeParagraphLayout, delta: number,
 export function projectTextLine(value: TextLine, delta: number,
   revision = value.revision): TextLine {
   return projectLine(value, delta, revision)
+}
+
+/** Object rows belong to the main scope. Table cells keep their local indices. */
+export function projectFlowNode(
+  node: LayoutNode,
+  delta: number,
+  objectId?: string
+): LayoutNode {
+  if (!delta) return node
+  if (node.kind === 'textLine') return projectTextLine(node, delta)
+  const { source } = node
+  const start = source.start + delta
+  const anchor = (caret: LayoutCaret) => ({
+    ...caret,
+    position: {
+      ...caret.position,
+      elementIndex: caret.position.elementIndex + delta
+    }
+  })
+  const projected = { ...source, start, end: source.end + delta }
+  switch (node.kind) {
+    case 'tableFragment':
+      return { ...node, source: projected }
+    case 'break':
+    case 'block': {
+      const id = objectId || source.scope + ':object:' + start
+      const base = { id, source: { ...projected, nodeId: id } }
+      return node.kind === 'break'
+        ? { ...node, ...base, caret: anchor(node.caret) }
+        : { ...node, ...base, anchor: node.anchor && anchor(node.anchor) }
+    }
+    default:
+      throw new Error('Unsupported cached flow node')
+  }
 }
 
 /** Spatial view for re-placed plain text. Logical data stays canonical/lazy. */

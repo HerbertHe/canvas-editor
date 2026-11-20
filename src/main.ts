@@ -26,7 +26,7 @@ import Editor, {
 import { Dialog } from './components/dialog/Dialog'
 import { formatPrismToken } from './utils/prism'
 import { Signature } from './components/signature/Signature'
-import { debounce, nextTick, scrollIntoView } from './utils'
+import { scrollIntoView } from './utils'
 import { demoPerformance } from './utils/demoPerformance'
 
 window.onload = async function () {
@@ -1408,12 +1408,8 @@ window.onload = async function () {
     })
   }
 
-  let catalogRequest = 0
   let lastCatalogSignature = ''
-  async function updateCatalog() {
-    const request = ++catalogRequest
-    const catalog = await instance.command.getCatalog()
-    if (request !== catalogRequest) return
+  function updateCatalog(catalog: ICatalogItem[] | null) {
     const signature = JSON.stringify(catalog)
     if (signature === lastCatalogSignature) return
     lastCatalogSignature = signature
@@ -1461,7 +1457,7 @@ window.onload = async function () {
     isCatalogShow = !isCatalogShow
     if (isCatalogShow) {
       catalogDom.style.display = 'block'
-      updateCatalog()
+      requestDemoRefresh()
     } else {
       catalogDom.style.display = 'none'
     }
@@ -1838,8 +1834,7 @@ window.onload = async function () {
 
   // 模拟批注
   const commentDom = document.querySelector<HTMLDivElement>('.comment')!
-  async function updateComment() {
-    const groupIds = await instance.command.getGroupIds()
+  function updateComment(groupIds: string[]) {
     for (const comment of commentList) {
       const activeCommentDom = commentDom.querySelector<HTMLDivElement>(
         `.comment-item[data-id='${comment.id}']`
@@ -1906,7 +1901,7 @@ window.onload = async function () {
     orderedCommentItemList.forEach(item =>
       commentDom.append(item.commentItemDom)
     )
-    drawCommentLines()
+    requestDrawCommentLines()
   }
   // 批注连接线（在编辑器外绘制：通过 getGroupRectList 获取成组坐标）
   const commentLineSvg = document.createElementNS(
@@ -1922,7 +1917,8 @@ window.onload = async function () {
   )!
   commentLineSwitch.onchange = () => {
     isCommentLineVisible = commentLineSwitch.checked
-    drawCommentLines()
+    if (isCommentLineVisible) requestDrawCommentLines()
+    else drawCommentLines()
   }
   function drawCommentLines() {
     // 清空已有连线
@@ -1970,14 +1966,6 @@ window.onload = async function () {
       commentLineSvg.append(path)
     }
   }
-  // 滚动/缩放时实时重绘（requestAnimationFrame 节流）
-  let commentLineRafId = 0
-  function requestDrawCommentLines() {
-    cancelAnimationFrame(commentLineRafId)
-    commentLineRafId = requestAnimationFrame(drawCommentLines)
-  }
-  window.addEventListener('scroll', requestDrawCommentLines, true)
-  window.addEventListener('resize', requestDrawCommentLines)
   // 8. 内部事件监听
   instance.listener.rangeStyleChange = function (payload) {
     // 控件类型
@@ -2239,28 +2227,106 @@ window.onload = async function () {
     activeMode.classList.add('active')
   }
 
-  let contentRequest = 0
-  const handleContentChange = async function () {
-    const request = ++contentRequest
-    // 字数
-    const wordCount = await instance.command.getWordCount()
-    if (request !== contentRequest) return
-    document.querySelector<HTMLSpanElement>('.word-count')!.innerText = `${
-      wordCount || 0
-    }`
-    // 目录
-    if (isCatalogShow) {
-      nextTick(() => {
-        updateCatalog()
+  let composing = false
+  let refreshPending = false
+  let linesPending = false
+  let refreshVersion = 0
+  let inFlightVersion: number | undefined
+  let refreshTimer: number | undefined
+  let commentLineRafId: number | undefined
+
+  function canRefreshDemo() {
+    return !composing && instance.state === 'ready'
+  }
+
+  function cancelDemoRefresh() {
+    window.clearTimeout(refreshTimer)
+    if (commentLineRafId !== undefined) cancelAnimationFrame(commentLineRafId)
+    refreshTimer = commentLineRafId = undefined
+  }
+
+  function scheduleDemoRefresh(delay: number) {
+    if (!canRefreshDemo()) return
+    if (refreshPending && refreshTimer === undefined &&
+      refreshVersion !== inFlightVersion) {
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = undefined
+        void refreshDemoContent()
+      }, delay)
+    }
+    if (linesPending && commentLineRafId === undefined) {
+      commentLineRafId = requestAnimationFrame(() => {
+        commentLineRafId = undefined
+        if (!canRefreshDemo()) return
+        linesPending = false
+        drawCommentLines()
       })
     }
-    // 批注
-    nextTick(() => {
-      updateComment()
-    })
   }
-  instance.listener.contentChange = debounce(handleContentChange, 200)
-  handleContentChange()
+
+  async function refreshDemoContent() {
+    if (!canRefreshDemo()) return
+    const version = refreshVersion
+    const { modelRevision } = instance.getPerformanceDiagnostics()
+    inFlightVersion = version
+    try {
+      const [wordCount, catalog, groupIds] = await Promise.all([
+        instance.command.getWordCount(),
+        isCatalogShow ? instance.command.getCatalog() : undefined,
+        instance.command.getGroupIds()
+      ])
+      if (!canRefreshDemo() || version !== refreshVersion) return
+      if (instance.getPerformanceDiagnostics().modelRevision !== modelRevision) {
+        requestDemoRefresh(200)
+        return
+      }
+      refreshPending = false
+      document.querySelector<HTMLSpanElement>('.word-count')!.innerText =
+        `${wordCount || 0}`
+      if (catalog !== undefined && isCatalogShow) updateCatalog(catalog)
+      updateComment(groupIds)
+    } catch (error) {
+      if (!canRefreshDemo() || version !== refreshVersion) return
+      refreshPending = false
+      console.error('更新示例侧栏失败', error)
+    } finally {
+      if (inFlightVersion === version) inFlightVersion = undefined
+    }
+  }
+
+  function requestDemoRefresh(delay = 0) {
+    refreshPending = true
+    refreshVersion++
+    window.clearTimeout(refreshTimer)
+    refreshTimer = undefined
+    scheduleDemoRefresh(delay)
+  }
+
+  function requestDrawCommentLines() {
+    linesPending = true
+    scheduleDemoRefresh(0)
+  }
+
+  instance.eventBus.on('compositionStateChange', active => {
+    composing = active
+    if (active) {
+      refreshVersion++
+      cancelDemoRefresh()
+    } else scheduleDemoRefresh(0)
+  })
+  window.addEventListener('scroll', requestDrawCommentLines, true)
+  window.addEventListener('resize', requestDrawCommentLines)
+  const destroyEditor = instance.destroy
+  instance.destroy = () => {
+    cancelDemoRefresh()
+    window.removeEventListener('scroll', requestDrawCommentLines, true)
+    window.removeEventListener('resize', requestDrawCommentLines)
+    commentLineSvg.remove()
+    destroyEditor()
+  }
+
+  instance.listener.contentChange = () => requestDemoRefresh(200)
+  requestDemoRefresh()
 
   instance.listener.saved = function (payload) {
     console.log('elementList: ', payload)

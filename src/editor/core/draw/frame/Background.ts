@@ -9,12 +9,10 @@ import { Draw } from '../Draw'
 export class Background {
   private draw: Draw
   private options: DeepRequired<IEditorOption>
-  private imageCache: Map<string, HTMLImageElement>
 
   constructor(draw: Draw) {
     this.draw = draw
     this.options = draw.getOptions()
-    this.imageCache = new Map()
   }
 
   private _renderBackgroundColor(
@@ -73,31 +71,6 @@ export class Background {
     }
   }
 
-  private _renderBackgroundImage(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number
-  ) {
-    const { background } = this.options
-    const imageElementCache = this.imageCache.get(background.image)
-    if (imageElementCache) {
-      this._drawImage(ctx, imageElementCache, width, height)
-    } else {
-      const img = new Image()
-      img.setAttribute('crossOrigin', 'Anonymous')
-      img.src = background.image
-      img.onload = () => {
-        this.imageCache.set(background.image, img)
-        this._drawImage(ctx, img, width, height)
-        // 避免层级上浮，触发编辑器二次渲染
-        this.draw.render({
-          isCompute: false,
-          isSubmitHistory: false
-        })
-      }
-    }
-  }
-
   public render(ctx: CanvasRenderingContext2D, pageNo: number) {
     const {
       background: { image, color, applyPageNumbers }
@@ -107,11 +80,14 @@ export class Background {
       (!applyPageNumbers?.length || applyPageNumbers.includes(pageNo))
     ) {
       const { width, height } = this.options
-      this._renderBackgroundImage(ctx, width, height)
-    } else {
-      const width = this.draw.getCanvasWidth(pageNo)
-      const height = this.draw.getCanvasHeight(pageNo)
-      this._renderBackgroundColor(ctx, color, width, height)
+      const bitmap = this.draw.getImageObserver().get(ctx.canvas, image)
+      if (bitmap) {
+        this._drawImage(ctx, bitmap, width, height)
+        return
+      }
     }
+    const width = this.draw.getCanvasWidth(pageNo)
+    const height = this.draw.getCanvasHeight(pageNo)
+    this._renderBackgroundColor(ctx, color, width, height)
   }
 }

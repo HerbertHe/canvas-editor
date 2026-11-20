@@ -1,12 +1,10 @@
 # 开发调试工具
 
-> 此处链接指向上游外部插件；它们并非本 fork 维护的插件，需验证异步初始化、字体与 API 兼容性。
+::: warning 兼容性暂未验证
+本分支暂未测试上游 Canvas Editor DevTools 扩展的兼容性。下方安装方式和功能是上游扩展的参考说明。 [上游扩展仓库](https://github.com/Hufe921/canvas-editor-devtools)
+:::
 
 Canvas Editor DevTools 是一个浏览器扩展插件，用于调试和分析 Canvas Editor 实例。
-
-::: tip
-插件仓库地址：https://github.com/Hufe921/canvas-editor-devtools
-:::
 
 ## 安装方式
 

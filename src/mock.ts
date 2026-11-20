@@ -58,10 +58,6 @@ export const options: IEditorOption = {
       scripts: [TextScript.THAI]
     }
   ],
-  // 原生段落增量复用（实验性；分页和位置仍重新计算）
-  lab: {
-    incrementalCompute: true
-  },
   trace: {
     author: '活动协调员'
   },

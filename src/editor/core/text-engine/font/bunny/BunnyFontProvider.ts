@@ -90,12 +90,12 @@ export class BunnyFontProvider {
         redirect: 'error'
       }
       const response = this.fetcher
-        ? await this.fetcher(bunnyResourceUrl(url), init)
-        : await sharedFontResources.fetch(url, init, version)
+        ? await this.fetcher(bunnyResourceUrl(url, kind), init)
+        : await sharedFontResources.fetch(url, init, version, kind)
       if (controller.signal.aborted)
         throw new DOMException('Request aborted', 'AbortError')
       if (!response.ok) throw new Error(`Bunny HTTP ${response.status}`)
-      if (response.url) bunnyResourceUrl(response.url)
+      if (response.url) bunnyResourceUrl(response.url, kind)
       const contentType = (response.headers.get('content-type') || '')
         .split(';')[0]
         .trim()

@@ -78,7 +78,7 @@ async function run() {
       ]
   const options = mergeOption({
     autoDownloadFonts: false,
-    lab: { incrementalCompute: params.has('incremental'),
+    lab: { performanceProfile: 'baseline', incrementalCompute: params.has('incremental'),
       glyphPathCache: params.has('advanced'),
       shapingRunCache: params.has('advanced'),
       incrementalFlow: params.has('advanced'),

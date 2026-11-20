@@ -3,12 +3,10 @@
 优化机制和限制见[性能优化原理](performance-principles.md)，
 基线与最新实测见 [Benchmark](benchmark.md)。
 
-实验项在 `lab` 下逐项默认关闭。当前统一使用 HarfBuzz，开启开关不会切换引擎。
+新实例默认使用同步性能优化和 IME 预览。所有配置均使用 HarfBuzz。
 
 ```typescript
-const editor = await Editor.create(container, data, {
-  lab: { performanceProfile: 'sync' }
-})
+const editor = await Editor.create(container, data)
 ```
 
 ## 输入性能分级配置
@@ -18,12 +16,12 @@ const editor = await Editor.create(container, data, {
 
 | profile | 行为 | 启用建议 |
 | --- | --- | --- |
-| `baseline` | 默认值，保留现有同步路径，实验优化全部关闭 | 发布默认与排查对照 |
-| `sync` | 路径/run 缓存、事务编辑/历史/覆盖、flow 范围接续/未变断行重放、行块位置/查询复用、脏页和绘制合并 | 在自身文档验证后按应用启用 |
+| `baseline` | 参考同步路径，各性能开关默认关闭 | 排查与对照 |
+| `sync` | 路径/run 缓存、事务编辑/历史/覆盖、flow 范围接续/未变断行重放、行块位置/查询复用、脏页和绘制合并 | 默认性能配置 |
 | `worker` | `sync` 加上简单正文的异步文本内核 | 实验；复杂范围、IME、几何消费者同步刷新 |
 
 三个 profile 都不自动开启 `workerTransfer` 或 `incrementalCompute`。
-Worker/同步增量尚未在全部目标文档达到 8ms/32ms 预算，保持 opt-in。
+部分目标文档的处理与几何延迟仍超过 8ms/32ms 预算。
 显式设置 `lab: { performanceProfile: 'worker', layoutWorker: false }`
 可以关闭异步内核，同时保留该档的同步优化。
 
@@ -90,7 +88,9 @@ const editor = await Editor.create(container, data, {
 })
 ```
 
-`imePreview` 默认 false，独立于 profile 和段落缓存。开启后按帧消费最新合成文本；
+省略 `performanceProfile` 时，`imePreview` 默认开启。显式选择任一 profile 时，
+用 `imePreview: true` 开启预览。可用 `imePreview: false` 单独关闭预览。
+开启后按帧消费最新合成文本。
 简单 LTR 正文单行、行高和基线不变时，使用 HarfBuzz 临时几何在原页面绘制预览，
 选字结束才写入最终文本。`sync` / `worker` profile 还启用 `imeWindowPreview`：
 长段落先尝试编辑行及前后校验行。同步预览可向后扩大窗口，最多十行、2048 个元素，

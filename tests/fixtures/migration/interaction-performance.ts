@@ -239,7 +239,7 @@ async function setup(next: Config) {
     pageMode: next.pageMode as any,
     ...(next.history ? {} : { historyMaxRecordCount: 0 }),
     autoDownloadFonts: false,
-    lab: { incrementalCompute: next.incremental,
+    lab: { performanceProfile: 'baseline', incrementalCompute: next.incremental,
       deferredPaint: next.deferredPaint,
       incrementalEditing: next.trackedEdits,
       transactionHistory: next.trackedEdits,

@@ -42,7 +42,8 @@ editor.command.executeSetRange(0, 1)
 
 `autoDownloadFonts` 默认 true，按当前实际缺字从 Bunny Fonts 下载基本字体。
 下载接口与缓存不上传文档原文；固定家族/字重/样式出现在网络 URL 中，
-全文上下文仅在本地选择片段。网络策略需允许 `https://fonts.bunny.net` 的 CSS 和字体资源。
+全文上下文仅在本地选择片段。网络策略需允许 `https://fonts.bunny.net` 的 CSS 和字体资源，
+以及 `https://cdn.jsdelivr.net/fontsource/fonts/` 下带版本的 WOFF/WOFF2 字体文件。
 字体与 WASM/解码器资源也受宿主 CSP、浏览器能力及部署路径影响。
 
 当前候选包括 Noto Sans（Latin/Greek/Cyrillic）、Noto Sans SC/JP/KR、

@@ -47,34 +47,14 @@ characters, every language/style or color emoji support. See the
 
 ## Benchmark
 
-Measured on Apple M1 Pro (8 logical CPUs, 16 GiB), Node 24.19.0, Chrome
-155, with fixed fonts, paging, history enabled, DPR 1 and middle edits at
-2Hz for 10 seconds. Values below are handler P50 in milliseconds, fixed
-trial 0; the final optimized configuration uses synchronous opt-in features.
+The same Chrome run compared the live upstream playground, the initial
+HarfBuzz migration and the current build. It exercised typing, repeat deletion
+and IME preedit in both the built-in demos and a shared 100-paragraph document.
 
-| Document / action | Initial baseline | Optimized | Reduction |
-| --- | ---: | ---: | ---: |
-| 100 paragraphs / input | 339.6 | 6.3 | 98.1% |
-| 100 paragraphs / Backspace | 357.1 | 7.5 | 97.9% |
-| 1000 paragraphs / input | 5296.0 | 34.8 | 99.3% |
-| 1000 paragraphs / Backspace | 5349.9 | 32.1 | 99.4% |
-| One long paragraph / input | 471.1 | 189.8 | 59.7% |
-| Large table / input | 42.4 | 20.0 | 52.8% |
-
-These are historical same-machine trends: Chrome changed from
-155.0.8059.85 to .86, so they are not a strict same-browser A/B.
-Compared with the immediately preceding optimization, thousand-paragraph
-position work fell 97.0% and query-index work fell 95.8%. In the 100-paragraph,
-30-second Worker Backspace test, offer-to-geometry P95 fell from 6718.4ms
-to 72.4ms and the mirror finished ready with no pending requests or edits.
-
-The default remains `baseline`; enable `lab.performanceProfile: 'sync'`
-only after validating your documents. Worker remains experimental and transfer
-is deferred. Long paragraphs, large tables and thousand-paragraph pressure
-still have expensive cases; handler/geometry budgets are not universally met.
-Geometry is a latency proxy, not measured screen presentation.
-Read the [full benchmark, three-trial ranges and raw data](docs/en/guide/benchmark.md)
-([中文](docs/guide/benchmark.md)) and [configuration](docs/en/guide/lab.md).
+New editors default to the synchronous performance preset and IME preview.
+Use `lab: { performanceProfile: 'baseline' }` to select the reference path.
+[Benchmark results and raw logs](docs/en/guide/benchmark.md) ·
+[中文](docs/guide/benchmark.md) · [Configuration](docs/en/guide/lab.md)
 
 ## Rendering support
 
@@ -153,9 +133,10 @@ deploy all generated chunks together, including workers and HarfBuzz WASM.
 
 When migrating, replace the upstream package dependency and imports, remove
 old engine options, await readiness and provide fonts for the required text.
-Revalidate pagination and plugins: font metrics and initialization differ from
-upstream. Upstream Word/Excel and other plugins are external projects whose
-compatibility with this fork must be tested individually.
+Revalidate pagination with the fonts used by your application. Compatibility
+with upstream plugins, including Word and Excel, and the upstream DevTools
+browser extension has yet to be tested on this fork.
+[Plugins](docs/en/guide/plugin-custom.md) · [DevTools](docs/en/guide/devtools.md)
 
 ## Features and development
 

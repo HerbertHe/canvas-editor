@@ -167,7 +167,7 @@ async function run(id: string, incremental: boolean) {
     ...migrationOptions,
     ...sample.options,
     autoDownloadFonts: false,
-    lab: { incrementalCompute: incremental },
+    lab: { performanceProfile: 'baseline', incrementalCompute: incremental },
     ...(historical ? { textEngine: 'harfbuzz' } : {}),
     fonts: [{ family: 'Noto Naskh Arabic', data: bytes }]
   })

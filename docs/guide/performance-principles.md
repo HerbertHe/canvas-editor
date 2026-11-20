@@ -2,8 +2,8 @@
 
 本页解释当前实现如何减少输入、持续删除和中文预编辑的重复工作。
 实测结果见 [Benchmark](benchmark.md)，开关和支持范围见[实验配置](lab.md)。
-默认仍使用 baseline；`imePreview` 与 `imeWorkerPreview` 均默认关闭，
-选择 sync/worker profile 不会自动开启它们。发布验收保持 hold。
+新实例默认使用同步性能配置和 `imePreview`。显式选择 profile 时可独立配置
+`imePreview`。异步 IME 预览仍需显式开启，历史发布验收结果为 hold。
 
 ## 输入为什么会卡顿
 
@@ -161,7 +161,7 @@ HarfBuzz/WASM 排版与文档流、索引、历史及缓存依赖仍按现有 CP
 
 ## 如何阅读和复现结果
 
-最新报告在 [IME-14 自动验收结果](benchmark.md#本轮最终自动验收结果)。
+当前版本与上游的对照见[性能基准](benchmark.md)。旧版专项数据见[历史 IME-14 日志](performance-baselines/ime-release-2026-11-03.json)。
 该报告五场景的 baseline→sync 对照包含多项优化，不能把总收益全部归给某一个开关；
 大表缓存开关、IME-10/11/12/13 历史专项才分别验证对应范围。
 旧日期数据保留当时的代码与口径，不作为本次重跑的结果。

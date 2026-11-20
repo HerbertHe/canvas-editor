@@ -100,9 +100,9 @@ export function mergeOption(
     typeof options.autoDownloadFonts !== 'boolean'
   )
     throw new TypeError('autoDownloadFonts must be a boolean')
+  const selectedProfile = options.lab?.performanceProfile
+  const profile = selectedProfile ?? 'sync'
   const labOptions: Required<ILabOption> = {
-    performanceProfile: 'baseline',
-    imePreview: false,
     imeWindowPreview: false,
     imeTableLayout: false,
     imeWorkerPreview: false,
@@ -120,8 +120,10 @@ export function mergeOption(
     incrementalCoverage: false,
     historyByteBudget: 16 * 1024 * 1024,
     paragraphCacheByteBudget: 64 * 1024 * 1024,
-    ...performanceProfile(options.lab?.performanceProfile ?? 'baseline'),
-    ...options.lab
+    ...performanceProfile(profile),
+    ...options.lab,
+    performanceProfile: profile,
+    imePreview: options.lab?.imePreview ?? (selectedProfile === undefined)
   }
   for (const key of ['historyByteBudget', 'paragraphCacheByteBudget'] as const) {
     if (!Number.isFinite(labOptions[key]) || labOptions[key] <= 0)

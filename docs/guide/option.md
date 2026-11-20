@@ -114,7 +114,9 @@ interface IEditorOption {
 
 ```typescript
 interface ILabOption {
-  incrementalCompute?: boolean // 行级增量行计算。默认：false
+  performanceProfile?: 'baseline' | 'sync' | 'worker' // 默认 sync
+  imePreview?: boolean // 省略 performanceProfile 时默认开启
+  incrementalCompute?: boolean // 旧段落缓存，默认关闭
 }
 ```
 

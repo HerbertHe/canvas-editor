@@ -3,13 +3,11 @@
 See [performance principles](performance-principles.md) for mechanisms/limits and
 [Benchmark](benchmark.md) for baseline comparisons and the latest measurements.
 
-Experimental options live under `lab` and are disabled by default. All text uses
-HarfBuzz; enabling an experimental option never selects a different engine.
+New editors use synchronous performance optimizations and IME preview by
+default. All settings use HarfBuzz.
 
 ```typescript
-const editor = await Editor.create(container, data, {
-  lab: { performanceProfile: 'sync' }
-})
+const editor = await Editor.create(container, data)
 ```
 
 ## Performance rollout profiles
@@ -19,13 +17,13 @@ editor with `baseline` and remove explicit opt-ins to return to the control path
 
 | Profile | Behavior | Rollout |
 | --- | --- | --- |
-| `baseline` | Existing synchronous behavior, experimental optimizations off | Default |
-| `sync` | Path/run caches, tracked edits/history/coverage, range flow commits, cached-break re-placement, row-block position/query reuse, dirty pages and deferred painting | Application opt-in after validation |
+| `baseline` | Reference synchronous behavior with performance switches off | Diagnosis and comparison |
+| `sync` | Path/run caches, tracked edits/history/coverage, range flow commits, cached-break re-placement, row-block position/query reuse, dirty pages and deferred painting | Default performance profile |
 | `worker` | `sync` plus asynchronous simple-body text layout | Experimental |
 
 No preset enables `workerTransfer` or `incrementalCompute`. The 8ms main-thread
 and 32ms visible-update goals have not been met across the target workloads.
-Defaults remain unchanged. `lab: { performanceProfile: 'worker', layoutWorker:
+`lab: { performanceProfile: 'worker', layoutWorker:
 false }` retains that preset's synchronous optimizations while disabling layout
 offloading.
 
@@ -98,8 +96,9 @@ internal Draw objects or snapshot structures.
 
 ## Experimental IME preview
 
-Opt in with `lab: { performanceProfile: 'sync', imePreview: true }`.
-`imePreview` defaults to false and is independent of profiles and paragraph caching.
+Omit `performanceProfile` to use IME preview by default. When explicitly
+selecting a profile, set `imePreview: true` to enable it. Set `imePreview: false`
+to disable preview independently.
 It consumes the latest preedit state once per frame. Supported simple LTR body
 paragraphs use a temporary HarfBuzz line when line count, height and baseline remain
 unchanged; final text is committed when composition ends. The sync/worker presets

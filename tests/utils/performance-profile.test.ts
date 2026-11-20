@@ -2,9 +2,34 @@ import { describe, expect, it } from 'vitest'
 import { mergeOption } from '@/editor/utils/option'
 
 describe('performance rollout profiles', () => {
-  it('preserves baseline defaults and keeps transfer opt-in in every profile', () => {
-    const baseline = mergeOption({}).lab
-    expect(baseline.performanceProfile).toBe('baseline')
+  it('defaults to the synchronous optimizations with IME preview', () => {
+    const lab = mergeOption({}).lab
+    expect(lab).toMatchObject({
+      performanceProfile: 'sync',
+      imePreview: true,
+      incrementalEditing: true,
+      transactionHistory: true,
+      incrementalCoverage: true,
+      incrementalFlow: true,
+      incrementalCommit: true,
+      glyphPathCache: true,
+      shapingRunCache: true,
+      imeWindowPreview: true,
+      imeTableLayout: true,
+      dirtyPagePaint: true,
+      deferredPaint: true,
+      incrementalCompute: false,
+      layoutWorker: false,
+      workerTransfer: false,
+      imeWorkerPreview: false
+    })
+    expect(mergeOption({ lab: { imePreview: false } }).lab).toMatchObject({
+      performanceProfile: 'sync',
+      imePreview: false
+    })
+  })
+
+  it('preserves explicit presets and keeps transfer opt-in', () => {
     for (const profile of ['baseline', 'sync', 'worker'] as const) {
       const options = mergeOption({ lab: { performanceProfile: profile } }).lab
       expect(options.workerTransfer).toBe(false)

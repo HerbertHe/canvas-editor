@@ -72,7 +72,7 @@ rtk npm run test:performance:acceptance -- \
 
 门禁输出 `pass`、`hold` 或 `fail`。仅 `pass` 默认返回 0；`--report-only` 可为合法但未达标的 `hold` 输出报告，证据损坏、源码过期或操作遗漏仍非零。不得降低预算或删慢样本来通过门禁。
 
-固定预算为 handler P95 ≤8ms、DOM→geometry P95 ≤32ms。当前结果仍为 **hold**：部分延迟超预算，真实系统 IME/长按、实际呈现和长期原生/WASM/GPU 内存尚需人工验收。默认仍为 `baseline`，`sync` 按应用验证后 opt-in，Worker 实验，transfer 暂缓。
+固定预算为 handler P95 ≤8ms、DOM→geometry P95 ≤32ms。历史验收结果为 **hold**，部分延迟超预算，真实系统 IME/长按、实际呈现和长期原生/WASM/GPU 内存尚需人工验收。当前默认性能配置见[实验配置](lab.md)。
 
 保留的 manifest 引用最终性能数据；为清理临时产物，其 `automated` 当前为空。重跑时需生成并填入质量、构建、生命周期和三浏览器差分/兼容/包消费证据。条目使用 `{ "kind": "quality", "path": "..." }` 等格式，浏览器证据额外提供 `engine`；完整校验由 `scripts/performanceAcceptance.ts` 定义。源码哈希必须匹配，后续修改运行时代码需重新测量。不能根据历史摘要填写 pass。
 

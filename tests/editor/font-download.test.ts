@@ -50,6 +50,19 @@ afterEach(() => {
 
 describe('automatic basic font download lifecycle', () => {
   it('defaults to enabled, resolves real missing text and preserves content/selection', async () => {
+    const bunnyFontUrl = parseBunnyFontCss(css, cssUrl, 'v').find(
+      face => face.family === 'Noto Naskh Arabic' && face.subset === 'arabic'
+    )!.url
+    const fontsourceUrl =
+      'https://cdn.jsdelivr.net/fontsource/fonts/noto-naskh-arabic@5.3.0/arabic-400-normal.woff2'
+    fetcher.mockResolvedValueOnce(
+      new Response(css.replaceAll(bunnyFontUrl, fontsourceUrl), {
+        headers: { 'content-type': 'text/css' }
+      })
+    )
+    fetcher.mockResolvedValueOnce(
+      Object.defineProperty(fontResponse(), 'url', { value: fontsourceUrl })
+    )
     const editor = await create()
     const before = editor.command.getValue().data
     editor.command.executeSetRange(0, 1)
@@ -72,6 +85,7 @@ describe('automatic basic font download lifecycle', () => {
     )
     expect(console.warn).not.toHaveBeenCalled()
     expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher.mock.calls[1][0]).toBe(fontsourceUrl)
     expect(editor.register.getFontRevision()).toBe(1)
     expect(editor.command.getValue().data).toEqual(before)
     expect(editor.command.getRange()).toMatchObject({

@@ -2087,9 +2087,9 @@ export class Draw {
     if (this.options.lab?.imePreview && this.canvasEvent.isComposing)
       this.canvasEvent.flushComposition()
     this.options.scale = payload
-    this._updatePageSizes()
     const cursorPosition = this.position.getCursorPosition()
     this.render({
+      isPageScaleChanged: true,
       isSubmitHistory: false,
       isSetCursor: !!cursorPosition,
       curIndex: cursorPosition?.index
@@ -2353,8 +2353,7 @@ export class Draw {
   }
 
   // 按各页实际尺寸（方向/缩放/DPR）校正页面 canvas 与容器宽度
-  private _updatePageSizes() {
-    const dpr = this.getPagePixelRatio()
+  private _updatePageSizes(deferBitmapResize = false) {
     const isPagingMode = this.getIsPagingMode()
     this.container.style.width = `${this._getPageMaxWidth()}px`
     this.pageList.forEach((p, i) => {
@@ -2365,18 +2364,22 @@ export class Draw {
       if (isPagingMode) {
         p.style.height = `${height}px`
       }
-      const canvasHeight = isPagingMode
-        ? height
-        : Number.parseFloat(p.style.height) || height
-      const pixelWidth = Math.floor(width * dpr)
-      const pixelHeight = Math.floor(canvasHeight * dpr)
-      const isSizeChanged = p.width !== pixelWidth || p.height !== pixelHeight
-      if (isSizeChanged) {
-        p.width = pixelWidth
-        p.height = pixelHeight
-        this._initPageContext(this.ctxList[i])
-      }
+      if (!deferBitmapResize) this._resizePageBitmap(i, width, height)
     })
+  }
+
+  private _resizePageBitmap(pageNo: number, width: number, height: number) {
+    const canvas = this.pageList[pageNo]
+    const dpr = this.getPagePixelRatio()
+    const canvasHeight = this.getIsPagingMode()
+      ? height
+      : Number.parseFloat(canvas.style.height) || height
+    const pixelWidth = Math.floor(width * dpr)
+    const pixelHeight = Math.floor(canvasHeight * dpr)
+    if (canvas.width === pixelWidth && canvas.height === pixelHeight) return
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight
+    this._initPageContext(this.ctxList[pageNo])
   }
 
   private _initPageContext(ctx: CanvasRenderingContext2D) {
@@ -3851,7 +3854,8 @@ export class Draw {
     } = this.options
     const isPrintMode = this.mode === EditorMode.PRINT
     const isContinuityMode = pageMode === PageMode.CONTINUITY
-    const { innerWidth } = this.getPageSize(pageNo)
+    const { innerWidth, width, height } = this.getPageSize(pageNo)
+    this._resizePageBitmap(pageNo, width, height)
     const ctx = this.ctxList[pageNo]
     // 判断当前激活区域-非正文区域时元素透明度降低
     ctx.globalAlpha = !this.zone.isMainActive() ? inactiveAlpha : 1
@@ -3977,7 +3981,7 @@ export class Draw {
     this.dirtyPages.delete(pageNo)
   }
 
-  private _lazyRender() {
+  private _lazyRender(eagerPages: number[]) {
     if (this.options.lab?.dirtyPagePaint) {
       if (!this.lazyRenderIntersectionObserver) {
         this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
@@ -4005,27 +4009,24 @@ export class Draw {
           this.lazyRenderIntersectionObserver.observe(page)
         }
       }
+      for (const pageNo of eagerPages) this.paintPage(pageNo)
       for (const page of this.visiblePages) {
         const index = Number(page.dataset.index)
         if (this.dirtyPages.has(index)) this.paintPage(index)
       }
       return
     }
-    const positionList = this.position.getOriginalMainPositionList(true)
-    const elementList = this.getOriginalMainElementList()
     this._disconnectLazyRender()
+    for (const pageNo of eagerPages) this.paintPage(pageNo)
+    const painted = new Set(eagerPages)
     this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const index = Number((<HTMLCanvasElement>entry.target).dataset.index)
-          this._drawPage({
-            elementList,
-            positionList,
-            rowList: this.pageRowList[index],
-            pageNo: index
-          })
-        }
-      })
+      for (const entry of entries) {
+        const page = entry.target as HTMLCanvasElement
+        const index = Number(page.dataset.index)
+        const wasPainted = painted.delete(index)
+        if (entry.isIntersecting && !wasPainted && this.pageList[index] === page)
+          this.paintPage(index)
+      }
     })
     this.pageList.forEach(el => {
       this.lazyRenderIntersectionObserver!.observe(el)
@@ -4462,9 +4463,13 @@ export class Draw {
     return this.geometryRevision
   }
 
-  private paintRender(isLazy: boolean) {
-    if (isLazy && this.getIsPagingMode()) this._lazyRender()
-    else this._immediateRender()
+  private paintRender(isLazy: boolean, isPageScaleChanged = false) {
+    if (isLazy && this.getIsPagingMode()) {
+      const eagerPages = isPageScaleChanged
+        ? this.scrollObserver.getPageVisibleInfo().visiblePageNoList
+        : []
+      this._lazyRender(eagerPages)
+    } else this._immediateRender()
   }
 
   private computeRenderGeometry(innerWidth: number, isPagingMode: boolean) {
@@ -4543,7 +4548,10 @@ export class Draw {
     }
   }
 
-  private commitRenderPages(oldPageDirectionList: typeof this.pageDirectionList) {
+  private commitRenderPages(
+    oldPageDirectionList: typeof this.pageDirectionList,
+    isPageScaleChanged: boolean
+  ) {
     // 创建纸张
     for (let i = 0; i < this.pageRowList.length; i++) {
       if (!this.pageList[i]) {
@@ -4571,8 +4579,10 @@ export class Draw {
       oldPageDirectionList.some(
         (direction, index) => direction !== this.pageDirectionList[index]
       )
-    if (isPageDirectionChanged) {
-      this._updatePageSizes()
+    if (isPageDirectionChanged || isPageScaleChanged) {
+      // Resizing the backing store clears it. During zoom keep the old
+      // bitmap until the page can be resized and painted in the same turn.
+      this._updatePageSizes(isPageScaleChanged && this.getIsPagingMode())
     }
   }
 
@@ -4681,6 +4691,7 @@ export class Draw {
       isSubmitHistory = true,
       isSetCursor = true,
       isLazy = true,
+      isPageScaleChanged = false,
       isFirstRender = false
     } = payload || {}
     const isCompute = payload?.isCompute !== false ||
@@ -4711,21 +4722,22 @@ export class Draw {
     // 清除光标等副作用
     this.imageObserver.clearAll()
     this.cursor.recoveryCursor()
-    this.commitRenderPages(oldPageDirectionList)
+    this.commitRenderPages(oldPageDirectionList, isPageScaleChanged)
     if (this.options.lab?.dirtyPagePaint) {
-      const changed = isCompute && this.layoutChange &&
+      const changed = !isPageScaleChanged && isCompute && this.layoutChange &&
         oldPageSize === this.pageRowList.length && this.usedIncrementalFlow
         ? this.layoutChange.changedPages
         : this.pageRowList.map((_, index) => index)
       for (const page of changed) this.dirtyPages.add(page)
     }
     if (
-      payload?.isDeferredPaint && isLazy && isPagingMode && !this.isPrintMode()
+      payload?.isDeferredPaint && !isPageScaleChanged &&
+      isLazy && isPagingMode && !this.isPrintMode()
     ) {
       this.requestPaint()
     } else {
       this.cancelPaint()
-      this.paintRender(isLazy)
+      this.paintRender(isLazy, isPageScaleChanged)
     }
     // 光标重绘
     if (isSetCursor) {

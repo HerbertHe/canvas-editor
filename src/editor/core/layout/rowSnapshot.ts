@@ -7,6 +7,31 @@ import { cellLayoutState } from './CellLayoutState'
 import { lineCarets, textRangeRects } from './InteractionGeometry'
 import { rowElementMetrics, rowSourceIndex } from './rowGeometry'
 
+// Incremental layouts expose projected arrays as proxies. Materialize them
+// for compatibility snapshots while leaving built-in values to structuredClone.
+function materializeLayoutArrays(
+  value: unknown,
+  seen = new WeakMap<object, object>()
+): unknown {
+  if (!value || typeof value !== 'object') return value
+  const cached = seen.get(value)
+  if (cached) return cached
+  const isArray = Array.isArray(value)
+  const prototype = Object.getPrototypeOf(value)
+  if (!isArray && prototype !== Object.prototype && prototype !== null)
+    return value
+  const copy = isArray ? new Array(value.length) : Object.create(null)
+  seen.set(value, copy)
+  for (const [key, child] of Object.entries(value))
+    Object.defineProperty(copy, key, {
+      value: materializeLayoutArrays(child, seen),
+      enumerable: true,
+      configurable: true,
+      writable: true
+    })
+  return copy
+}
+
 /** Detached compatibility output. Native layout/paint must never consume it. */
 export function snapshotRows(
   rows: LayoutRow[],
@@ -87,6 +112,12 @@ export function snapshotRows(
           }))
         }))
     }
-    return deepClone(result)
+    try {
+      return deepClone(result)
+    } catch (error) {
+      if (!(error instanceof Error) || error.name !== 'DataCloneError')
+        throw error
+      return deepClone(materializeLayoutArrays(result)) as IRow
+    }
   })
 }

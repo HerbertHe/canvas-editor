@@ -47,9 +47,9 @@ import type { ISpellcheckOption } from './Spellcheck'
 import type { PerformanceProfile } from '../utils/performanceProfile'
 
 export interface ILabOption {
-  /** Opt-in constructor preset. Explicit switches override it. Default baseline. */
+  /** Constructor preset. Explicit switches override it. Default sync. */
   performanceProfile?: PerformanceProfile
-  /** Experimental frame-coalesced IME with conservative local preview. */
+  /** Frame-coalesced IME preview. Defaults on when no profile is specified. */
   imePreview?: boolean
   /** Validate a bounded row window for long-paragraph IME previews. */
   imeWindowPreview?: boolean
@@ -75,7 +75,7 @@ export interface ILabOption {
   historyByteBudget?: number
   /** Estimated retained paragraph cache bytes, shared by both cache paths. */
   paragraphCacheByteBudget?: number
-  /** Coalesce safe input paints after synchronous layout. Default: false. */
+  /** Coalesce safe input paints. Defaults on with sync and worker profiles. */
   deferredPaint?: boolean
   /**
    * 行级增量行计算：编辑时仅从受影响行断点续算，区间外行复用。
@@ -169,7 +169,7 @@ export interface IEditorOption {
   autoDownloadFonts?: boolean
   /** Explicit binaries/URLs. System fonts and CSS alone cannot supply HB data. */
   fonts?: IEditorFontFace[]
-  // 实验性功能（逐项默认关闭，未来可能调整或移除）
+  // 性能配置与实验性功能
   lab?: ILabOption
   table?: ITableOption
   header?: IHeader

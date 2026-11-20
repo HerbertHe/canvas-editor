@@ -37,7 +37,7 @@
 | 包格式                                       | ESM + UMD                              | 仅 ESM 与类型声明；包根 exports；不支持 require/UMD                  |
 | 页面绘制                                     | 主干 Canvas，另有 SVG 实验分支         | 默认且仅 Canvas；SVG 绘制与独立 SVG 导出暂缓、不可用                 |
 | 表格、控件、分页、段落间距、批注、留痕、宏等 | 上游已有                               | 继承并适配，不作为本 fork 原创新功能宣传                             |
-| 插件生态                                     | 上游维护的外部插件                     | 可作为参考；需逐项验证字体、异步初始化及 API 兼容性                  |
+| 插件与 DevTools                              | 上游维护的插件和浏览器扩展             | 本分支暂未验证兼容性。见[插件接入](./plugin-custom.md)和 [DevTools](./devtools.md) |
 
 依据：[上游包配置](https://github.com/Hufe921/canvas-editor/blob/1d7cd1a7742f3e8af1f67536a5157d03b2945de7/package.json)、
 [上游文字绘制](https://github.com/Hufe921/canvas-editor/blob/1d7cd1a7742f3e8af1f67536a5157d03b2945de7/src/editor/core/draw/particle/TextParticle.ts)。

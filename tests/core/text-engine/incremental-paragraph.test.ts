@@ -41,7 +41,7 @@ async function setup(
     fonts: [{ family: 'Noto Naskh Arabic', data: fontData }],
     header: { disabled: true },
     footer: { disabled: true },
-    lab: { incrementalCompute },
+    lab: { performanceProfile: 'baseline', incrementalCompute },
     ...extra
   })
   formatElementList(main, {

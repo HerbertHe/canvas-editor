@@ -17,16 +17,24 @@ export interface BunnyFontResource {
 
 export function bunnyResourceUrl(
   value: string,
+  kind: 'css' | 'font',
   base = 'https://fonts.bunny.net/css'
 ) {
   const url = new URL(value, base)
+  const fontsource =
+    kind === 'font' &&
+    url.origin === 'https://cdn.jsdelivr.net' &&
+    !url.search &&
+    /^\/fontsource\/fonts\/[a-z0-9-]+@\d+\.\d+\.\d+\/[a-z0-9-]+\.woff2?$/.test(
+      url.pathname
+    )
   if (
-    url.origin !== 'https://fonts.bunny.net' ||
     url.username ||
     url.password ||
-    url.hash
+    url.hash ||
+    (url.origin !== 'https://fonts.bunny.net' && !fontsource)
   )
-    throw new Error('Font URL must belong to https://fonts.bunny.net')
+    throw new Error(`Untrusted Bunny ${kind} resource URL`)
   return url.href
 }
 
@@ -96,6 +104,7 @@ export function parseBunnyFontCss(
     if (!selected) continue
     const url = bunnyResourceUrl(
       selected[1] || selected[2] || selected[3],
+      'font',
       cssUrl
     )
     const ranges = fields.get('unicode-range')
@@ -107,7 +116,11 @@ export function parseBunnyFontCss(
       url,
       format: selected[4].toLowerCase() as BunnyFontFormat,
       sources: supported.map(source => ({
-        url: bunnyResourceUrl(source[1] || source[2] || source[3], cssUrl),
+        url: bunnyResourceUrl(
+          source[1] || source[2] || source[3],
+          'font',
+          cssUrl
+        ),
         format: source[4].toLowerCase() as BunnyFontFormat
       })),
       unicodeRanges: ranges ? parseUnicodeRanges(ranges) : null,

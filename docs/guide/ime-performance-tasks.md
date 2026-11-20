@@ -174,7 +174,7 @@ render 和销毁流程。与 06 联调后才接管实际预览。
 标尺、选区样式和工具弹层延后，结束及公开查询/导出屏障补齐，内容/页数事件保留。
 简单预览支持无障碍输入反馈，同内容不重复写入 live region，合成反馈不读取 offsetHeight。
 默认关闭路径保留原行为；真实屏幕阅读器和系统输入法仍需 IME-14 手动验收。
-工作量对照见 [Benchmark](benchmark.md#ime-07-派生工作专项)。
+工作量对照见 [历史 IME 插桩日志](performance-baselines/ime-2026-10-30.json)。
 
 ## IME-08：光标、候选窗锚点与滚动同步
 
@@ -472,7 +472,7 @@ BASE_URL=http://127.0.0.1:3020 npm run test:performance:ime:table-worker:anchors
 **本轮结果**：七项质量阶段和三浏览器 21 组正确性阶段全部通过，179 文件 / 1169 项单测通过。
 本轮重跑有 7 项性能预算失败（三引擎长段/600 格大表及 Firefox 1000 段）；
 人工记录缺失，保持 hold。
-完整逐场景对照见 [Benchmark 的 IME-14 结果](benchmark.md#本轮最终自动验收结果)。
+完整逐场景对照见 [历史 IME-14 日志](performance-baselines/ime-release-2026-11-03.json)。
 
 **已实现的自动入口**：
 

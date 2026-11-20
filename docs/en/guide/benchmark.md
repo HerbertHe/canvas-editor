@@ -8,7 +8,7 @@ Target order rotated between trials.
 | --- | --- |
 | Upstream playground | The page reported 1.2.0. Entry asset `index-VPntKjiG.js` had SHA-256 prefix `de04b0fea892`. [Live upstream playground](https://hufe.club/canvas-editor/) |
 | Initial migration | Production playground rebuilt from the initial documentation-site revision `c5a00d38`, with its original defaults. |
-| Current build | Production playground built from `bb315ee9` plus working-tree changes, with the default `sync` preset and IME preview. Asset hashes and the source diff fingerprint are in the raw log. |
+| Current build | Production playground built from `dd3cfccf` plus the P0/P1 working-tree changes, with the default `sync` preset and IME preview. Asset hashes and the source diff fingerprint are in the raw log. |
 
 ## Built-in playgrounds
 
@@ -22,11 +22,11 @@ Each cell shows pooled **P50 / P95 (ms)** across three trials.
 
 | Metric | Upstream playground | Initial migration | Current build |
 | --- | ---: | ---: | ---: |
-| Typing handler | 2.2 / 4.3 | 107.6 / 134.9 | 44.3 / 89.3 |
-| Backspace handler | 1.9 / 4.3 | 106.4 / 122.1 | 43.3 / 48.2 |
-| Delete handler | 2.4 / 5.2 | 107.9 / 123.1 | 43.9 / 63.2 |
-| IME preedit handler | 2.1 / 3.9 | 104.5 / 122.8 | 0.0 / 0.1 |
-| IME preedit to second rAF | 23.4 / 30.8 | 109.0 / 128.4 | 84.1 / 283.8 |
+| Typing handler | 2.5 / 3.9 | 109.5 / 131.1 | 7.4 / 48.0 |
+| Backspace handler | 2.0 / 4.7 | 106.6 / 121.3 | 6.6 / 49.7 |
+| Delete handler | 2.4 / 4.1 | 107.8 / 116.9 | 5.9 / 7.2 |
+| IME preedit handler | 1.9 / 3.8 | 104.8 / 130.5 | 0.0 / 0.1 |
+| IME preedit to second rAF | 26.3 / 32.4 | 111.5 / 135.1 | 29.4 / 31.6 |
 
 ## Shared 100-paragraph document
 
@@ -39,19 +39,19 @@ respectively. Each version used its own font resolution and layout pipeline.
 
 | Metric | Upstream playground | Initial migration | Current build |
 | --- | ---: | ---: | ---: |
-| Typing handler | 3.4 / 5.3 | 403.2 / 469.4 | 6.7 / 9.0 |
-| Backspace handler | 3.3 / 5.4 | 418.2 / 482.9 | 6.6 / 7.8 |
-| Delete handler | 3.4 / 5.1 | 411.7 / 473.4 | 7.2 / 9.6 |
-| IME preedit handler | 3.4 / 4.0 | 402.8 / 444.7 | 0.0 / 0.1 |
-| IME preedit to second rAF | 24.8 / 31.9 | 414.9 / 460.4 | 22.3 / 36.3 |
+| Typing handler | 3.2 / 5.3 | 418.2 / 573.8 | 7.0 / 8.3 |
+| Backspace handler | 3.7 / 5.2 | 412.4 / 460.2 | 6.5 / 8.3 |
+| Delete handler | 3.0 / 6.6 | 417.5 / 503.7 | 6.9 / 9.1 |
+| IME preedit handler | 3.1 / 3.8 | 418.4 / 473.2 | 0.0 / 0.1 |
+| IME preedit to second rAF | 26.8 / 31.2 | 430.8 / 493.9 | 28.9 / 31.2 |
 
-On the shared workload, Backspace handler P95 fell from **482.9 ms**
-in the initial migration to **7.8 ms** in the current build. Upstream
-recorded **5.4 ms**. In the built-in playgrounds, IME preedit to second rAF
-P95 was **30.8 ms** upstream, **128.4 ms** in the initial migration
-and **283.8 ms** in the current build. The current playground improved
-the median while its slowest updates took longer. A short handler can leave
-layout and painting work for later browser frames.
+On the shared workload, Backspace handler P95 fell from **460.2 ms**
+in the initial migration to **8.3 ms** in the current build. Upstream
+recorded **5.2 ms**. In the built-in playgrounds, IME preedit to second rAF
+P95 was **32.4 ms** upstream, **135.1 ms** in the initial migration
+and **31.6 ms** in the current build. The current built-in playground’s
+Backspace handler had a median of **6.6 ms** and a P95 of
+**49.7 ms**, showing a wider spread in the slowest samples.
 
 ## Method and reproduction
 
@@ -75,7 +75,7 @@ Build the current playground with `npm run docs:build`. Export the initial
 revision into a temporary directory with `git archive c5a00d38`, reuse the
 project dependencies and build it with
 `DOCS_BASE=/initial/ node scripts/build-docs-demo.mjs`. Serve both production
-builds at their configured base paths and run:
+builds at their configured base paths and set the URLs below.
 
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs \

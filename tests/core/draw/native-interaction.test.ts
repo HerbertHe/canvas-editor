@@ -18,6 +18,7 @@ import {
 import { LineGeometryIndex } from '@/editor/core/layout/LineGeometryIndex'
 import { Listener } from '@/editor/core/listener/Listener'
 import { Override } from '@/editor/core/override/Override'
+import { ImageObserver } from '@/editor/core/observer/ImageObserver'
 import { ZERO } from '@/editor/dataset/constant/Common'
 import { EditorZone, PaperDirection } from '@/editor/dataset/enum/Editor'
 import { ElementType } from '@/editor/dataset/enum/Element'
@@ -45,7 +46,11 @@ afterEach(() => {
   document.body.replaceChildren()
   vi.restoreAllMocks()
 })
-async function setup(main: IElement[], extra: Partial<IEditorOption> = {}) {
+async function setup(
+  main: IElement[],
+  extra: Partial<IEditorOption> = {},
+  header: IElement[] = [{ value: ZERO }]
+) {
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   const options = mergeOption({
     autoDownloadFonts: false,
@@ -62,7 +67,7 @@ async function setup(main: IElement[], extra: Partial<IEditorOption> = {}) {
     footer: { disabled: true },
     ...extra
   })
-  const content = { main, header: [{ value: ZERO }], footer: [{ value: ZERO }] }
+  const content = { main, header, footer: [{ value: ZERO }] }
   Object.values(content).forEach(elements =>
     formatElementList(elements, {
       editorOptions: options,
@@ -121,6 +126,120 @@ it('bounds splice arguments for a very large insertion', async () => {
   expect(elements.length).toBe(150004)
   expect(inserted.every((element, i) => elements[i + 2] === element)).toBe(true)
   expect(elements[150002]).toBe(suffix)
+})
+
+it('paints the visible editing page before other visible or prefetched pages', async () => {
+  const root = document.createElement('div')
+  root.id = 'paint-test-scroll-root'
+  document.body.append(root)
+  const rect = (y: number, height: number) =>
+    DOMRect.fromRect({ x: 20, y, width: 400, height })
+  vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(rect(90, 270))
+  Object.defineProperties(root, {
+    clientHeight: { value: 270 },
+    clientWidth: { value: 400 }
+  })
+  const main = Array.from({ length: 4 }, (_, i): IElement[] => [
+    ...(i ? [{ value: ZERO, type: ElementType.PAGE_BREAK }] : []),
+    { value: 'page ' + i }
+  ]).flat()
+  const draw = await setup(main, { scrollContainerSelector: '#' + root.id })
+  root.append(draw.getContainer().parentElement!)
+  let offset = 0
+  draw.getPageList().forEach((page, index) => {
+    vi.spyOn(page, 'getBoundingClientRect')
+      .mockImplementation(() => rect(index * 320 - 140 - offset, 300))
+  })
+  const frames = new Map<number, FrameRequestCallback>()
+  let id = 0
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+    frames.set(++id, callback)
+    return id
+  })
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => {
+    frames.delete(id)
+  })
+  let time = 100
+  vi.spyOn(performance, 'now').mockImplementation(() => time)
+  const pages: number[] = []
+  const drawPage = Reflect.get(draw, '_drawPage').bind(draw)
+  vi.spyOn(draw as any, '_drawPage').mockImplementation((payload: any) => {
+    pages.push(payload.pageNo)
+    time += 9
+    drawPage(payload)
+  })
+  const frame = () => {
+    const callbacks = [...frames.values()]
+    frames.clear()
+    callbacks.forEach(callback => callback(time))
+  }
+  draw.setPageNo(1)
+  const queue = () => draw.render({
+    isCompute: false, isSetCursor: false, isDeferredPaint: true,
+    isSubmitHistory: false
+  })
+  queue()
+  frame()
+  expect(pages).toEqual([1])
+  expect(draw.getPerformanceDiagnostics().pages.visible).toBe(2)
+  frame()
+  frame()
+  expect(pages).toEqual([1, 0, 2])
+  queue()
+  offset = 550
+  root.dispatchEvent(new Event('scroll'))
+  frame()
+  expect(pages.at(-1)).toBe(2)
+  offset = 0
+  root.dispatchEvent(new Event('scroll'))
+  frame()
+  expect(pages.at(-1)).toBe(1)
+  const beforeFlush = pages.length
+  draw.flushPaint()
+  expect(pages.slice(beforeFlush)).toEqual([0, 1, 2, 3])
+  frame()
+  expect(pages.length).toBe(beforeFlush + 4)
+
+  pages.length = 0
+  for (let i = 0; i < 12; i++) {
+    queue()
+    frame()
+    time += 16
+  }
+  expect(pages[0]).toBe(1)
+  expect(pages).toContain(0)
+})
+
+it('repaints only pages that still use a decoded image', async () => {
+  const images: HTMLImageElement[] = []
+  vi.spyOn(window, 'Image').mockImplementation(function () {
+    const image = document.createElement('img')
+    images.push(image)
+    return image
+  })
+  const page = document.createElement('canvas')
+  const other = document.createElement('canvas')
+  const invalidate = vi.fn()
+  const observer = new ImageObserver(invalidate)
+  for (const canvas of [page, other]) {
+    observer.beginPage(canvas)
+    observer.get(canvas, '/shared.png')
+  }
+  expect(images).toHaveLength(1)
+  observer.beginPage(page)
+  observer.get(page, '/replacement.png')
+  const pending = observer.allSettled()
+  for (const image of images) image.dispatchEvent(new Event('load'))
+  await pending
+  expect(invalidate.mock.calls).toEqual([[other], [page]])
+  expect(observer.get(page, '/replacement.png')).toBe(images[1])
+
+  observer.get(other, '/removed.png')
+  observer.forgetPage(other)
+  images[2].dispatchEvent(new Event('load'))
+  await observer.allSettled()
+  expect(invalidate).toHaveBeenCalledTimes(2)
+  observer.destroy()
 })
 
 it('reuses unchanged suffix positions while matching a fresh full commit', async () => {
@@ -1109,6 +1228,89 @@ describe('immutable cache ownership and disabled history', () => {
 
 
 describe('PERF-12–14 incremental flow', () => {
+  it('projects stable edits across lists, table fragments and page breaks', async () => {
+    const table = (rowCount: number): IElement => ({
+      type: ElementType.TABLE, value: '',
+      colgroup: [{ width: 150 }],
+      trList: Array.from({ length: rowCount }, (_, index) => ({
+        height: 48,
+        tdList: [{ colspan: 1, rowspan: 1, value: [{ value: 'cell ' + index }] }]
+      }))
+    })
+    const main: IElement[] = [
+      { value: 'plain editable paragraph' },
+      { value: '\n' },
+      {
+        type: ElementType.LIST, value: '', listType: ListType.OL,
+        listStyle: ListStyle.DECIMAL,
+        valueList: [{ value: 'first\nsecond\nthird' }]
+      },
+      table(12),
+      { type: ElementType.PAGE_BREAK, value: '\n' },
+      { value: 'tail paragraph' }
+    ]
+    const header = { disabled: false }
+    const incremental = await setup(structuredClone(main), {
+      header, lab: { performanceProfile: 'sync' }
+    }, [table(1)])
+    const full = await setup(structuredClone(main), {
+      header, lab: { performanceProfile: 'sync', incrementalFlow: false }
+    }, [table(1)])
+    const state = (draw: Draw) => {
+      const position = draw.getPosition()
+      const at = draw.getRange().getRange().endIndex
+      const coordinates = ({ index, pageNo, rowIndex, coordinate }:
+        ReturnType<typeof position.getOriginalMainPositionList>[number]) =>
+        ({ index, pageNo, rowIndex, coordinate })
+      return {
+        pages: draw.getLayoutPages().map(rows => rows.map(row => ({
+          start: row.startIndex, width: row.width, height: row.height,
+          sources: Array.from(row.sourceIndices || []), listIndex: row.listIndex,
+          flow: row.flow, nodeKind: row.node?.kind, source: row.node?.source.start,
+          fragment: row.tableFragment
+        }))),
+        positions: position.getOriginalMainPositionList().map(coordinates),
+        fragments: position.getTablePagingPositionList().map(coordinates),
+        caret: position.getNativeCaret(at)
+      }
+    }
+    for (const draw of [incremental, full]) caret(draw, 7)
+    expect(incremental.getPosition().getTablePagingPositionList().length)
+      .toBeGreaterThan(1)
+    expect(state(incremental)).toEqual(state(full))
+    const before = incremental.getFlowStats().computed
+    for (const action of ['input', 'Backspace', 'Delete']) {
+      for (const draw of [incremental, full]) {
+        if (action === 'input') draw.getCanvasEvent().input('x')
+        else key(draw, action)
+        draw.flushGeometry()
+      }
+      expect(incremental.getLayoutChangeSet()?.full).toBe(false)
+      expect(incremental.getLayoutChangeSet()?.reusedParagraphs.length)
+        .toBeGreaterThan(4)
+      expect(state(incremental)).toEqual(state(full))
+    }
+    expect(incremental.getFlowStats().computed - before).toBe(3)
+    for (const draw of [incremental, full]) {
+      draw.getCanvasEvent().input('w'.repeat(300))
+      draw.flushGeometry()
+    }
+    expect(incremental.getLayoutChangeSet()?.full).toBe(true)
+    expect(incremental.getFlowStats().mixedFootprintFallbacks).toBe(1)
+    expect(state(incremental)).toEqual(state(full))
+    for (const command of ['undo', 'redo', 'undo'] as const) {
+      for (const draw of [incremental, full])
+        new CommandAdapt(draw)[command]()
+      expect(state(incremental)).toEqual(state(full))
+    }
+    for (const draw of [incremental, full]) {
+      key(draw, 'Enter')
+      draw.flushGeometry()
+    }
+    expect(incremental.getLayoutChangeSet()?.reusedParagraphs).toEqual([])
+    expect(state(incremental)).toEqual(state(full))
+  })
+
   it('publishes page-limit truncation as a reversible model snapshot', async () => {
     const draw = await setup(Array.from({ length: 30 }, () => [
       { value: ZERO }, { value: 'paragraph text' }

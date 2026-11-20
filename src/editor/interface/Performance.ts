@@ -8,6 +8,7 @@ export type WorkerFallbackReason = 'dependencies' | 'unavailable' |
 export interface EditorPerformanceDiagnostics {
   schemaVersion: 1
   state: EditorRuntimeState
+  modelRevision: number
   options: Required<ILabOption>
   worker: {
     ready: boolean

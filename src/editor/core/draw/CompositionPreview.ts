@@ -7,6 +7,8 @@ import { lineCarets, textRangeRects } from '../layout/InteractionGeometry'
 import { getAnchorElement, getSlimCloneElementList } from '../../utils/element'
 import { splitText } from '../../utils'
 import { ZERO } from '../../dataset/constant/Common'
+import { RowFlex } from '../../dataset/enum/Row'
+import { isFloatingImage } from '../layout/InlineObjectMeasure'
 import type { NativeParagraphLayout } from '../text-engine/layout/TextLayoutService'
 import type { ParagraphSpan } from '../text-engine-host/ElementBridge'
 
@@ -45,7 +47,9 @@ export class CompositionPreview {
   }
 
   private dependencies() {
-    return [this.draw.getDocumentRevision(), this.draw.getInnerWidth(),
+    return [this.draw.getDocumentRevision(),
+      this.draw.getLayoutChangeSet()?.geometryRevision,
+      this.draw.getPageSize(this.placed.pageNo).innerWidth,
       this.draw.getOptions().scale,
       this.draw.getLayoutHostAdapter().getFontManager().getRevision()].join(':')
   }
@@ -61,16 +65,24 @@ export class CompositionPreview {
       return null
     const elements = draw.getOriginalMainElementList()
     // Float exclusions need per-line width constraints, not the full page width.
-    if (elements.some(element => !!element.imgDisplay)) return null
+    if (elements.some(element => isFloatingImage(element.imgDisplay))) return null
     const adapter = draw.getLayoutHostAdapter()
     // Baseline edits do not maintain the incremental paragraph directory.
     if (!options.lab.incrementalEditing) adapter.paragraphs.invalidate(elements)
     const entry = adapter.paragraphs.get(elements).locate(from)
-    if (!entry || !entry.record.editable ||
+    if (!entry) return null
+    const centeredTitle = entry.record.plain &&
+      entry.record.elements.some(element => element.rowFlex === RowFlex.CENTER) &&
+      entry.record.elements.every(element => !element.title?.disabled &&
+        !element.listId && !element.groupIds?.length &&
+        !element.hide && !element.trace?.length)
+    if ((!entry.record.editable && !centeredTitle) ||
       to >= entry.end || entry.record.elements.some(element =>
         element.underline || element.strikeout || element.highlight ||
         element.textDecoration || element.translateX ||
-        element.imgDisplay || element.rowFlex || element.direction ||
+        element.imgDisplay ||
+        (element.rowFlex && element.rowFlex !== RowFlex.CENTER) ||
+        element.direction ||
         (element.type && element.type !== 'text'))) return null
     const lines = draw.getPosition().getNativeLines().filter(placed =>
       placed.line.source.start >= entry.start && placed.line.source.start < entry.end)
@@ -81,7 +93,8 @@ export class CompositionPreview {
     let original = entry.record.elements
     let placed = lines[0]
     if (lines.length > 1) {
-      if (!options.lab.imeWindowPreview) return null
+      if (!options.lab.imeWindowPreview ||
+        original.some(element => element.rowFlex === RowFlex.CENTER)) return null
       // Keep shaping context at complete wrap units. Contextual scripts and
       // metric/style changes continue through the authoritative full layout.
       const metric = (e: IElement) => JSON.stringify([
@@ -131,7 +144,8 @@ export class CompositionPreview {
     const row = draw.getLayoutPages()[placed.pageNo]?.find(row =>
       draw.getPosition().getNativeRow(row,
         draw.getPosition().getOriginalMainPositionList(true), placed.pageNo)?.line === placed.line)
-    if (!row) return null
+    if (!row || row.isSurround ||
+      (!entry.record.editable && row.rowFlex !== RowFlex.CENTER)) return null
     return new CompositionPreview(draw, row, placed, from, to, base,
       original, window)
   }
@@ -158,7 +172,8 @@ export class CompositionPreview {
       return null
     const adapter = this.draw.getLayoutHostAdapter()
     const paragraphs = adapter.scanParagraphs(elements)
-    if (paragraphs.length !== 1) return null
+    if (paragraphs.length !== 1 ||
+      paragraphs[0].rowFlex !== this.row.rowFlex) return null
     this.work.windowElements = elements.length
     return { elements, paragraph: paragraphs[0], from, to, lineCount,
       insertedCount: inserted.length }
@@ -168,7 +183,7 @@ export class CompositionPreview {
     const adapter = this.draw.getLayoutHostAdapter()
     try {
       return adapter.prepareParagraphInput(prepared.paragraph, prepared.elements,
-        this.draw.getInnerWidth(), 'ime-preview')
+        this.draw.getPageSize(this.placed.pageNo).innerWidth, 'ime-preview')
     } finally { adapter.releaseScope('ime-preview') }
   }
 
@@ -184,7 +199,7 @@ export class CompositionPreview {
     let layout: ReturnType<typeof adapter.layoutParagraph>
     try {
       layout = adapter.layoutParagraph(prepared.paragraph, prepared.elements,
-        this.draw.getInnerWidth(), 'ime-preview')
+        this.draw.getPageSize(this.placed.pageNo).innerWidth, 'ime-preview')
     } finally {
       adapter.releaseScope('ime-preview')
     }
@@ -196,7 +211,7 @@ export class CompositionPreview {
     const { elements, from, to, insertedCount } = prepared
     this.work.laidOutLines = layout.lines.length
     if (layout.lines.length !== prepared.lineCount) return false
-    const width = this.draw.getInnerWidth()
+    const width = this.draw.getPageSize(this.placed.pageNo).innerWidth
     if (this.window?.lines.slice(0, prepared.lineCount).some(placed =>
       this.draw.getPageSize(placed.pageNo).innerWidth !== width
     )) return false
@@ -211,9 +226,15 @@ export class CompositionPreview {
       const old = placed.line
       let line = layout.lines[i]
       if (line.direction !== 'ltr' || line.carets.some(c => c.bidiLevel % 2 === 1) ||
-        Math.abs(line.rect.height - old.rect.height) > 0.01 ||
         Math.abs(line.baseline - old.baseline) > 0.01 || line.hidden ||
+        line.spacingBefore !== old.spacingBefore ||
+        line.spacingAfter !== old.spacingAfter ||
+        (this.row.rowFlex === RowFlex.CENTER &&
+          line.rect.width * placed.scale > width + 0.01) ||
         line.inlines.some(item => item.kind !== 'missingGlyph')) return false
+      const fitted = this.fitHeight(line, placed)
+      if (!fitted) return false
+      line = fitted
       if (this.window) line = this.placeLine(line, old)
       const position = this.draw.getPosition()
       const row = i === target ? this.row : this.draw.getLayoutPages()[placed.pageNo]
@@ -239,6 +260,39 @@ export class CompositionPreview {
     this.caret = caret
     this.work.replacedLines = changed.length
     return true
+  }
+
+  private fitHeight(line: TextLine, placed: PlacedTextLine) {
+    const old = placed.line
+    const difference = Math.abs(line.rect.height - old.rect.height)
+    if (difference <= 0.01) return line
+    if (this.row.rowFlex !== RowFlex.CENTER) return null
+    const dpr = this.draw.getPagePixelRatio()
+    const scale = placed.scale
+    const top = placed.y + old.rect.y * scale
+    const nextBottom = top + line.rect.height * scale
+    const page = this.draw.getPageSize(placed.pageNo)
+    const footer = this.draw.getFooter().getExtraHeight(
+      placed.pageNo, this.draw.getPageDirection(placed.pageNo)
+    )
+    const pageBottom = page.height - page.margins[2] - footer
+    if (difference * scale * dpr >= 0.5 ||
+      nextBottom + line.spacingAfter * scale > pageBottom) return null
+
+    // A fallback face can change descent by a fraction of a device pixel.
+    // Keep the committed row box and baseline until formal layout can reflow.
+    const height = old.rect.height
+    const caret = (value: TextLine['carets'][number]) => ({ ...value, height })
+    return { ...line, rect: { ...line.rect, height }, contentHeight: height,
+      carets: line.carets.map(caret),
+      clusters: line.clusters.map(cluster => ({
+        ...cluster, rect: { ...cluster.rect, height },
+        carets: cluster.carets.map(caret)
+      })),
+      inlines: line.inlines.map(item => item.kind === 'missingGlyph'
+        ? { ...item, rect: { ...item.rect, height },
+          carets: item.carets.map(caret) } : item)
+    }
   }
 
   private placeLine(line: TextLine, old: TextLine): TextLine {

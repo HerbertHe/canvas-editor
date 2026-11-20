@@ -327,6 +327,7 @@ export class CanvasEvent {
       if (this.compositionSession === session)
         this.draw.updateCompositionCoverage(value)
     })
+    this.draw.getEventBus?.().emit('compositionStateChange', true)
   }
 
   public acceptWorkerComposition(generation: number, sequence: number,
@@ -374,39 +375,44 @@ export class CanvasEvent {
     this.compositionSession = null
     this.draw.clearCompositionPreview()
     this.isComposing = false
-    this.draw.finalizeComposition(() => {
-      const rollback = () => {
-        this.compositionInfo = null
-        let restored = false
-        if (this.compositionRollback) {
-          this.compositionRollback()
-          restored = true
-        } else restored = this.draw.rollbackEditTransaction()
-        if (!restored) {
-          if (original) this.range.replaceRange(original.range)
-          this.draw.render({ isSubmitHistory: false,
-            curIndex: this.range.getRange().endIndex })
+    try {
+      this.draw.finalizeComposition(() => {
+        const rollback = () => {
+          this.compositionInfo = null
+          let restored = false
+          if (this.compositionRollback) {
+            this.compositionRollback()
+            restored = true
+          } else restored = this.draw.rollbackEditTransaction()
+          if (!restored) {
+            if (original) this.range.replaceRange(original.range)
+            this.draw.render({ isSubmitHistory: false,
+              curIndex: this.range.getRange().endIndex })
+          }
+          this.range.setDefaultStyle(null)
+          if (original?.defaultStyle) this.range.setDefaultStyle(original.defaultStyle)
         }
-        this.range.setDefaultStyle(null)
-        if (original?.defaultStyle) this.range.setDefaultStyle(original.defaultStyle)
-      }
-      try {
-        if (!evt.data) rollback()
-        else {
-          this.compositionRollback ||= this.draw.createCompositionRollback()
-          input(evt.data, this)
-          this.draw.commitEditTransaction?.()
+        try {
+          if (!evt.data) rollback()
+          else {
+            this.compositionRollback ||= this.draw.createCompositionRollback()
+            input(evt.data, this)
+            this.draw.commitEditTransaction?.()
+          }
+        } catch (error) {
+          rollback()
+          throw error
+        } finally {
+          this.compositionOriginal = null
+          this.compositionRollback = null
+          this.draw.getCursor().clearAgentDomValue()
+          this.rememberFinalInput(evt.data)
         }
-      } catch (error) {
-        rollback()
-        throw error
-      } finally {
-        this.compositionOriginal = null
-        this.compositionRollback = null
-        this.draw.getCursor().clearAgentDomValue()
-        this.rememberFinalInput(evt.data)
-      }
-    })
+      })
+    } finally {
+      if (!this.isComposing)
+        this.draw.getEventBus?.().emit('compositionStateChange', false)
+    }
   }
 
   private clearFinalInput() {

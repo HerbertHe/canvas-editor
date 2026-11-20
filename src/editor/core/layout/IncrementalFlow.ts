@@ -4,7 +4,7 @@ import type { ParagraphRecord } from './ParagraphIndex'
 import type { DocumentFlow, FlowPlacement } from './DocumentFlow'
 import { captureFlow, checkpointMismatch, restoreFlow, sameFlow } from './FlowCheckpoint'
 import type { FlowCheckpoint } from './FlowCheckpoint'
-import { mapView, projectTextLine, projectLayout, translateTextLineView } from './relativeLayout'
+import { mapView, projectFlowNode, projectLayout, projectTextLine, translateTextLineView } from './relativeLayout'
 import type { LayoutResult } from '../text-engine/types'
 
 const indexOrigins = new WeakMap<number[], { base: number[]; delta: number }>()
@@ -51,7 +51,9 @@ export class IncrementalFlow {
   private entries = new Map<string, Entry>()
   private next = new Map<string, Entry>()
   readonly stats = { computed: 0, reused: 0, shifted: 0, reflowed: 0,
-    checked: 0, batchChecked: 0, batchReused: 0, checkpointChecks: 0 }
+    checked: 0, batchChecked: 0, batchReused: 0, checkpointChecks: 0,
+    mixedScopeFallbacks: 0, mixedStructureFallbacks: 0,
+    mixedFootprintFallbacks: 0 }
   reused: string[] = []
   changed: string[] = []
   shifts: LayoutChangeSet['indexShifts'] = []
@@ -72,10 +74,12 @@ export class IncrementalFlow {
     if (delta) this.shifts.push({ paragraphId: previous.input.nodeId,
       from: previous.start, to: start })
     if (delta || rowDelta) this.stats.shifted++
+    const objectId = previous.rows[0]?.elementList[0]?.id
     return !delta && !rowDelta ? previous : { ...previous, start, rowIndex,
       rows: previous.rows.map(row => {
-        const line = projectTextLine(row.nativeLine!, delta)
-        return { ...row, nativeLine: line, node: line,
+        const line = row.nativeLine && projectTextLine(row.nativeLine, delta)
+        return { ...row, nativeLine: line,
+          node: line || (row.node && projectFlowNode(row.node, delta, objectId)),
           startIndex: row.startIndex + delta,
           rowIndex: row.rowIndex + rowDelta,
           sourceIndices: lazy ? shiftIndices(row.sourceIndices, delta)
@@ -84,10 +88,9 @@ export class IncrementalFlow {
       compatibility: previous.compatibility && projectLayout({
         lines: [], shaped: previous.compatibility
       }, delta, { documentRevision: 0, fontRevision: 0 }).shaped,
-      nodes: includeNodes ? previous.nodes.map(node => {
-        if (node.kind !== 'textLine') throw new Error('Unsupported cached node')
-        return projectTextLine(node, delta)
-      }) : [] }
+      nodes: includeNodes
+        ? previous.nodes.map(node => projectFlowNode(node, delta, objectId))
+        : [] }
   }
 
   /** Keep line breaking only when every new line interval matches the cached one. */
@@ -187,7 +190,8 @@ export class IncrementalFlow {
     dependencies: string,
     compute: () => Pick<Entry, 'rows' | 'nodes' | 'compatibility'>,
     dirty = false,
-    capturePages = false
+    capturePages = false,
+    allowReflow = true
   ) {
     this.stats.checked++
     const revision = [record.content, record.metrics, record.paint].join(':')
@@ -202,7 +206,7 @@ export class IncrementalFlow {
       this.stats.reused++
       this.reused.push(record.id)
     } else {
-      const reflowed = capturePages && !dirty && previous &&
+      const reflowed = capturePages && allowReflow && !dirty && previous &&
         previous.revision === revision && previous.input.dependencies === dependencies
         ? this.reflow(previous, start, rowIndex, flow) : null
       if (reflowed) {
@@ -234,6 +238,22 @@ export class IncrementalFlow {
     this.next.set(record.id, { ...result, start, rowIndex, revision, input,
       output, pages })
     return result
+  }
+
+  changedFootprint(record: ParagraphRecord) {
+    const previous = this.entries.get(record.id)
+    const current = this.next.get(record.id)
+    return !!previous && !!current &&
+      previous.input.dependencies === current.input.dependencies &&
+      (!sameFlow(previous.output.state, current.output.state) ||
+        previous.rows.length !== current.rows.length ||
+        previous.rows.some((row, i) => {
+          const next = current.rows[i]
+          return row.height !== next.height || row.flow?.y !== next.flow?.y ||
+            row.flow?.pageNo !== next.flow?.pageNo ||
+            row.flow?.columnIndex !== next.flow?.columnIndex ||
+            row.flow?.direction !== next.flow?.direction
+        }))
   }
 }
 

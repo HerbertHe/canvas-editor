@@ -166,6 +166,9 @@ import { Magnifier } from './interactive/Magnifier'
 import { Accessibility } from '../accessibility/Accessibility'
 
 const ELEMENT_INSERT_BATCH_SIZE = 1024
+const PAGE_PREFETCH_PX = 200
+const PAGE_PAINT_BUDGET_MS = 6
+const PAGE_PAINT_MAX_WAIT_MS = 96
 
 interface EditSelection {
   cursorIndex: number
@@ -442,7 +445,7 @@ export class Draw {
 
     this.scrollObserver = new ScrollObserver(this)
     this.selectionObserver = new SelectionObserver(this)
-    this.imageObserver = new ImageObserver()
+    this.imageObserver = new ImageObserver(page => this.invalidatePageImage(page))
     new MouseObserver(this)
 
     this.canvasEvent = new CanvasEvent(this)
@@ -1988,7 +1991,11 @@ export class Draw {
       isSetCursor: false,
       isSubmitHistory: false
     })
-    await this.imageObserver.allSettled()
+    const resources = await this.imageObserver.allSettled()
+    if (resources.length && this.isReady()) {
+      this.cancelPaint()
+      this._immediateRender()
+    }
     // 叠加iframe图片
     if (snapDomFunction) {
       await this.blockParticle.drawIframeToPage(this.pageList, snapDomFunction)
@@ -2118,8 +2125,8 @@ export class Draw {
   }
 
   public setPageDevicePixel() {
-    this._updatePageSizes()
     this.render({
+      isPageScaleChanged: true,
       isSubmitHistory: false,
       isSetCursor: false
     })
@@ -2128,8 +2135,8 @@ export class Draw {
   public setPaperSize(width: number, height: number) {
     this.options.width = width
     this.options.height = height
-    this._updatePageSizes()
     this.render({
+      isPageScaleChanged: true,
       isSubmitHistory: false,
       isSetCursor: false
     })
@@ -2350,6 +2357,7 @@ export class Draw {
     // 缓存上下文
     this.pageList.push(canvas)
     this.ctxList.push(ctx)
+    if (this.dirtyPageObserver) this.observePaintPage(canvas)
   }
 
   // 按各页实际尺寸（方向/缩放/DPR）校正页面 canvas 与容器宽度
@@ -2526,6 +2534,11 @@ export class Draw {
     )
   }
 
+  private getEngineRowListAnchor(row: LayoutRow) {
+    return row.elementList.find(el => el.listId && el.value === ZERO) ||
+      row.elementList.find(el => !!el.listId)
+  }
+
   /**
    * text-engine 行补齐列表元数据（isList/offsetX/listIndex），
    * 否则工具栏 setList 虽写入 listId，却不缩进、不绘项目符号。
@@ -2537,9 +2550,7 @@ export class Draw {
   ) {
     const { scale } = this.options
     for (const row of rows) {
-      const listAnchor =
-        row.elementList.find(el => el.listId && el.value === ZERO) ||
-        row.elementList.find(el => !!el.listId)
+      const listAnchor = this.getEngineRowListAnchor(row)
       if (!listAnchor?.listId) continue
       const listId = listAnchor.listId
       if (listAnchor.value === ZERO && !listAnchor.listWrap) {
@@ -2612,7 +2623,8 @@ export class Draw {
     startRowIndex = 0,
     nativeNodes?: LayoutNode[],
     inheritedAreaId?: string,
-    flow?: DocumentFlow
+    flow?: DocumentFlow,
+    listContext?: { styles: Map<string, number>; indices: Map<string, number> }
   ): LayoutRow[] {
     const paragraphs = this.layoutHostAdapter.scanParagraphs(
       elementList,
@@ -2621,8 +2633,9 @@ export class Draw {
       endIndex
     )
     const paraByStart = new Map(paragraphs.map(p => [p.startIndex, p] as const))
-    const listStyleMap = this.listParticle.computeNativeListStyle(elementList)
-    const listIndexMap: Map<string, number> = new Map()
+    const listStyleMap = listContext?.styles ||
+      this.listParticle.computeNativeListStyle(elementList)
+    const listIndexMap = listContext?.indices || new Map<string, number>()
     const rowList: LayoutRow[] = []
     let rowIndex = startRowIndex
     const scopeNodes: LayoutNode[] = []
@@ -3025,79 +3038,125 @@ export class Draw {
     const flow = createFlow()
     const entries = isMainLayout && this.options.lab?.incrementalEditing &&
       this.options.lab?.incrementalFlow && flow && !surroundElementList.length &&
-      this.textFrameDependencies() !== null &&
       !this.options.pageNumber.maxPageNo
       ? this.layoutHostAdapter.paragraphs.get(elementList).entries() : null
-    if (entries && entries.length <= 2048 && entries.every(e => e.record.editable)) {
-      this.usedIncrementalFlow = true
-      const dependencies = JSON.stringify([
-        this.options, this.layoutHostAdapter.getFontManager().getRevision(),
-        this.layoutHostAdapter.getParagraphEpoch(), engineWidth,
-        defaultDirection, defaultAlign, this.textFrameDependencies()
-      ])
-      this.incrementalFlow.begin()
-      const rows: LayoutRow[] = []
-      const compatibility: { startIndex: number; endIndex: number;
-        layout: import('../text-engine/types').LayoutResult }[] = []
-      const append = (entry: typeof entries[number], result: {
-        rows: LayoutRow[]; nodes: LayoutNode[];
-        compatibility?: import('../text-engine/types').LayoutResult
-      }) => {
-        rows.push(...result.rows)
-        if (result.compatibility) compatibility.push({
-          startIndex: entry.start, endIndex: entry.end - 1,
-          layout: result.compatibility
-        })
-        payload.nativeNodes?.push(...result.nodes)
-      }
-      let first = 0
-      const dirty = payload.dirtyRange
-      const batch = this.options.lab.incrementalCommit && dirty
-      if (batch) {
-        let low = 0
-        let high = entries.length
-        while (low < high) {
-          const mid = (low + high) >>> 1
-          if (entries[mid].end <= dirty.startIndex) low = mid + 1
-          else high = mid
+    const textFrames = entries ? this.textFrameDependencies() : null
+    const mixed = !!entries && (!textFrames || entries.some(e => !e.record.editable))
+    const dirty = payload.dirtyRange
+    const edit = this.activeEdit
+    const supportsMixed = mixed && !isColumnEnabled && entries &&
+      entries.every(e => e.record.supportsMixedFlow)
+    const structuralEdit = mixed && !!dirty && (!edit?.trusted ||
+      edit.operations.slice(edit.published).some(operation =>
+        operation.kind === 'splice' &&
+        [...operation.before, ...operation.after].some(el => el.value === ZERO)) ||
+      entries?.some(e => !e.record.editable &&
+        e.end > dirty.startIndex && e.start < dirty.endIndex))
+    const canUseMixed = supportsMixed && !structuralEdit
+    if (mixed && dirty && !canUseMixed) {
+      if (supportsMixed) this.incrementalFlow.stats.mixedStructureFallbacks++
+      else this.incrementalFlow.stats.mixedScopeFallbacks++
+    }
+    if (entries && flow && entries.length <= 2048 && (!mixed || canUseMixed)) {
+      // Untracked mutations and configuration changes must reseed mixed flow.
+      if (mixed && !dirty) this.incrementalFlow.clear()
+      const frameDependencies = textFrames || [
+        getSlimCloneElementList(this.header.getElementList()),
+        getSlimCloneElementList(this.footer.getElementList())
+      ]
+      const layoutIncrementally = () => {
+        this.usedIncrementalFlow = true
+        const dependencies = JSON.stringify([
+          this.options, this.layoutHostAdapter.getFontManager().getRevision(),
+          this.layoutHostAdapter.getParagraphEpoch(), engineWidth,
+          defaultDirection, defaultAlign, frameDependencies
+        ])
+        this.incrementalFlow.begin()
+        const listContext = mixed ? {
+          styles: this.listParticle.computeNativeListStyle(elementList),
+          indices: new Map<string, number>()
+        } : undefined
+        const rows: LayoutRow[] = []
+        const compatibility: { startIndex: number; endIndex: number;
+          layout: import('../text-engine/types').LayoutResult }[] = []
+        const append = (entry: typeof entries[number], result: {
+          rows: LayoutRow[]; nodes: LayoutNode[];
+          compatibility?: import('../text-engine/types').LayoutResult
+        }) => {
+          rows.push(...result.rows)
+          // Cached list entries must leave the counter at the same value as
+          // laying out their rows. Marker text is resolved for the entire scope.
+          if (listContext && entry.record.hasList) {
+            for (const row of result.rows) {
+              const id = this.getEngineRowListAnchor(row)?.listId
+              if (id && row.listIndex !== undefined)
+                listContext.indices.set(id, row.listIndex)
+            }
+          }
+          if (result.compatibility) compatibility.push({
+            startIndex: entry.start, endIndex: entry.end - 1,
+            layout: result.compatibility
+          })
+          payload.nativeNodes?.push(...result.nodes)
         }
-        const prefix = entries.slice(0, low)
-        const reused = this.incrementalFlow.reuseRange(prefix, flow!, dependencies, 0)
-        if (reused) {
-          reused.forEach((result, i) => append(prefix[i], result))
-          first = prefix.length
-        }
-      }
-      for (let i = first; i < entries.length; i++) {
-        const entry = entries[i]
-        if (batch && entry.start >= dirty.endIndex) {
-          const reused = this.incrementalFlow.reuseRange(
-            entries, flow!, dependencies, rows.length, i)
+        let first = 0
+        const batch = this.options.lab.incrementalCommit && dirty
+        let recomputeSuffix = false
+        if (batch) {
+          let low = 0
+          let high = entries.length
+          while (low < high) {
+            const mid = (low + high) >>> 1
+            if (entries[mid].end <= dirty.startIndex) low = mid + 1
+            else high = mid
+          }
+          const prefix = entries.slice(0, low)
+          const reused = this.incrementalFlow.reuseRange(prefix, flow, dependencies, 0)
           if (reused) {
-            reused.forEach((result, j) => append(entries[i + j], result))
-            break
+            reused.forEach((result, i) => append(prefix[i], result))
+            first = prefix.length
           }
         }
-        const result = this.incrementalFlow.paragraph(
-          entry.record, entry.start, rows.length, flow!, dependencies, () => {
-            const nodes: LayoutNode[] = []
-            const paragraphRows = this._computeRowListByTextEngine(
-              elementList, engineWidth, layoutScope, defaultDirection,
-              defaultAlign, entry.start, entry.end, rows.length, nodes,
-              payload.inheritedAreaId, flow!
-            )
-            return { rows: paragraphRows, nodes, compatibility:
-              this.layoutHostAdapter.findLayoutByElementIndex(entry.start, layoutScope)?.layout }
-          },
-          !!payload.dirtyRange && entry.end > payload.dirtyRange.startIndex &&
-            entry.start < payload.dirtyRange.endIndex,
-          this.options.lab.incrementalCommit
-        )
-        append(entry, result)
+        for (let i = first; i < entries.length; i++) {
+          const entry = entries[i]
+          if (batch && !recomputeSuffix && entry.start >= dirty.endIndex) {
+            const reused = this.incrementalFlow.reuseRange(
+              entries, flow, dependencies, rows.length, i)
+            if (reused) {
+              reused.forEach((result, j) => append(entries[i + j], result))
+              break
+            }
+          }
+          const isDirty = !!dirty && entry.end > dirty.startIndex &&
+            entry.start < dirty.endIndex
+          const result = this.incrementalFlow.paragraph(
+            entry.record, entry.start, rows.length, flow, dependencies, () => {
+              const nodes: LayoutNode[] = []
+              const paragraphRows = this._computeRowListByTextEngine(
+                elementList, engineWidth, layoutScope, defaultDirection,
+                defaultAlign, entry.start, entry.end, rows.length, nodes,
+                payload.inheritedAreaId, flow, listContext
+              )
+              return { rows: paragraphRows, nodes, compatibility:
+                this.layoutHostAdapter.findLayoutByElementIndex(entry.start, layoutScope)?.layout }
+            }, isDirty || recomputeSuffix,
+            mixed || this.options.lab.incrementalCommit, !mixed
+          )
+          if (mixed && isDirty && !recomputeSuffix &&
+            this.incrementalFlow.changedFootprint(entry.record)) {
+            recomputeSuffix = true
+            this.usedIncrementalFlow = false
+            this.incrementalFlow.stats.mixedFootprintFallbacks++
+          }
+          append(entry, result)
+        }
+        this.incrementalFlow.end()
+        this.layoutHostAdapter.replaceParagraphLayouts(layoutScope, compatibility)
+        return rows
       }
-      this.incrementalFlow.end()
-      this.layoutHostAdapter.replaceParagraphLayouts(layoutScope, compatibility)
-      return rows
+      return mixed && entries.some(e => e.record.hasList)
+        ? this.layoutHostAdapter.withListMarkers(elementList, layoutIncrementally)
+        : layoutIncrementally()
     }
     if (isMainLayout) {
       this.usedIncrementalFlow = false
@@ -3857,6 +3916,7 @@ export class Draw {
     const { innerWidth, width, height } = this.getPageSize(pageNo)
     this._resizePageBitmap(pageNo, width, height)
     const ctx = this.ctxList[pageNo]
+    this.imageObserver.beginPage(ctx.canvas)
     // 判断当前激活区域-非正文区域时元素透明度降低
     ctx.globalAlpha = !this.zone.isMainActive() ? inactiveAlpha : 1
     this._clearPage(pageNo)
@@ -3958,18 +4018,43 @@ export class Draw {
     ) {
       this.waterMark.render(ctx, pageNo)
     }
+    this.paintedPages.add(ctx.canvas)
   }
 
   private _disconnectLazyRender() {
     this.lazyRenderIntersectionObserver?.disconnect()
     this.lazyRenderIntersectionObserver = null
     this.observedPages.clear()
-    this.visiblePages.clear()
+    this.visiblePaintPageCount = 0
+    this.dirtyPageObserver = false
+    this.paintObserverRoot = null
   }
 
   private observedPages = new Set<HTMLCanvasElement>()
-  private visiblePages = new Set<HTMLCanvasElement>()
-  private dirtyPages = new Set<number>()
+  private dirtyPages = new Map<number, number>()
+  private paintedPages = new WeakSet<HTMLCanvasElement>()
+  private dirtyPageObserver = false
+  private paintObserverRoot: Element | null = null
+  private visiblePaintPageCount = 0
+  private paintScrollOffset = 0
+  private paintScrollDirection = 1
+
+  private markPageDirty(pageNo: number, time = performance.now()) {
+    if (!this.dirtyPages.has(pageNo)) this.dirtyPages.set(pageNo, time)
+  }
+
+  private invalidatePageImage(page: HTMLCanvasElement) {
+    const pageNo = Number(page.dataset.index)
+    if (!this.isReady() || this.pageList[pageNo] !== page) return
+    this.markPageDirty(pageNo)
+    this.requestPaint()
+  }
+
+  private observePaintPage(page: HTMLCanvasElement) {
+    this.observedPages.add(page)
+    this.lazyRenderIntersectionObserver?.observe(page)
+    if (!this.paintedPages.has(page)) this.markPageDirty(Number(page.dataset.index))
+  }
 
   private paintPage(pageNo: number) {
     if (!this.pageRowList[pageNo]) return
@@ -3981,42 +4066,26 @@ export class Draw {
     this.dirtyPages.delete(pageNo)
   }
 
-  private _lazyRender(eagerPages: number[]) {
+  private _lazyRender(eagerVisible: boolean, editingPage?: number) {
     if (this.options.lab?.dirtyPagePaint) {
-      if (!this.lazyRenderIntersectionObserver) {
-        this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
-          for (const entry of entries) {
-            const page = entry.target as HTMLCanvasElement
-            if (entry.isIntersecting) {
-              this.visiblePages.add(page)
-              const index = Number(page.dataset.index)
-              if (this.dirtyPages.has(index)) this.paintPage(index)
-            } else this.visiblePages.delete(page)
-          }
-        }, { rootMargin: '200px 0px' })
+      const container = this.scrollObserver.getScrollContainer()
+      const root = container instanceof Element ? container : null
+      if (!this.dirtyPageObserver || this.paintObserverRoot !== root) {
+        this._disconnectLazyRender()
+        this.dirtyPageObserver = true
+        this.paintObserverRoot = root
+        this.lazyRenderIntersectionObserver = new IntersectionObserver(() => {
+          this.requestViewportPaint()
+        }, { root, rootMargin: `${PAGE_PREFETCH_PX}px 0px` })
+        for (const page of this.pageList) this.observePaintPage(page)
       }
-      for (const page of this.observedPages) {
-        if (!this.pageList.includes(page)) {
-          this.lazyRenderIntersectionObserver.unobserve(page)
-          this.observedPages.delete(page)
-          this.visiblePages.delete(page)
-        }
-      }
-      for (const page of this.pageList) {
-        if (!this.observedPages.has(page)) {
-          this.observedPages.add(page)
-          this.dirtyPages.add(Number(page.dataset.index))
-          this.lazyRenderIntersectionObserver.observe(page)
-        }
-      }
-      for (const pageNo of eagerPages) this.paintPage(pageNo)
-      for (const page of this.visiblePages) {
-        const index = Number(page.dataset.index)
-        if (this.dirtyPages.has(index)) this.paintPage(index)
-      }
+      this.paintViewport(eagerVisible, editingPage)
       return
     }
     this._disconnectLazyRender()
+    const eagerPages = eagerVisible
+      ? this.scrollObserver.getPageVisibleInfo().visiblePageNoList
+      : []
     for (const pageNo of eagerPages) this.paintPage(pageNo)
     const painted = new Set(eagerPages)
     this.lazyRenderIntersectionObserver = new IntersectionObserver(entries => {
@@ -4031,6 +4100,54 @@ export class Draw {
     this.pageList.forEach(el => {
       this.lazyRenderIntersectionObserver!.observe(el)
     })
+  }
+
+  private paintViewport(eagerVisible: boolean, editingPage?: number) {
+    const { visiblePageNoList, before, after, offset } =
+      this.scrollObserver.getPaintPageInfo(PAGE_PREFETCH_PX)
+    this.visiblePaintPageCount = visiblePageNoList.length
+    if (offset !== this.paintScrollOffset)
+      this.paintScrollDirection = offset > this.paintScrollOffset ? 1 : -1
+    this.paintScrollOffset = offset
+    const current = editingPage ?? this.compositionPreview?.placed.pageNo ??
+      (this.zone.isMainActive() ? this.position.getCursorPosition()?.pageNo : undefined) ??
+      this.pageNo
+    const visible = new Set(visiblePageNoList)
+    const candidates = [
+      ...(visible.has(current) ? [current] : []),
+      ...visiblePageNoList.filter(page => page !== current),
+      ...(this.paintScrollDirection < 0 ? [...before, ...after] : [...after, ...before])
+    ]
+    const start = performance.now()
+    let painted = false
+    let servedWaitingPage = false
+    let remaining = false
+    for (const pageNo of candidates) {
+      const since = this.dirtyPages.get(pageNo)
+      if (since === undefined) continue
+      const isVisible = visible.has(pageNo)
+      if (eagerVisible && !isVisible) {
+        remaining = true
+        continue
+      }
+      const needsBitmap = isVisible && !this.paintedPages.has(this.pageList[pageNo])
+      if (painted && !needsBitmap && !eagerVisible &&
+        performance.now() - start >= PAGE_PAINT_BUDGET_MS) {
+        if (servedWaitingPage || start - since < PAGE_PAINT_MAX_WAIT_MS) {
+          remaining = true
+          continue
+        }
+        servedWaitingPage = true
+      }
+      this.paintPage(pageNo)
+      painted = true
+    }
+    if (remaining) this.requestViewportPaint()
+  }
+
+  public requestViewportPaint() {
+    if (this.options.lab?.dirtyPagePaint && this.dirtyPages.size &&
+      this.getIsPagingMode() && !this.isPrintMode()) this.requestPaint()
   }
 
   private _immediateRender() {
@@ -4090,6 +4207,7 @@ export class Draw {
     return {
       schemaVersion: 1,
       state: this.lifecycle.state,
+      modelRevision: this.modelRevision,
       options: { ...this.options.lab },
       worker: { ready, pending, ...this.layoutWorkerClient?.getQueueStats(),
         requests: this.layoutWorkerClient?.getQueueStats().requests || 0,
@@ -4106,7 +4224,7 @@ export class Draw {
       utilityWorkers: { ...this.workerManager.stats },
       composition: this.canvasEvent.getCompositionDiagnostics(),
       pages: { observed: this.observedPages.size,
-        visible: this.visiblePages.size, dirty: this.dirtyPages.size }
+        visible: this.visiblePaintPageCount, dirty: this.dirtyPages.size }
     }
   }
 
@@ -4280,16 +4398,11 @@ export class Draw {
 
   /** Synchronous mode coalesces paint; worker mode commits versioned geometry. */
   public requestPaint() {
-    if (!this.isReady()) return
-    if (!this.getIsPagingMode() || this.isPrintMode()) {
-      this.cancelPaint()
-      this.paintRender(false)
-      return
-    }
-    if (this.pendingPaint !== null) return
+    if (!this.isReady() || this.pendingPaint !== null) return
     this.pendingPaint = requestAnimationFrame(() => {
       this.pendingPaint = null
-      if (this.isReady()) this.paintRender(true)
+      if (this.isReady() && !this.pendingWorkerRender &&
+        this.geometryRevision === this.modelRevision) this.paintRender(true)
     })
   }
 
@@ -4302,7 +4415,7 @@ export class Draw {
   public flushPaint() {
     this.flushGeometry()
     this.flushCompositionDerivedState()
-    if (this.options.lab?.dirtyPagePaint && this.dirtyPages.size) {
+    if (this.dirtyPages.size) {
       this.cancelPaint()
       this._immediateRender()
       this.dirtyPages.clear()
@@ -4424,7 +4537,7 @@ export class Draw {
     this.compositionPreview = preview
     this.compositionHighlightsDirty = true
     this.compositionToolsDirty = true
-    this.paintPage(preview.placed.pageNo)
+    this.paintCompositionPage(preview.placed.pageNo)
     this.cursor.setCompositionCaret(preview.caret)
   }
 
@@ -4436,7 +4549,15 @@ export class Draw {
     const preview = this.compositionPreview
     this.compositionPreview = null
     this.cursor.setCompositionCaret(null)
-    if (preview && this.isReady()) this.paintPage(preview.placed.pageNo)
+    if (preview && this.isReady()) this.paintCompositionPage(preview.placed.pageNo)
+  }
+
+  private paintCompositionPage(pageNo: number) {
+    if (this.options.lab?.dirtyPagePaint &&
+      !this.scrollObserver.getPageVisibleInfo().visiblePageNoList.includes(pageNo)) {
+      this.markPageDirty(pageNo)
+      this.requestViewportPaint()
+    } else this.paintPage(pageNo)
   }
 
   /** Geometry commands may explicitly assert the current synchronous commit. */
@@ -4463,12 +4584,10 @@ export class Draw {
     return this.geometryRevision
   }
 
-  private paintRender(isLazy: boolean, isPageScaleChanged = false) {
-    if (isLazy && this.getIsPagingMode()) {
-      const eagerPages = isPageScaleChanged
-        ? this.scrollObserver.getPageVisibleInfo().visiblePageNoList
-        : []
-      this._lazyRender(eagerPages)
+  private paintRender(isLazy: boolean, isPageScaleChanged = false,
+    editingPage?: number) {
+    if (isLazy && this.getIsPagingMode() && !this.isPrintMode()) {
+      this._lazyRender(isPageScaleChanged, editingPage)
     } else this._immediateRender()
   }
 
@@ -4569,8 +4688,8 @@ export class Draw {
         .forEach(page => {
           this.lazyRenderIntersectionObserver?.unobserve(page)
           this.observedPages.delete(page)
-          this.visiblePages.delete(page)
           this.dirtyPages.delete(Number(page.dataset.index))
+          this.imageObserver.forgetPage(page)
           page.remove()
         })
     }
@@ -4582,7 +4701,7 @@ export class Draw {
     if (isPageDirectionChanged || isPageScaleChanged) {
       // Resizing the backing store clears it. During zoom keep the old
       // bitmap until the page can be resized and painted in the same turn.
-      this._updatePageSizes(isPageScaleChanged && this.getIsPagingMode())
+      this._updatePageSizes(this.getIsPagingMode())
     }
   }
 
@@ -4728,7 +4847,8 @@ export class Draw {
         oldPageSize === this.pageRowList.length && this.usedIncrementalFlow
         ? this.layoutChange.changedPages
         : this.pageRowList.map((_, index) => index)
-      for (const page of changed) this.dirtyPages.add(page)
+      const time = performance.now()
+      for (const page of changed) this.markPageDirty(page, time)
     }
     if (
       payload?.isDeferredPaint && !isPageScaleChanged &&
@@ -4737,7 +4857,11 @@ export class Draw {
       this.requestPaint()
     } else {
       this.cancelPaint()
-      this.paintRender(isLazy, isPageScaleChanged)
+      const editingPage = isSetCursor && curIndex !== undefined &&
+        this.zone.isMainActive() && this.options.lab?.dirtyPagePaint
+        ? this.position.getNativeCaret(curIndex)?.pageNo
+        : undefined
+      this.paintRender(isLazy, isPageScaleChanged, editingPage)
     }
     // 光标重绘
     if (isSetCursor) {
@@ -5358,6 +5482,7 @@ export class Draw {
     this.historyManager.recovery()
     this.fontDiagnostics.destroy()
     this.fontDownloadManager.destroy()
+    this.imageObserver.destroy()
     this.fontCoverageTracker.destroy()
     this.compositionCoverage.destroy()
     this.layoutHostAdapter.destroy()

@@ -9,12 +9,10 @@ import { PageNumber } from './PageNumber'
 export class Watermark {
   private draw: Draw
   private options: DeepRequired<IEditorOption>
-  private imageCache: Map<string, HTMLImageElement>
 
   constructor(draw: Draw) {
     this.draw = draw
     this.options = <DeepRequired<IEditorOption>>draw.getOptions()
-    this.imageCache = new Map()
   }
 
   public formatText(data: string, pageNo: number): string {
@@ -128,20 +126,8 @@ export class Watermark {
       watermark: { width, height, data, opacity, repeat, gap },
       scale
     } = this.options
-    if (!this.imageCache.has(data)) {
-      const img = new Image()
-      img.setAttribute('crossOrigin', 'Anonymous')
-      img.src = data
-      img.onload = () => {
-        this.imageCache.set(data, img)
-        // 避免层级上浮，触发编辑器二次渲染
-        this.draw.render({
-          isCompute: false,
-          isSubmitHistory: false
-        })
-      }
-      return
-    }
+    const image = this.draw.getImageObserver().get(ctx.canvas, data)
+    if (!image) return
     const { width: docWidth, height: docHeight } = this.draw.getPageSize(pageNo)
     const imageWidth = width * scale
     const imageHeight = height * scale
@@ -171,7 +157,7 @@ export class Watermark {
       temporaryCtx.translate(-patternWidth / 2, -patternHeight / 2)
       // 绘制图片
       temporaryCtx.drawImage(
-        this.imageCache.get(data)!,
+        image,
         (patternWidth - imageWidth) / 2,
         (patternHeight - imageHeight) / 2,
         imageWidth,
@@ -190,7 +176,7 @@ export class Watermark {
       ctx.translate(x, y)
       ctx.rotate((-45 * Math.PI) / 180)
       ctx.drawImage(
-        this.imageCache.get(data)!,
+        image,
         -imageWidth / 2,
         -imageHeight / 2,
         imageWidth,

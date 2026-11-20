@@ -1,3 +1,5 @@
+import { ElementType } from '../../dataset/enum/Element'
+import { isFloatingImage } from './InlineObjectMeasure'
 import type { IElement } from '../../interface/Element'
 import { ZERO } from '../../dataset/constant/Common'
 import { isParagraphObject } from '../text-engine-host/ElementBridge'
@@ -8,6 +10,8 @@ export interface ParagraphRecord {
   elements: IElement[]
   plain: boolean
   editable: boolean
+  hasList: boolean
+  supportsMixedFlow: boolean
   content: number
   metrics: number
   paint: number
@@ -122,6 +126,12 @@ export class ParagraphIndex {
           !element.listId && !element.controlId && !element.control && !element.titleId &&
           !element.title && !element.areaId && !element.area && !element.groupIds?.length &&
           !element.hide && !element.trace?.length),
+        hasList: elements.some(element => !!element.listId),
+        // Area grouping spans multiple records and table children require
+        // a stable cell-local scope independent of the table's main index.
+        supportsMixedFlow: elements.every(element =>
+          !element.areaId && !element.area && !isFloatingImage(element.imgDisplay) &&
+          (element.type !== ElementType.TABLE || !!element.id)),
         content: (previous?.content || 0) + 1,
         metrics: previous?.metrics || 0, paint: previous?.paint || 0
       }

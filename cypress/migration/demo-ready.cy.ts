@@ -82,6 +82,83 @@ describeSource('T21 main demo readiness', () => {
     })
   }
 
+  for (const nested of [false, true]) {
+    const viewport = nested ? 'a nested scroll container' : 'the window'
+    it(`keeps the visible page anchored when zooming in ${viewport}`, () => {
+      cy.intercept('https://fonts.bunny.net/**', { statusCode: 404 })
+      cy.visit('/canvas-editor/')
+      cy.window({ timeout: 20000 }).its('editor.state').should('eq', 'ready')
+      cy.window().then(async win => {
+        const { editor } = win as typeof win & { editor: Editor }
+        const command = editor.command
+        const root = win.document.createElement('div')
+        if (nested) {
+          root.id = 'zoom-scroll-root'
+          root.style.cssText =
+            'position:fixed;top:90px;left:100px;width:1000px;height:460px;overflow:auto'
+          win.document.body.append(root)
+          root.append(command.getContainer())
+          command.executeUpdateOptions({ scrollContainerSelector: '#' + root.id })
+        }
+        const frame = () => new Promise<void>(resolve =>
+          win.requestAnimationFrame(() => win.requestAnimationFrame(() => resolve())))
+        command.executeSetRange(3, 3)
+        await frame()
+        const page = command.getContainer().querySelector<HTMLCanvasElement>(
+          '.ce-page-container canvas[data-index="2"]'
+        )!
+        const top = nested ? root.getBoundingClientRect().top : 0
+        const distance = page.getBoundingClientRect().top - top + 175
+        if (nested) root.scrollBy({ top: distance, behavior: 'instant' })
+        else win.scrollBy({ top: distance, behavior: 'instant' })
+        await frame()
+        const pageRatio = (y: number) => {
+          const rect = page.getBoundingClientRect()
+          return (y - rect.top) / rect.height
+        }
+        const anchor = pageRatio(top)
+        expect(anchor).to.be.greaterThan(0.1)
+        for (const selector of [
+          '.page-scale-add', '.page-scale-add', '.page-scale-minus',
+          '.page-scale-percentage'
+        ]) {
+          win.document.querySelector<HTMLElement>(selector)!.click()
+          await frame()
+          expect(pageRatio(top)).to.be.closeTo(anchor, 0.003)
+        }
+
+        const rect = page.getBoundingClientRect()
+        const x = (Math.max(rect.left, 0) + Math.min(rect.right, win.innerWidth)) / 2
+        const y = top + 210
+        const pointerAnchor = pageRatio(y)
+        page.dispatchEvent(new win.WheelEvent('wheel', {
+          ctrlKey: true, deltaY: -1, clientX: x, clientY: y,
+          bubbles: true, cancelable: true
+        }))
+        await frame()
+        expect(command.getOptions().scale).to.be.closeTo(1.1, 0.001)
+        expect(pageRatio(y)).to.be.closeTo(pointerAnchor, 0.003)
+        if (nested) {
+          expect(win.scrollY).to.eq(0)
+          const current = pageRatio(top)
+          const agent = command.getContainer().querySelector<HTMLTextAreaElement>(
+            '.ce-inputarea'
+          )!
+          agent.dispatchEvent(new win.CompositionEvent('compositionstart'))
+          agent.value = 'ni'
+          agent.dispatchEvent(new win.InputEvent('input', {
+            data: 'ni', isComposing: true
+          }))
+          win.document.querySelector<HTMLElement>('.page-scale-add')!.click()
+          await frame()
+          expect(editor.getPerformanceDiagnostics().composition.active).to.be.true
+          expect(pageRatio(top)).to.be.closeTo(current, 0.003)
+          agent.dispatchEvent(new win.CompositionEvent('compositionend'))
+        }
+      })
+    })
+  }
+
   it('exports the latest background at high DPR after image loads', () => {
     const svg = (color: string) =>
       `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="${color}"/></svg>`

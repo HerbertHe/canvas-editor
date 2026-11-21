@@ -61,7 +61,7 @@ export type IDrawCursorOption = ICursorOption & {
   isBlink?: boolean
   isFocus?: boolean
   hitLineStartIndex?: number
-  revealComposition?: boolean
+  reveal?: boolean
 }
 
 export interface IMoveCursorToVisibleOption {
@@ -102,7 +102,7 @@ export class Cursor {
     this.compositionAnchor = new CompositionAnchor(this.container,
       this.getAgentDom(), this.cursorDom, this.options,
       () => this.isCompositionTracking(), reveal => this.drawCursor({
-        isFocus: false, isBlink: false, revealComposition: reveal
+        isFocus: false, isBlink: false, reveal
       }))
   }
 
@@ -176,6 +176,10 @@ export class Cursor {
     }
   }
 
+  public isCompositionCaretVisible() {
+    return this.compositionAnchor.isVisible()
+  }
+
   public drawCursor(payload?: IDrawCursorOption) {
     if (this.destroyed) return
     const generation = ++this.placementGeneration
@@ -190,7 +194,7 @@ export class Cursor {
       isShow = true,
       isBlink = true,
       isFocus: requestFocus = true,
-      revealComposition = true,
+      reveal = true,
       hitLineStartIndex
     } = { ...cursor, ...payload }
     const isFocus = requestFocus && !this.focusSuppressed
@@ -264,9 +268,10 @@ export class Cursor {
     }
     if (this.isCompositionTracking()) {
       this._clearBlinkTimeout()
+      if (!reveal) this.compositionAnchor.cancel()
       this.compositionAnchor.update({ left: cursorLeft, top: cursorTop,
         height: cursorHeight, width: width * scale, color, direction,
-        show: isShow && !this.draw.isReadonly() }, revealComposition)
+        show: isShow && !this.draw.isReadonly() }, reveal)
       return
     }
     this.compositionAnchor.restore()
@@ -302,7 +307,7 @@ export class Cursor {
       this._clearBlinkTimeout()
     }
     // 移动到视野范围内（仅在聚焦时）
-    if (isFocus) {
+    if (isFocus && reveal) {
       nextTick(() => {
         // Ignore work superseded by a composition frame, blur or destruction.
         if (this.destroyed || generation !== this.placementGeneration) return

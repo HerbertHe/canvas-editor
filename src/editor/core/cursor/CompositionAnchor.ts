@@ -61,7 +61,7 @@ export class CompositionAnchor {
 
   private onViewportChange = (event?: Event) => {
     if (this.destroyed || !this.active()) return
-    this.viewportReveal ||= event?.type !== 'scroll'
+    this.viewportReveal ||= event?.type === 'resize'
     if (this.frame !== null) return
     this.frame = requestAnimationFrame(() => {
       this.frame = null
@@ -125,16 +125,7 @@ export class CompositionAnchor {
     write(this.caret, 'display', show ? 'block' : 'none')
   }
 
-  private measureScroll(geometry: CompositionAnchorGeometry) {
-    const box = this.container.getBoundingClientRect()
-    const xScale = box.width / this.container.offsetWidth || 1
-    const yScale = box.height / this.container.offsetHeight || 1
-    let left = box.left + (this.container.clientLeft + geometry.left -
-      this.container.scrollLeft) * xScale
-    let top = box.top + (this.container.clientTop + geometry.top -
-      this.container.scrollTop) * yScale
-    const width = geometry.width * xScale
-    const height = geometry.height * yScale
+  private getScrollPorts() {
     const ports: ScrollPort[] = []
     const root = document.scrollingElement || document.documentElement
     // All ancestor ports matter: nested horizontal and vertical scrollers can
@@ -163,9 +154,31 @@ export class CompositionAnchor {
       bottom: (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight),
       xScale: 1, yScale: 1, x: true, y: true, document: true,
       rtl: getComputedStyle(root).direction === 'rtl' })
+    return ports
+  }
+
+  isVisible() {
+    if (!this.active()) return false
+    const rect = this.caret.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0 && this.getScrollPorts().every(port =>
+      (!port.x || (rect.right > port.left && rect.left < port.right)) &&
+      (!port.y || (rect.bottom > port.top && rect.top < port.bottom))
+    )
+  }
+
+  private measureScroll(geometry: CompositionAnchorGeometry) {
+    const box = this.container.getBoundingClientRect()
+    const xScale = box.width / this.container.offsetWidth || 1
+    const yScale = box.height / this.container.offsetHeight || 1
+    let left = box.left + (this.container.clientLeft + geometry.left -
+      this.container.scrollLeft) * xScale
+    let top = box.top + (this.container.clientTop + geometry.top -
+      this.container.scrollTop) * yScale
+    const width = geometry.width * xScale
+    const height = geometry.height * yScale
     const scrolls: (() => void)[] = []
     const [marginTop, marginRight, marginBottom, marginLeft] = this.options.maskMargin
-    for (const port of ports) {
+    for (const port of this.getScrollPorts()) {
       const minX = port.left + marginLeft
       const maxX = Math.max(minX, port.right - marginRight)
       const minY = port.top + marginTop

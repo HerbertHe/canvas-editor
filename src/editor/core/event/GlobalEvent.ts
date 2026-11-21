@@ -142,18 +142,19 @@ export class GlobalEvent {
     // 仅在按下Ctrl键时生效
     if (!evt.ctrlKey) return
     evt.preventDefault()
+    const point = { x: evt.clientX, y: evt.clientY }
     const { scale } = this.options
     if (evt.deltaY < 0) {
       // 放大
       const nextScale = scale * 10 + 1
       if (nextScale <= 30) {
-        this.draw.setPageScale(nextScale / 10)
+        this.draw.setPageScale(nextScale / 10, point)
       }
     } else {
       // 缩小
       const nextScale = scale * 10 - 1
       if (nextScale >= 5) {
-        this.draw.setPageScale(nextScale / 10)
+        this.draw.setPageScale(nextScale / 10, point)
       }
     }
   }

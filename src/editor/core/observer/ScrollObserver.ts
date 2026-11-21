@@ -1,10 +1,19 @@
 import { IEditorOption } from '../../interface/Editor'
-import { debounce } from '../../utils'
+import { debounce, findScrollContainer } from '../../utils'
 import { Draw } from '../draw/Draw'
 
 export interface IPageVisibleInfo {
   intersectionPageNo: number
   visiblePageNoList: number[]
+}
+
+export interface PageZoomAnchor {
+  container: Element | Document
+  pageNo: number
+  viewportX: number
+  viewportY: number
+  pageX: number
+  pageY: number
 }
 
 export class ScrollObserver {
@@ -49,13 +58,7 @@ export class ScrollObserver {
     return { intersectionPageNo, visiblePageNoList }
   }
 
-  public getPaintPageInfo(prefetch: number) {
-    const pageList = this.draw.getPageList()
-    const visiblePageNoList: number[] = []
-    const before: number[] = []
-    const after: number[] = []
-    let intersectionPageNo = 0
-    let intersectionMaxHeight = 0
+  private getViewport(container: Element | Document) {
     let top = 0
     let left = 0
     let bottom = Math.max(
@@ -63,7 +66,6 @@ export class ScrollObserver {
       window.innerHeight
     )
     let right = Math.max(document.documentElement.clientWidth, window.innerWidth)
-    const container = this.getScrollContainer()
     if (container instanceof Element) {
       const rect = container.getBoundingClientRect()
       const containerTop = rect.top + container.clientTop
@@ -73,6 +75,66 @@ export class ScrollObserver {
       left = Math.max(left, containerLeft)
       right = Math.min(right, containerLeft + container.clientWidth)
     }
+    return { top, left, bottom, right }
+  }
+
+  public captureZoomAnchor(
+    point?: { x: number; y: number }
+  ): PageZoomAnchor | undefined {
+    const editor = this.draw.getContainer()
+    const configured = this.getScrollContainer()
+    const root = configured instanceof Element && configured.contains(editor)
+      ? configured
+      : findScrollContainer(editor)
+    const container = root === document.scrollingElement ||
+      root === document.documentElement ? document : root
+    const viewport = this.getViewport(container)
+    const { intersectionPageNo, visiblePageNoList } =
+      this.getPaintPageInfo(0, viewport)
+    if (!visiblePageNoList.length) return
+    const pages = this.draw.getPageList()
+    const pointedPage = point && point.x >= viewport.left && point.x <= viewport.right &&
+      point.y >= viewport.top && point.y <= viewport.bottom
+      ? visiblePageNoList.find(pageNo => {
+        const rect = pages[pageNo].getBoundingClientRect()
+        return point.x >= rect.left && point.x <= rect.right &&
+          point.y >= rect.top && point.y <= rect.bottom
+      }) : undefined
+    const pageNo = pointedPage ?? intersectionPageNo
+    const rect = pages[pageNo].getBoundingClientRect()
+    if (!rect.width || !rect.height) return
+    const viewportX = pointedPage !== undefined && point
+      ? point.x : (Math.max(rect.left, viewport.left) +
+        Math.min(rect.right, viewport.right)) / 2
+    const viewportY = pointedPage !== undefined && point
+      ? point.y : Math.max(rect.top, viewport.top)
+    return { container, pageNo, viewportX, viewportY,
+      pageX: (viewportX - rect.left) / rect.width,
+      pageY: (viewportY - rect.top) / rect.height }
+  }
+
+  public restoreZoomAnchor(anchor: PageZoomAnchor) {
+    const pages = this.draw.getPageList()
+    const rect = pages[Math.min(anchor.pageNo, pages.length - 1)]
+      ?.getBoundingClientRect()
+    if (!rect?.width || !rect.height) return
+    // Read the final bounds so the correction includes native scroll anchoring.
+    const left = rect.left + anchor.pageX * rect.width - anchor.viewportX
+    const top = rect.top + anchor.pageY * rect.height - anchor.viewportY
+    if (Math.abs(left) < 0.5 && Math.abs(top) < 0.5) return
+    const options: ScrollToOptions = { left, top, behavior: 'instant' }
+    if (anchor.container instanceof Element) anchor.container.scrollBy(options)
+    else window.scrollBy(options)
+  }
+
+  public getPaintPageInfo(prefetch: number,
+    { top, left, bottom, right } = this.getViewport(this.getScrollContainer())) {
+    const pageList = this.draw.getPageList()
+    const visiblePageNoList: number[] = []
+    const before: number[] = []
+    const after: number[] = []
+    let intersectionPageNo = 0
+    let intersectionMaxHeight = 0
     const offset = top - (pageList[0]?.getBoundingClientRect().top || 0)
     const result = { intersectionPageNo, visiblePageNoList, before, after, offset }
     if (top >= bottom || left >= right) return result

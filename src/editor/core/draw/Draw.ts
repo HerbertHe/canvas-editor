@@ -91,6 +91,7 @@ import { ImageParticle } from './particle/ImageParticle'
 import { LaTexParticle } from './particle/latex/LaTexParticle'
 import { PageNumber } from './frame/PageNumber'
 import { ScrollObserver } from '../observer/ScrollObserver'
+import type { PageZoomAnchor } from '../observer/ScrollObserver'
 import { SelectionObserver } from '../observer/SelectionObserver'
 import { TableParticle } from './particle/table/TableParticle'
 import { TablePaging } from './particle/table/TablePaging'
@@ -2090,9 +2091,11 @@ export class Draw {
     })
   }
 
-  public setPageScale(payload: number) {
+  public setPageScale(payload: number, point?: { x: number; y: number }) {
+    const revealCaret = !point && this.cursor.isCompositionCaretVisible()
     if (this.options.lab?.imePreview && this.canvasEvent.isComposing)
       this.canvasEvent.flushComposition()
+    const anchor = this.scrollObserver.captureZoomAnchor(point)
     this.options.scale = payload
     const cursorPosition = this.position.getCursorPosition()
     this.render({
@@ -2100,7 +2103,7 @@ export class Draw {
       isSubmitHistory: false,
       isSetCursor: !!cursorPosition,
       curIndex: cursorPosition?.index
-    })
+    }, { anchor, revealCaret })
     if (this.listener.pageScaleChange) {
       this.listener.pageScaleChange(payload)
     }
@@ -4792,7 +4795,10 @@ export class Draw {
     })
   }
 
-  public render(payload?: IDrawOption) {
+  public render(payload?: IDrawOption, zoom?: {
+    anchor?: PageZoomAnchor
+    revealCaret: boolean
+  }) {
     this.canvasEvent?.flushComposition()
     if (this.historyReplayDepth) {
       this.deferredHistoryRender = payload || {}
@@ -4842,6 +4848,7 @@ export class Draw {
     this.imageObserver.clearAll()
     this.cursor.recoveryCursor()
     this.commitRenderPages(oldPageDirectionList, isPageScaleChanged)
+    if (zoom?.anchor) this.scrollObserver.restoreZoomAnchor(zoom.anchor)
     if (this.options.lab?.dirtyPagePaint) {
       const changed = !isPageScaleChanged && isCompute && this.layoutChange &&
         oldPageSize === this.pageRowList.length && this.usedIncrementalFlow
@@ -4865,7 +4872,7 @@ export class Draw {
     }
     // 光标重绘
     if (isSetCursor) {
-      curIndex = this.setCursor(curIndex)
+      curIndex = this.setCursor(curIndex, zoom?.revealCaret ?? true)
     } else if (this.range.getIsSelection()) {
       // 存在选区时仅定位避免事件无法捕获
       this.cursor.focus()
@@ -4908,7 +4915,7 @@ export class Draw {
     this.ensureLayoutWorker()
   }
 
-  public setCursor(curIndex: number | undefined) {
+  public setCursor(curIndex: number | undefined, reveal = true) {
     if (curIndex !== undefined) {
       const normalized = this.position.normalizeNativeIndex(curIndex)
       if (normalized !== curIndex && this.range.getIsCollapsed())
@@ -4959,7 +4966,8 @@ export class Draw {
       curIndex !== undefined ? this.position.getNativeCaret(curIndex) : null
     if (caret && this.zone.isMainActive()) this.setPageNo(caret.pageNo)
     this.cursor.drawCursor({
-      isShow: isShowCursor
+      isShow: isShowCursor,
+      reveal
     })
     return curIndex
   }
